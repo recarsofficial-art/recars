@@ -44,16 +44,16 @@ import { Car as CarType, CarInquiry, SellRequest, TestDriveBooking } from '@/lib
 import { MAKES, CITIES } from '@/lib/data';
 
 const AVAILABLE_IMAGES = [
-  { label: 'Hyundai Creta (White SUV)', url: '/car-creta.jpg' },
-  { label: 'Honda City (Silver Sedan)', url: '/car-city.jpg' },
-  { label: 'Mahindra Thar (Red 4x4)', url: '/car-thar.jpg' },
-  { label: 'Toyota Fortuner (White SUV)', url: '/car-fortuner.jpg' },
-  { label: 'Tata Nexon (Blue Crossover)', url: '/cat-suv.jpg' },
-  { label: 'Maruti Baleno (Grey Hatchback)', url: '/cat-hatch.jpg' },
-  { label: 'Toyota Hilux (White Ute)', url: '/cat-ute.jpg' },
-  { label: 'BMW 3-Series (Luxury Performance)', url: '/cat-performance.jpg' },
-  { label: 'Electric EV Vehicle', url: '/cat-ev.jpg' },
-  { label: 'Eco Hybrid Vehicle', url: '/cat-hybrid.jpg' },
+  { label: 'Hyundai Creta (Metallic Titan Grey Studio SUV)', url: '/car-creta-hd.jpg' },
+  { label: 'Honda City (Platinum White Pearl Studio Sedan)', url: '/car-city-hd.jpg' },
+  { label: 'Toyota Fortuner (Attitude Black 4x4 Studio SUV)', url: '/car-fortuner-hd.jpg' },
+  { label: 'Kia Seltos (Glacier White Studio Compact SUV)', url: '/car-seltos-hd.jpg' },
+  { label: 'Tata Nexon EV (Teal Dual-Tone Electric SUV)', url: '/car-nexon-hd.jpg' },
+  { label: 'BMW 3-Series (Portimao Blue Luxury Sports Sedan)', url: '/car-bmw-hd.jpg' },
+  { label: 'Maruti Suzuki Swift (Fire Red Studio Hatchback)', url: '/car-swift-hd.jpg' },
+  { label: 'Toyota Innova Crysta (Garnet Red Luxury MUV)', url: '/car-innova-hd.jpg' },
+  { label: 'Hyundai i20 (Fiery Red Studio Hatchback)', url: '/car-i20-hd.jpg' },
+  { label: 'Hyundai Venue (Polar White Studio Compact SUV)', url: '/car-venue-hd.jpg' },
 ];
 
 export default function AdminDashboardPage() {

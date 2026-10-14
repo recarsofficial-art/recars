@@ -65,9 +65,9 @@ export const INITIAL_CARS: Car[] = [
     ownership: '1st Owner',
     city: 'Hyderabad',
     locationArea: 'Gachibowli Recars Hub',
-    image: '/car-creta-real.jpg',
+    image: '/car-creta-hd.jpg',
     galleryImages: [
-      '/car-creta-real.jpg',
+      '/car-creta-hd.jpg',
       'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80'
@@ -119,9 +119,9 @@ export const INITIAL_CARS: Car[] = [
     ownership: '1st Owner',
     city: 'Hyderabad',
     locationArea: 'Banjara Hills Recars Hub',
-    image: '/car-city-real.jpg',
+    image: '/car-city-hd.jpg',
     galleryImages: [
-      '/car-city-real.jpg',
+      '/car-city-hd.jpg',
       'https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1541348263662-e0c866c24385?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=1200&q=80'
@@ -172,9 +172,9 @@ export const INITIAL_CARS: Car[] = [
     ownership: '1st Owner',
     city: 'Hyderabad',
     locationArea: 'Madhapur Recars Hub',
-    image: '/car-fortuner-real.jpg',
+    image: '/car-fortuner-hd.jpg',
     galleryImages: [
-      '/car-fortuner-real.jpg',
+      '/car-fortuner-hd.jpg',
       'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80'
@@ -224,9 +224,9 @@ export const INITIAL_CARS: Car[] = [
     ownership: '1st Owner',
     city: 'Hyderabad',
     locationArea: 'Kukatpally Recars Hub',
-    image: '/car-seltos-real.jpg',
+    image: '/car-seltos-hd.jpg',
     galleryImages: [
-      '/car-seltos-real.jpg',
+      '/car-seltos-hd.jpg',
       'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80'
     ],
@@ -275,9 +275,9 @@ export const INITIAL_CARS: Car[] = [
     ownership: '1st Owner',
     city: 'Bengaluru',
     locationArea: 'Indiranagar Recars Hub',
-    image: '/type-electric.jpg',
+    image: '/car-nexon-hd.jpg',
     galleryImages: [
-      '/type-electric.jpg',
+      '/car-nexon-hd.jpg',
       'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=80'
     ],
     isVerified: true,
@@ -325,9 +325,9 @@ export const INITIAL_CARS: Car[] = [
     ownership: '1st Owner',
     city: 'Mumbai',
     locationArea: 'Bandra West Recars Hub',
-    image: '/type-luxury.jpg',
+    image: '/car-bmw-hd.jpg',
     galleryImages: [
-      '/type-luxury.jpg',
+      '/car-bmw-hd.jpg',
       'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1200&q=80',
       'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80'
     ],
@@ -376,9 +376,9 @@ export const INITIAL_CARS: Car[] = [
     ownership: '1st Owner',
     city: 'Hyderabad',
     locationArea: 'Hitec City Recars Hub',
-    image: '/type-hatchback.jpg',
+    image: '/car-swift-hd.jpg',
     galleryImages: [
-      '/type-hatchback.jpg',
+      '/car-swift-hd.jpg',
       'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80'
     ],
     isVerified: true,
@@ -425,9 +425,9 @@ export const INITIAL_CARS: Car[] = [
     ownership: '1st Owner',
     city: 'Bengaluru',
     locationArea: 'Whitefield Recars Hub',
-    image: '/type-muv.jpg',
+    image: '/car-innova-hd.jpg',
     galleryImages: [
-      '/type-muv.jpg',
+      '/car-innova-hd.jpg',
       'https://images.unsplash.com/photo-1541348263662-e0c866c24385?auto=format&fit=crop&w=1200&q=80'
     ],
     isVerified: true,
