@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Shield,
+  ShieldCheck,
+  Lock,
+  LogOut,
+  EyeOff,
+  ArrowLeft,
   Menu,
   LayoutDashboard,
   Car,
@@ -69,6 +74,17 @@ export default function AdminDashboardPage() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Admin Portal Restricted Authentication States
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [isCheckingAdminAuth, setIsCheckingAdminAuth] = useState(true);
+  const [adminUser, setAdminUser] = useState<{ email: string; name: string; role: string } | null>(null);
+
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [adminAuthError, setAdminAuthError] = useState<string | null>(null);
+  const [isAdminLoggingIn, setIsAdminLoggingIn] = useState(false);
+
   // Live Supabase synced states
   const [liveCars, setLiveCars] = useState<CarType[]>([]);
   const [liveSellRequests, setLiveSellRequests] = useState<SellRequest[]>([]);
@@ -102,28 +118,139 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const checkAdminAuth = async () => {
+    try {
+      const res = await fetch('/api/admin/auth');
+      const data = await res.json();
+      if (data.authenticated && data.admin) {
+        setIsAdminAuthenticated(true);
+        setAdminUser(data.admin);
+        return true;
+      }
+      setIsAdminAuthenticated(false);
+      setAdminUser(null);
+      return false;
+    } catch {
+      setIsAdminAuthenticated(false);
+      setAdminUser(null);
+      return false;
+    } finally {
+      setIsCheckingAdminAuth(false);
+    }
+  };
+
+  const handleAdminEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminAuthError(null);
+    setIsAdminLoggingIn(true);
+    try {
+      const res = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'login',
+          email: adminEmail,
+          password: adminPassword,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.admin) {
+        setIsAdminAuthenticated(true);
+        setAdminUser(data.admin);
+        syncAllFromSupabase();
+        showToast(`Authenticated as Administrator: ${data.admin.email}`);
+      } else {
+        setAdminAuthError(data.error || 'Authentication failed. Please verify admin credentials.');
+      }
+    } catch (err: any) {
+      setAdminAuthError(err.message || 'Connection error. Please try again.');
+    } finally {
+      setIsAdminLoggingIn(false);
+    }
+  };
+
+  const handleAdminGoogleLogin = async () => {
+    setAdminAuthError(null);
+    setIsAdminLoggingIn(true);
+    try {
+      const { signInWithPopup } = await import('firebase/auth');
+      const { auth, googleProvider } = await import('@/lib/firebase');
+      const cred = await signInWithPopup(auth, googleProvider);
+      const googleUser = cred.user;
+
+      const res = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'google_admin',
+          email: googleUser.email,
+          name: googleUser.displayName || 'Recars Administrator',
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.admin) {
+        setIsAdminAuthenticated(true);
+        setAdminUser(data.admin);
+        syncAllFromSupabase();
+        showToast(`Administrator verified: ${data.admin.email}`);
+      } else {
+        setAdminAuthError(data.error || 'Access denied: This Google account is not an authorized administrator.');
+      }
+    } catch (err: any) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setAdminAuthError(err.message || 'Google administrator authentication failed.');
+      }
+    } finally {
+      setIsAdminLoggingIn(false);
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    try {
+      await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'logout' }),
+      });
+    } catch {
+      // ignore
+    }
+    setIsAdminAuthenticated(false);
+    setAdminUser(null);
+    setAdminPassword('');
+    showToast('Administrator session closed securely.');
+  };
+
   useEffect(() => {
     setMounted(true);
-    syncAllFromSupabase();
+    checkAdminAuth().then((authed) => {
+      if (authed) syncAllFromSupabase();
+    });
 
-    const handleFocus = () => syncAllFromSupabase();
+    const handleFocus = () => {
+      if (isAdminAuthenticated) syncAllFromSupabase();
+    };
     window.addEventListener('focus', handleFocus);
     const handleVis = () => {
-      if (document.visibilityState === 'visible') syncAllFromSupabase();
+      if (document.visibilityState === 'visible' && isAdminAuthenticated) syncAllFromSupabase();
     };
     document.addEventListener('visibilitychange', handleVis);
-    const interval = setInterval(syncAllFromSupabase, 6000);
+    const interval = setInterval(() => {
+      if (isAdminAuthenticated) syncAllFromSupabase();
+    }, 6000);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVis);
       clearInterval(interval);
     };
-  }, []);
+  }, [isAdminAuthenticated]);
 
   useEffect(() => {
-    syncAllFromSupabase();
-  }, [activeTab]);
+    if (isAdminAuthenticated) {
+      syncAllFromSupabase();
+    }
+  }, [activeTab, isAdminAuthenticated]);
 
   const cars = liveCars.length > 0 ? liveCars : storeCars;
   const sellRequests = liveSellRequests;
@@ -323,26 +450,169 @@ export default function AdminDashboardPage() {
   };
 
 
-  if (!mounted) {
+  if (!mounted || isCheckingAdminAuth) {
     return (
-      <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
-        <header className="bg-white border-b border-[#E5E7EB] py-3.5 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-40 shadow-2xs">
-          <div className="flex items-center gap-4">
-            <Logo showTagline={false} size="sm" />
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF0F3] border border-[#FFD6DF] text-xs font-bold text-[#E5325C] tracking-wide uppercase">
-              <Shield className="w-3.5 h-3.5" />
-              <span>Admin Control Center</span>
+      <div className="min-h-screen flex flex-col bg-[#0F1117] items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-[#FFF0F3] border border-[#FFD6DF] flex items-center justify-center text-[#E5325C] animate-pulse">
+            <Shield className="w-6 h-6" />
+          </div>
+          <span className="text-xs font-bold text-gray-400">Verifying Admin Security Authorization...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // RESTRICTED ACCESS GATE: Dedicated Admin Portal Sign-In
+  if (!isAdminAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#0F1117] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className="fixed top-5 right-5 z-50 bg-[#101216] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-gray-700 animate-in fade-in slide-in-from-top-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+            <span className="text-xs font-bold">{toastMessage}</span>
+            <button onClick={() => setToastMessage(null)} className="text-gray-400 hover:text-white ml-2">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Ambient background glows */}
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-[#E5325C]/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-200 p-8 space-y-6 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+          <div className="text-center space-y-3">
+            <div className="flex justify-center">
+              <Logo showTagline={false} size="md" />
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF0F3] border border-[#FFD6DF] text-[#E5325C] text-[10px] font-extrabold uppercase tracking-wider">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Restricted • Admin Portal Access</span>
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold text-[#101216]">Admin Portal Sign In</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Enter your administrative credentials to manage inventory, customer inquiries, and platform records.
+              </p>
+            </div>
+          </div>
+
+          {adminAuthError && (
+            <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-2.5 text-xs text-red-700 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+              <span>{adminAuthError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleAdminEmailLogin} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-700 block">Administrator Email</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="email"
+                  required
+                  placeholder="admin@recars.in"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:border-[#E5325C] focus:ring-2 focus:ring-[#FFF0F3] outline-hidden text-xs text-gray-900 transition-all font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-gray-700 block">Administrator Password</label>
+              </div>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type={showAdminPassword ? 'text' : 'password'}
+                  required
+                  placeholder="••••••••••••"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-gray-300 focus:border-[#E5325C] focus:ring-2 focus:ring-[#FFF0F3] outline-hidden text-xs text-gray-900 transition-all font-medium"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAdminPassword(!showAdminPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  {showAdminPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isAdminLoggingIn}
+              className="w-full py-3 rounded-xl bg-[#E5325C] hover:bg-[#D4254E] text-white text-xs font-extrabold shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isAdminLoggingIn ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Authenticating Admin...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Sign In to Admin Hub</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="relative flex items-center justify-center">
+            <div className="border-t border-gray-200 w-full" />
+            <span className="bg-white px-3 text-[10px] uppercase font-bold text-gray-400 tracking-wider absolute">
+              or authorized sso
             </span>
           </div>
-          <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
-        </header>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex-1 w-full flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-9 h-9 border-3 border-[#E5325C] border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs font-bold text-gray-500">Loading Recars Admin Console...</span>
+
+          <button
+            type="button"
+            onClick={handleAdminGoogleLogin}
+            disabled={isAdminLoggingIn}
+            className="w-full py-2.5 rounded-xl border border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 text-xs font-bold transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shadow-2xs"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+              />
+            </svg>
+            <span>Sign in with Google (Admin Only)</span>
+          </button>
+
+          <div className="p-3 rounded-2xl bg-gray-50 border border-gray-200 text-[10px] text-gray-500 leading-relaxed text-center">
+            Restricted System • Only verified Recars administrators have authorized access. All administrative operations are monitored and audited.
+          </div>
+
+          <div className="text-center pt-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-[#E5325C] transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Return to Recars Marketplace</span>
+            </Link>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -597,8 +867,32 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Sidebar Footer with Supabase status & Marketplace Link */}
+        {/* Sidebar Footer with Admin Profile, Supabase status & Marketplace Link */}
         <div className="p-4 border-t border-[#E5E7EB] space-y-3 bg-[#F8F9FA]/60">
+          {/* Authenticated Admin Account Info */}
+          <div className="p-2.5 rounded-xl bg-white border border-[#E5E7EB] flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center font-extrabold text-[10px] flex-shrink-0">
+                ADM
+              </div>
+              <div className="min-w-0">
+                <span className="text-[11px] font-bold text-[#101216] block truncate">
+                  {adminUser?.email || 'Operations Admin'}
+                </span>
+                <span className="text-[9px] text-[#237A52] font-semibold flex items-center gap-1">
+                  <ShieldCheck className="w-2.5 h-2.5" /> Authorized Admin
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={handleAdminLogout}
+              title="Sign Out Administrator"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -683,8 +977,23 @@ export default function AdminDashboardPage() {
               <ExternalLink className="w-3.5 h-3.5" />
             </Link>
 
-            <div className="w-8 h-8 rounded-full bg-[#E5325C] text-white flex items-center justify-center text-xs font-extrabold shadow-sm">
-              ADM
+            <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
+              <div className="hidden lg:flex flex-col text-right">
+                <span className="text-xs font-bold text-[#101216] leading-tight truncate max-w-[160px]">
+                  {adminUser?.email || 'admin@recars.in'}
+                </span>
+                <span className="text-[10px] text-emerald-600 font-bold flex items-center justify-end gap-1">
+                  <ShieldCheck className="w-2.5 h-2.5" /> Admin
+                </span>
+              </div>
+              <button
+                onClick={handleAdminLogout}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                title="Lock session & Sign out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
             </div>
           </div>
         </header>
