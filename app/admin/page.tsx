@@ -35,6 +35,8 @@ import {
   MapPin,
   Tag,
   RefreshCw,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
@@ -283,7 +285,13 @@ export default function AdminDashboardPage() {
   const [newOwnership, setNewOwnership] = useState<'1st Owner' | '2nd Owner' | '3rd Owner'>('1st Owner');
   const [newCity, setNewCity] = useState('Hyderabad');
   const [newLocationArea, setNewLocationArea] = useState('Hitec City Automotive Hub');
-  const [newImage, setNewImage] = useState('/car-creta.jpg');
+  const [newImage, setNewImage] = useState('/car-creta-hd.jpg');
+  const [newGalleryImages, setNewGalleryImages] = useState<string[]>(['/car-creta-hd.jpg']);
+  const [imageInputMode, setImageInputMode] = useState<'upload' | 'url' | 'preset'>('upload');
+  const [customImageUrl, setCustomImageUrl] = useState('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [newScore, setNewScore] = useState(97);
   const [newIsVerified, setNewIsVerified] = useState(true);
   const [newIsSelect, setNewIsSelect] = useState(true);
@@ -292,6 +300,64 @@ export default function AdminDashboardPage() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleImageFileUpload = async (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+    setUploadError(null);
+    setIsUploadingImage(true);
+
+    try {
+      const fileList = Array.from(files);
+      const uploadedUrls: string[] = [];
+
+      for (const file of fileList) {
+        if (!file.type.startsWith('image/')) {
+          setUploadError('Please select valid JPG or image files.');
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (data.success && data.url) {
+          uploadedUrls.push(data.url);
+        } else {
+          // Client-side base64 fallback
+          const base64: string = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+          uploadedUrls.push(base64);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        setNewImage(uploadedUrls[0]);
+        setNewGalleryImages((prev) => Array.from(new Set([...uploadedUrls, ...prev])));
+        showToast(`Uploaded ${uploadedUrls.length} high-resolution JPG image(s)!`);
+      }
+    } catch (err: any) {
+      console.error('File upload failed:', err);
+      setUploadError('Failed to process JPG upload. Please try again.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const removeGalleryImage = (urlToRemove: string) => {
+    const updated = newGalleryImages.filter((u) => u !== urlToRemove);
+    setNewGalleryImages(updated);
+    if (newImage === urlToRemove) {
+      setNewImage(updated[0] || '/car-creta-hd.jpg');
+    }
   };
 
   const handleCreateCar = async (e: React.FormEvent) => {
@@ -311,8 +377,8 @@ export default function AdminDashboardPage() {
       ownership: newOwnership,
       city: newCity,
       locationArea: newLocationArea || `${newCity} Hub`,
-      image: newImage,
-      galleryImages: [newImage],
+      image: newImage || '/car-creta-hd.jpg',
+      galleryImages: newGalleryImages.length > 0 ? newGalleryImages : [newImage || '/car-creta-hd.jpg'],
       isVerified: newIsVerified,
       isRecarsSelect: newIsSelect,
       featured: true,
@@ -2371,22 +2437,186 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              {/* Photo Selector */}
-              <div>
-                <label className="block font-bold text-[#101216] mb-1">Vehicle Image Preset or Custom Path</label>
-                <div className="flex gap-2">
+              {/* Photo Selector & JPG Upload */}
+              <div className="space-y-3 p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="block font-bold text-[#101216] text-xs">Vehicle Photography (.JPG)</label>
+                    <p className="text-[11px] text-gray-500">Upload high-resolution .jpg images or select a studio preset</p>
+                  </div>
+                  <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200 self-start sm:self-center">
+                    <button
+                      type="button"
+                      onClick={() => setImageInputMode('upload')}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                        imageInputMode === 'upload'
+                          ? 'bg-[#E5325C] text-white shadow-xs'
+                          : 'text-gray-600 hover:text-black'
+                      }`}
+                    >
+                      <Upload className="w-3 h-3 inline mr-1" />
+                      Upload JPG
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageInputMode('url')}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                        imageInputMode === 'url'
+                          ? 'bg-[#E5325C] text-white shadow-xs'
+                          : 'text-gray-600 hover:text-black'
+                      }`}
+                    >
+                      JPG URL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageInputMode('preset')}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                        imageInputMode === 'preset'
+                          ? 'bg-[#E5325C] text-white shadow-xs'
+                          : 'text-gray-600 hover:text-black'
+                      }`}
+                    >
+                      Studio Presets
+                    </button>
+                  </div>
+                </div>
+
+                {uploadError && (
+                  <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                    <span>{uploadError}</span>
+                  </div>
+                )}
+
+                {/* Option 1: Upload JPG */}
+                {imageInputMode === 'upload' && (
+                  <div>
+                    <label
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDraggingOver(true);
+                      }}
+                      onDragLeave={() => setIsDraggingOver(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDraggingOver(false);
+                        if (e.dataTransfer.files) handleImageFileUpload(e.dataTransfer.files);
+                      }}
+                      className={`flex flex-col items-center justify-center p-5 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
+                        isDraggingOver
+                          ? 'border-[#E5325C] bg-[#FFF0F3]'
+                          : 'border-gray-300 hover:border-[#E5325C] bg-white hover:bg-[#FFF0F3]/30'
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center mb-2">
+                        <Upload className={`w-5 h-5 ${isUploadingImage ? 'animate-bounce' : ''}`} />
+                      </div>
+                      <span className="text-xs font-bold text-[#101216]">
+                        {isUploadingImage ? 'Uploading JPG image...' : 'Click to browse JPG files or drag & drop'}
+                      </span>
+                      <span className="text-[10px] text-gray-500 mt-0.5">
+                        Accepts .jpg, .jpeg, .png • High-resolution quality • Multiple photos supported
+                      </span>
+                      <input
+                        type="file"
+                        multiple
+                        accept=".jpg,.jpeg,image/jpeg,image/png,image/webp"
+                        disabled={isUploadingImage}
+                        onChange={(e) => e.target.files && handleImageFileUpload(e.target.files)}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+
+                {/* Option 2: JPG URL */}
+                {imageInputMode === 'url' && (
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={customImageUrl}
+                      onChange={(e) => setCustomImageUrl(e.target.value)}
+                      placeholder="Paste high-res JPG URL (e.g. https://.../car.jpg)"
+                      className="flex-1 px-3 py-2 bg-white border border-[#E5E7EB] rounded-xl font-medium text-gray-900 focus:outline-none focus:border-[#E5325C] text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (customImageUrl.trim()) {
+                          setNewImage(customImageUrl.trim());
+                          setNewGalleryImages((prev) => Array.from(new Set([customImageUrl.trim(), ...prev])));
+                          setCustomImageUrl('');
+                          showToast('Custom JPG image applied!');
+                        }
+                      }}
+                      className="px-3 py-2 bg-[#101216] text-white rounded-xl font-bold text-xs hover:bg-black transition-colors cursor-pointer"
+                    >
+                      Apply JPG
+                    </button>
+                  </div>
+                )}
+
+                {/* Option 3: Presets */}
+                {imageInputMode === 'preset' && (
                   <select
                     value={newImage}
-                    onChange={(e) => setNewImage(e.target.value)}
-                    className="flex-1 px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                    onChange={(e) => {
+                      setNewImage(e.target.value);
+                      setNewGalleryImages((prev) => Array.from(new Set([e.target.value, ...prev])));
+                    }}
+                    className="w-full px-3 py-2.5 bg-white border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C] text-xs"
                   >
                     {AVAILABLE_IMAGES.map((img) => (
                       <option key={img.url} value={img.url}>{img.label}</option>
                     ))}
                   </select>
-                  <div className="w-12 h-10 rounded-xl overflow-hidden bg-gray-200 border border-gray-300 flex-shrink-0">
-                    <img src={newImage} alt="preview" className="w-full h-full object-cover" />
+                )}
+
+                {/* Live Preview & Gallery management */}
+                <div className="bg-white p-3 rounded-xl border border-gray-200 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-20 h-14 rounded-lg overflow-hidden bg-gray-100 border border-gray-300 flex-shrink-0 relative group">
+                      <img src={newImage} alt="Vehicle Primary Preview" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#F0F9F4] text-[#237A52] text-[9px] font-extrabold uppercase border border-[#D1EAD9]">
+                        Primary Listing Image
+                      </span>
+                      <p className="text-xs font-bold text-[#101216] mt-0.5 truncate max-w-[200px] sm:max-w-xs">{newImage}</p>
+                      <p className="text-[10px] text-gray-400">High-Resolution Automotive Image</p>
+                    </div>
                   </div>
+
+                  {newGalleryImages.length > 1 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-bold text-gray-500 mr-1">Gallery ({newGalleryImages.length}):</span>
+                      {newGalleryImages.map((imgUrl, i) => (
+                        <div key={i} className="relative group/thumb">
+                          <img
+                            src={imgUrl}
+                            alt={`gallery-${i}`}
+                            onClick={() => setNewImage(imgUrl)}
+                            className={`w-9 h-7 rounded-md object-cover border cursor-pointer transition-all ${
+                              newImage === imgUrl ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]' : 'border-gray-200 opacity-75 hover:opacity-100'
+                            }`}
+                            title="Click to set as primary image"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeGalleryImage(imgUrl);
+                            }}
+                            className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-red-600 text-white flex items-center justify-center text-[9px] font-bold opacity-0 group-hover/thumb:opacity-100 transition-opacity cursor-pointer shadow-xs"
+                            title="Remove image"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
