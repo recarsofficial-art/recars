@@ -99,7 +99,7 @@ function CarDetailInner({ params }: PageProps) {
       carPrice: car.price,
       userName: tdName,
       userPhone: tdPhone,
-      userEmail: 'javed@recars.in',
+      userEmail: user?.email || 'Recars.in@gmail.com',
       city: car.city,
       preferredDate: tdDate,
       preferredTimeSlot: 'Morning Slot (10 AM - 1 PM)',
@@ -121,7 +121,7 @@ function CarDetailInner({ params }: PageProps) {
       carPrice: car.price,
       userName: cbName || 'Interested Buyer',
       userPhone: cbPhone,
-      userEmail: 'customer@recars.in',
+      userEmail: user?.email || 'Recars.in@gmail.com',
       city: car.city,
       inquiryType: 'Price Quote / Best Offer',
       message: 'Customer requested instant callback regarding vehicle availability and test drive booking.',
@@ -647,11 +647,30 @@ function CarDetailInner({ params }: PageProps) {
 
                 <button
                   onClick={() => setIsCallbackModalOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold text-sm text-[#101216] bg-white border border-[#E5E7EB] hover:bg-[#FFF0F3] hover:border-[#E5325C] transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-2xl font-bold text-sm text-[#101216] bg-white border border-[#E5E7EB] hover:bg-[#FFF0F3] hover:border-[#E5325C] transition-all"
                 >
                   <Phone className="w-4 h-4 text-[#E5325C]" />
                   <span>Request Callback</span>
                 </button>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <a
+                    href="tel:+919908796677"
+                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-bold text-xs text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-[#E5325C] transition-all"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
+                    <span>Call 9908796677</span>
+                  </a>
+
+                  <a
+                    href={`https://wa.me/919908796677?text=Hello%20Recars%2C%20I%20am%20inquiring%20about%20the%20${encodeURIComponent(car.year + ' ' + car.make + ' ' + car.model)}%20(${encodeURIComponent(car.id)})%20listed%20at%20${encodeURIComponent(formatINR(car.price))}.`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-bold text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all"
+                  >
+                    <span>Chat on WhatsApp</span>
+                  </a>
+                </div>
               </div>
 
               {/* Recars Assured Pillars */}

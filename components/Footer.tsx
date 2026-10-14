@@ -60,14 +60,27 @@ export default function Footer() {
               Recars is India&apos;s most trusted verified pre-owned car marketplace. We combine rigorous 200+ point inspection engineering, fixed transparent pricing, and doorstep convenience so every Indian can buy and sell with utmost confidence.
             </p>
             
-            <div className="pt-2 space-y-2 text-xs text-gray-600">
+            <div className="pt-2 space-y-2.5 text-xs text-gray-600">
               <div className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
-                <span>Customer Care: +91 1800 209 8899 (9 AM – 9 PM)</span>
+                <a href="tel:+919908796677" className="hover:text-[#E5325C] transition-colors font-medium">
+                  Customer Care: +91 99087 96677 (9 AM – 9 PM)
+                </a>
+                <span className="text-gray-300">|</span>
+                <a
+                  href="https://wa.me/919908796677?text=Hello%20Recars%20Team%2C%20I%20have%20an%20inquiry%20regarding%20pre-owned%20cars."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-600 hover:text-emerald-700 font-bold transition-colors"
+                >
+                  WhatsApp
+                </a>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-[#E5325C]" />
-                <span>Support: support@recars.in</span>
+                <a href="mailto:Recars.in@gmail.com" className="hover:text-[#E5325C] transition-colors font-medium">
+                  Support: Recars.in@gmail.com
+                </a>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-3.5 h-3.5 text-[#E5325C]" />

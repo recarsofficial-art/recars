@@ -17,6 +17,7 @@ import {
   Calculator,
   HelpCircle,
   LogOut,
+  Phone,
 } from 'lucide-react';
 import Logo from './Logo';
 import CitySelectorModal from './CitySelectorModal';
@@ -135,13 +136,13 @@ export default function Navbar({
 
             {/* Right Action Icons & Sell Button */}
             <div className="hidden md:flex items-center space-x-3 lg:space-x-4">
-              {/* Call Us Link matching Spinny header */}
+              {/* Call Us Link */}
               <a
-                href="tel:7277277275"
+                href="tel:+919908796677"
                 className="hidden xl:flex items-center gap-1 text-xs font-semibold text-[#101216] hover:text-[#E5325C] transition-colors pr-1"
               >
                 <span className="text-[#6B7078] text-[11px]">Call us at</span>
-                <span className="font-extrabold text-[#101216] tracking-tight">727-727-7275</span>
+                <span className="font-extrabold text-[#101216] tracking-tight">+91 99087 96677</span>
               </a>
 
               {/* City selector pill */}
@@ -324,6 +325,22 @@ export default function Navbar({
             >
               Admin Dashboard
             </Link>
+
+            <div className="pt-3 mt-2 border-t border-gray-100 flex flex-col gap-2 px-3 py-2 text-xs">
+              <a
+                href="tel:+919908796677"
+                className="flex items-center gap-2 font-bold text-[#101216] hover:text-[#E5325C]"
+              >
+                <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
+                <span>Call Us: +91 99087 96677</span>
+              </a>
+              <a
+                href="mailto:Recars.in@gmail.com"
+                className="flex items-center gap-2 text-gray-500 hover:text-[#E5325C]"
+              >
+                <span>Email: Recars.in@gmail.com</span>
+              </a>
+            </div>
           </div>
         )}
       </header>

@@ -580,7 +580,7 @@ export default function AdminDashboardPage() {
                 <input
                   type="email"
                   required
-                  placeholder="admin@recars.in"
+                  placeholder="Recars.in@gmail.com"
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:border-[#E5325C] focus:ring-2 focus:ring-[#FFF0F3] outline-hidden text-xs text-gray-900 transition-all font-medium"
@@ -1046,7 +1046,7 @@ export default function AdminDashboardPage() {
             <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
               <div className="hidden lg:flex flex-col text-right">
                 <span className="text-xs font-bold text-[#101216] leading-tight truncate max-w-[160px]">
-                  {adminUser?.email || 'admin@recars.in'}
+                  {adminUser?.email || 'Recars.in@gmail.com'}
                 </span>
                 <span className="text-[10px] text-emerald-600 font-bold flex items-center justify-end gap-1">
                   <ShieldCheck className="w-2.5 h-2.5" /> Admin

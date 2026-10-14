@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@recars.in';
+const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'Recars.in@gmail.com';
 const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'AdminRecars@2026';
 
 function getAllowedAdminEmails(): string[] {
@@ -12,6 +12,7 @@ function getAllowedAdminEmails(): string[] {
     .filter(Boolean);
 
   parsed.push(DEFAULT_ADMIN_EMAIL.toLowerCase());
+  parsed.push('recars.in@gmail.com');
   return Array.from(new Set(parsed));
 }
 

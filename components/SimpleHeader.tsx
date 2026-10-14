@@ -75,9 +75,9 @@ export default function SimpleHeader() {
             )}
           </div>
 
-          {/* Call us link matching screenshot */}
+          {/* Call us link */}
           <a
-            href="tel:7277277275"
+            href="tel:+919908796677"
             className="hidden md:flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm font-semibold text-[#101216] hover:text-[#E5325C] transition-colors group px-2 py-1 sm:p-0 rounded-full bg-gray-50 sm:bg-transparent border border-gray-200/80 sm:border-0"
           >
             <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#E5325C]" />
@@ -85,7 +85,7 @@ export default function SimpleHeader() {
               Call us at
             </span>
             <span className="font-extrabold text-[#101216] group-hover:text-[#E5325C] tracking-tight text-xs sm:text-sm whitespace-nowrap">
-              727-727-7275
+              +91 99087 96677
             </span>
           </a>
 
