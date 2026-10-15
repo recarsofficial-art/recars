@@ -62,12 +62,39 @@ export default function CitySelectorModal({
               autoFocus
             />
           </div>
+
+          {/* Quick Featured Hubs Strip */}
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Telangana Hubs:</span>
+            <button
+              type="button"
+              onClick={() => {
+                onSelectCity('Warangal');
+                onClose();
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-extrabold cursor-pointer transition-all shadow-2xs animate-pulse"
+            >
+              <span>⭐ Warangal</span>
+              <span className="text-[9px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-black">Featured</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onSelectCity('Hyderabad');
+                onClose();
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold cursor-pointer transition-all"
+            >
+              <span>Hyderabad</span>
+            </button>
+          </div>
         </div>
 
         {/* City list */}
         <div className="p-3 max-h-80 overflow-y-auto grid grid-cols-2 gap-2">
           {filteredCities.map((city) => {
             const isCurrent = city === selectedCity;
+            const isWarangal = city === 'Warangal';
             return (
               <button
                 key={city}
@@ -78,11 +105,20 @@ export default function CitySelectorModal({
                 className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-medium transition-all text-left ${
                   isCurrent
                     ? 'bg-[#FFF0F3] text-[#E5325C] border border-[#E5325C]/40 font-semibold shadow-xs'
+                    : isWarangal
+                    ? 'bg-amber-50/70 border border-amber-200 text-[#101216] font-bold hover:bg-amber-100/80 shadow-2xs'
                     : 'text-[#24262A] hover:bg-[#F8F9FA] hover:text-[#101216]'
                 }`}
               >
-                <span>{city}</span>
-                {isCurrent && <Check className="w-4 h-4 text-[#E5325C]" />}
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={isWarangal ? 'font-extrabold text-[#101216]' : ''}>{city}</span>
+                  {isWarangal && (
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-200 text-amber-950">
+                      Featured
+                    </span>
+                  )}
+                </div>
+                {isCurrent && <Check className="w-4 h-4 text-[#E5325C] flex-shrink-0" />}
               </button>
             );
           })}

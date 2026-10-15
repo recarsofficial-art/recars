@@ -2,6 +2,7 @@ import { Car, CarBodyType } from './types';
 
 export const CITIES = [
   'Hyderabad',
+  'Warangal',
   'Bengaluru',
   'Mumbai',
   'Delhi NCR',
@@ -222,8 +223,8 @@ export const INITIAL_CARS: Car[] = [
     transmission: 'Automatic',
     bodyType: 'SUV',
     ownership: '1st Owner',
-    city: 'Hyderabad',
-    locationArea: 'Kukatpally Recars Hub',
+    city: 'Warangal',
+    locationArea: 'Hanamkonda Recars Hub',
     image: '/car-seltos-hd.jpg',
     galleryImages: [
       '/car-seltos-hd.jpg',
@@ -243,7 +244,7 @@ export const INITIAL_CARS: Car[] = [
       bootSpace: '433 Litres',
       fuelTankCapacity: '50 Litres',
       groundClearance: '190 mm',
-      rto: 'TS-08 (Hyderabad)',
+      rto: 'TS-03 (Warangal)',
       regYear: 2022,
       insuranceValidTill: 'Nov 2026',
       color: 'Glacier White Pearl'

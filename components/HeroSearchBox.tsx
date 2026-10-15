@@ -166,7 +166,7 @@ export default function HeroSearchBox({ currentCity, onOpenCityModal }: HeroSear
               >
                 {CITIES.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {c === 'Warangal' ? '⭐ Warangal (Telangana Hub)' : c}
                   </option>
                 ))}
               </select>

@@ -529,7 +529,39 @@ function SellWorkflowContent() {
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-[#101216] mb-1">City Hub</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-[#101216]">City Hub</label>
+                    <span className="text-[10px] font-bold text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200">
+                      ⭐ Warangal Featured
+                    </span>
+                  </div>
+
+                  {/* Quick selection chips for top Telangana hubs */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setSellerCity('Warangal')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        sellerCity === 'Warangal'
+                          ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-300'
+                          : 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
+                      }`}
+                    >
+                      <span>⭐ Warangal Hub</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSellerCity('Hyderabad')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        sellerCity === 'Hyderabad'
+                          ? 'bg-[#E5325C] text-white shadow-xs'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Hyderabad
+                    </button>
+                  </div>
+
                   <select
                     value={sellerCity}
                     onChange={(e) => setSellerCity(e.target.value)}
@@ -537,10 +569,17 @@ function SellWorkflowContent() {
                   >
                     {CITIES.map((c) => (
                       <option key={c} value={c}>
-                        {c}
+                        {c === 'Warangal' ? '⭐ Warangal (Telangana Featured Hub)' : c}
                       </option>
                     ))}
                   </select>
+
+                  {sellerCity === 'Warangal' && (
+                    <p className="text-[11px] text-amber-950 bg-amber-50/90 p-2 rounded-lg border border-amber-200 mt-1.5 font-medium flex items-center gap-1.5">
+                      <span>📍</span>
+                      <span><strong>Warangal Doorstep Service:</strong> Certified engineer inspection available across Warangal, Hanamkonda & Kazipet.</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>

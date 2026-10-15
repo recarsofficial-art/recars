@@ -673,9 +673,10 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-semibold text-gray-600">Featured Cities:</span>
               <span className="px-2.5 py-1 rounded-md bg-white border border-gray-200 text-xs font-bold text-gray-800">Hyderabad</span>
+              <span className="px-2.5 py-1 rounded-md bg-amber-50 border border-amber-300 text-xs font-extrabold text-amber-900 shadow-2xs">⭐ Warangal (Featured)</span>
               <span className="px-2.5 py-1 rounded-md bg-white border border-gray-200 text-xs font-bold text-gray-800">Bengaluru</span>
               <span className="px-2.5 py-1 rounded-md bg-white border border-gray-200 text-xs font-bold text-gray-800">Mumbai</span>
             </div>
@@ -697,6 +698,29 @@ export default function HomePage() {
               </p>
               <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs font-semibold text-[#E5325C]">
                 <span>View Hyderabad inventory</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </div>
+            </Link>
+
+            <Link
+              href="/buy?city=Warangal"
+              className="bg-gradient-to-b from-amber-50/50 to-white rounded-2xl p-6 border-2 border-amber-300 hover:border-amber-500 hover:shadow-lg transition-all group relative overflow-hidden"
+            >
+              <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 text-[10px] font-black uppercase tracking-wider">
+                Featured
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold mb-4">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-base text-[#101216] group-hover:text-amber-700 transition-colors flex items-center gap-1.5">
+                <span>Warangal Hub</span>
+                <span>⭐</span>
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Hanamkonda & Kazipet • Verified inventory & doorstep service
+              </p>
+              <div className="mt-4 pt-3 border-t border-amber-100 flex items-center justify-between text-xs font-semibold text-amber-700">
+                <span>View Warangal inventory</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </Link>

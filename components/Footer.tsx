@@ -130,6 +130,7 @@ export default function Footer() {
             <ul className="space-y-2.5 text-xs text-gray-600">
               <li><Link href="/why-recars" className="hover:text-[#E5325C] transition-colors">Why Choose Recars</Link></li>
               <li><Link href="/buy?city=Hyderabad" className="hover:text-[#E5325C] transition-colors">Cars in Hyderabad</Link></li>
+              <li><Link href="/buy?city=Warangal" className="hover:text-[#E5325C] font-semibold text-amber-700 transition-colors">Cars in Warangal ⭐</Link></li>
               <li><Link href="/buy?city=Bengaluru" className="hover:text-[#E5325C] transition-colors">Cars in Bengaluru</Link></li>
               <li><Link href="/buy?city=Mumbai" className="hover:text-[#E5325C] transition-colors">Cars in Mumbai</Link></li>
               <li><Link href="/account" className="hover:text-[#E5325C] transition-colors">Customer Portal</Link></li>
