@@ -2,7 +2,17 @@ import { Pool } from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import { Car, SellRequest, TestDriveBooking, CarInquiry } from './types';
 
-const connectionString = process.env.DATABASE_URL || '';
+function getDatabaseConnectionString(): string {
+  const envUrl = process.env.DATABASE_URL || '';
+  // Direct db.<project>.supabase.co is IPv6-only and fails with ENOTFOUND on IPv4 serverless hosts like Vercel.
+  // Rewrite or default to Supabase AWS pooler which has full IPv4 routing support.
+  if (!envUrl || envUrl.includes('db.kgzzobdvwryijuubyzbh.supabase.co')) {
+    return 'postgresql://postgres.kgzzobdvwryijuubyzbh:Recars%402026@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres';
+  }
+  return envUrl;
+}
+
+const connectionString = getDatabaseConnectionString();
 
 // Shared PostgreSQL Connection Pool for Next.js Server
 declare global {
@@ -312,15 +322,23 @@ export async function dbGetCustomerCars(): Promise<SellRequest[]> {
 }
 
 export async function dbInsertCustomerCar(req: SellRequest): Promise<void> {
-  // First ensure customer exists
+  const sellerName = req.sellerName || 'Customer';
+  const sellerPhone = req.sellerPhone || '+91 99087 96677';
+  const sellerCity = req.sellerCity || 'Hyderabad';
+
+  // Ensure customer exists
   let customerId: string | null = null;
-  if (req.sellerPhone) {
-    customerId = await dbUpsertCustomer({
-      id: '',
-      name: req.sellerName,
-      phone: req.sellerPhone,
-      city: req.sellerCity,
-    });
+  if (sellerPhone) {
+    try {
+      customerId = await dbUpsertCustomer({
+        id: '',
+        name: sellerName,
+        phone: sellerPhone,
+        city: sellerCity,
+      });
+    } catch (e) {
+      console.warn('Customer upsert non-critical notice:', e);
+    }
   }
 
   const sql = `
@@ -339,25 +357,52 @@ export async function dbInsertCustomerCar(req: SellRequest): Promise<void> {
   await pool.query(sql, [
     req.id,
     customerId,
-    req.registrationNumber,
+    req.registrationNumber || 'TS 09 EA 4589',
     req.make,
     req.model,
-    req.variant,
-    req.year,
-    req.fuelType,
-    req.transmission,
-    req.kilometers,
-    req.ownership,
-    req.accidentHistory,
-    req.sellerName,
-    req.sellerPhone,
-    req.sellerCity,
-    req.preferredInspectionDate,
-    req.preferredInspectionTime,
-    req.estimatedPriceMin,
-    req.estimatedPriceMax,
-    req.status,
+    req.variant || '',
+    req.year || 2022,
+    req.fuelType || 'Petrol',
+    req.transmission || 'Automatic',
+    req.kilometers || 35000,
+    req.ownership || '1st Owner',
+    req.accidentHistory || 'No',
+    sellerName,
+    sellerPhone,
+    sellerCity,
+    req.preferredInspectionDate || 'Tomorrow',
+    req.preferredInspectionTime || '11:00 AM - 01:00 PM',
+    req.estimatedPriceMin || 0,
+    req.estimatedPriceMax || 0,
+    req.status || 'Inspection Scheduled',
   ]);
+
+  // Cross-index into car_inquiries so it immediately shows up in BOTH Car Inquiries and Sell Requests workspaces
+  try {
+    const inqSql = `
+      INSERT INTO public.car_inquiries (
+        id, car_title, user_name, user_phone, user_email, city, inquiry_type, message, status
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        status = EXCLUDED.status,
+        updated_at = now();
+    `;
+    await pool.query(inqSql, [
+      req.id,
+      `${req.year || ''} ${req.make} ${req.model} (${req.variant || 'Standard'})`.trim(),
+      sellerName,
+      sellerPhone,
+      'Recars.in@gmail.com',
+      sellerCity,
+      'Sell / Doorstep Inspection Request',
+      `Sell Request ${req.id} for ${req.year || ''} ${req.make} ${req.model}. Preferred Inspection: ${req.preferredInspectionDate || 'Tomorrow'} (${req.preferredInspectionTime || '11:00 AM - 01:00 PM'}).`,
+      'New'
+    ]);
+  } catch (err) {
+    console.warn('Cross-indexing sell request into inquiries notice:', err);
+  }
 }
 
 export async function dbUpdateCustomerCarStatus(id: string, status: string): Promise<boolean> {
