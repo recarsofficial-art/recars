@@ -725,7 +725,7 @@ export default function AdminDashboardPage() {
         <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-200 p-8 space-y-6 relative z-10 animate-in fade-in zoom-in-95 duration-200">
           <div className="text-center space-y-3">
             <div className="flex justify-center">
-              <Logo showTagline={false} size="md" />
+              <Logo size="lg" variant="horizontal" />
             </div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF0F3] border border-[#FFD6DF] text-[#E5325C] text-[10px] font-extrabold uppercase tracking-wider">
               <ShieldCheck className="w-3.5 h-3.5" />

@@ -3,9 +3,10 @@ import './globals.css';
 import ClientProviders from '@/components/ClientProviders';
 
 export const metadata: Metadata = {
-  title: 'Recars — Trust Every Drive. Value Every Rupee.',
+  metadataBase: new URL('https://www.recars.in'),
+  title: 'Recars | Trust Every Drive. Value Every Rupee.',
   description:
-    'Discover verified used cars in India with 200+ point inspection, transparent market pricing, verified ownership, and reliable RC transfer assistance. Buy or sell pre-owned cars with total confidence.',
+    'Discover, buy and sell used cars with Recars. Trust Every Drive. Value Every Rupee.',
   keywords: [
     'Used Cars',
     'Pre-owned Cars',
@@ -13,17 +14,48 @@ export const metadata: Metadata = {
     'Sell Car Online',
     'Recars',
     'Used Cars Hyderabad',
+    'Used Cars Warangal',
     'Used Cars Bangalore',
     'Certified Second Hand Cars',
   ],
+  alternates: {
+    canonical: '/',
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  manifest: '/site.webmanifest',
   openGraph: {
-    title: 'Recars — Trust Every Drive. Value Every Rupee.',
+    title: 'Recars | Trust Every Drive. Value Every Rupee.',
     description:
-      'Verified used cars, transparent pricing and a hassle-free experience. Buy, sell or upgrade with confidence.',
-    url: 'https://recars.in',
+      'Discover, buy and sell used cars with Recars. Trust Every Drive. Value Every Rupee.',
+    url: 'https://www.recars.in',
     siteName: 'Recars',
     locale: 'en_IN',
     type: 'website',
+    images: [
+      {
+        url: '/images/recars-og.png',
+        width: 1200,
+        height: 630,
+        alt: 'Recars — Trust Every Drive. Value Every Rupee.',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Recars | Trust Every Drive. Value Every Rupee.',
+    description:
+      'Discover, buy and sell used cars with Recars. Trust Every Drive. Value Every Rupee.',
+    images: ['/images/recars-og.png'],
   },
 };
 

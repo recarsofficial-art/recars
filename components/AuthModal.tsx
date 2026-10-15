@@ -5,6 +5,8 @@ import { X, Shield, Phone, Mail, User, MapPin, CheckCircle2, ArrowRight, Sparkle
 import { useAuth } from '@/lib/authContext';
 import { CITIES } from '@/lib/data';
 
+import Logo from './Logo';
+
 export function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24">
@@ -126,7 +128,8 @@ export default function AuthModal() {
             <X className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center justify-between mb-3 pr-8">
+            <Logo size="sm" variant="horizontal" />
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white text-[#E5325C] text-[10px] font-extrabold uppercase tracking-wider border border-[#FFD6DF] shadow-2xs">
               <Shield className="w-3 h-3" />
               <span>Verified Account</span>

@@ -4,10 +4,13 @@
   :root {
     --recars-black: #101216;
     --recars-charcoal: #24262A;
-    --recars-gold: #E5325C;
-    --recars-gold-hover: #D4264E;
-    --recars-gold-light: #E5325C;
-    --recars-gold-bg: #FFF0F3;
+    --recars-gold: #C59B27;
+    --recars-gold-metallic: #DFBA5A;
+    --recars-gold-hover: #B3891E;
+    --recars-gold-bg: #FCF9EE;
+    --recars-gold-border: #EADBAC;
+    --recars-accent: #E5325C;
+    --recars-accent-hover: #D4264E;
     --recars-bg: #F8F9FA;
     --recars-card: #FFFFFF;
     --recars-muted: #6B7078;

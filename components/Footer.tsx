@@ -55,8 +55,7 @@ export default function Footer() {
           {/* Brand info */}
           <div className="md:col-span-2 space-y-4">
             <div>
-              <Logo size="md" />
-              <p className="text-xs font-semibold text-[#E5325C] mt-1 tracking-tight">Trust Every Drive. Value Every Rupee.</p>
+              <Logo size="lg" variant="horizontal" />
             </div>
 
             <p className="text-xs text-gray-600 leading-relaxed max-w-sm">
