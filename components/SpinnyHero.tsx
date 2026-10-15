@@ -188,7 +188,7 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
                   <span>Enter your car details</span>
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#237A52] text-white text-[10px] sm:text-[11px] font-extrabold shadow-2xs whitespace-nowrap">
                     <ShieldCheck className="w-3 h-3 text-white" />
-                    <span>Free Doorstep Inspection</span>
+                    <span>Doorstep Inspection</span>
                   </span>
                 </label>
                 <button
@@ -468,20 +468,20 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
                   <span className="text-[10px] sm:text-xs font-bold leading-tight">Instant Payment</span>
                 </div>
 
-                {/* 2. Free Car Evaluation */}
+                {/* 2. Expert Car Evaluation */}
                 <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left group">
                   <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#FFF0F3] border border-[#FFD6DF] flex items-center justify-center text-[#E5325C] shrink-0">
                     <CarFront className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   </div>
-                  <span className="text-[10px] sm:text-xs font-bold leading-tight">Free Evaluation</span>
+                  <span className="text-[10px] sm:text-xs font-bold leading-tight">Expert Evaluation</span>
                 </div>
 
-                {/* 3. Free & Fast RC Transfer */}
+                {/* 3. Fast RC Transfer Assistance */}
                 <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left group">
                   <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#FFF0F3] border border-[#FFD6DF] flex items-center justify-center text-[#E5325C] shrink-0">
                     <FileCheck2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   </div>
-                  <span className="text-[10px] sm:text-xs font-bold leading-tight">Free RC Transfer</span>
+                  <span className="text-[10px] sm:text-xs font-bold leading-tight">RC Transfer Support</span>
                 </div>
 
               </div>

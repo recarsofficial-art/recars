@@ -136,7 +136,7 @@ export default function SellProcessSection() {
               Let's talk about your car
             </h3>
             <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed max-w-[240px] mb-3">
-              Tell us about your vehicle and schedule a free doorstep inspection
+              Tell us about your vehicle and schedule a certified doorstep inspection
             </p>
             <Link
               href="/sell"

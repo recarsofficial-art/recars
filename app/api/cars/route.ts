@@ -60,6 +60,25 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, availabilityStatus } = body;
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Car ID is required' }, { status: 400 });
+    }
+    if (availabilityStatus) {
+      const { dbUpdateCarAvailability } = await import('@/lib/db');
+      const updated = await dbUpdateCarAvailability(id, availabilityStatus);
+      return NextResponse.json({ success: updated, message: `Availability status set to ${availabilityStatus}` });
+    }
+    await dbInsertCar(body);
+    return NextResponse.json({ success: true, message: 'Vehicle details updated successfully' });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

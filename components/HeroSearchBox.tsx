@@ -225,7 +225,7 @@ export default function HeroSearchBox({ currentCity, onOpenCityModal }: HeroSear
             type="submit"
             className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold text-sm text-white bg-[#E5325C] hover:bg-[#D4264E] transition-all shadow-md active:scale-98"
           >
-            <span>Book Free Doorstep Inspection</span>
+            <span>Book Doorstep Inspection</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>

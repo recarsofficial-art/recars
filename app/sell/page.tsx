@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -79,6 +79,48 @@ function SellWorkflowContent() {
 
   // Step 4: Submitted Result
   const [generatedRequestId, setGeneratedRequestId] = useState<string>('');
+  const [feeAcknowledged, setFeeAcknowledged] = useState(true);
+  const [inspectionFee, setInspectionFee] = useState(499);
+  const [isFreeInspection, setIsFreeInspection] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.inspectionConfig) {
+          const cfg = data.inspectionConfig;
+          if (cfg.freeInspectionActive) {
+            setInspectionFee(0);
+            setIsFreeInspection(true);
+          } else {
+            setInspectionFee(cfg.sellerInspectionFee ?? 499);
+            setIsFreeInspection(false);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const calculateSuggestedPrice = () => {
+    let base = 850000;
+    if (make === 'Toyota') base = 1600000;
+    else if (make === 'Hyundai' || make === 'Kia') base = 950000;
+    else if (make === 'Honda') base = 900000;
+    else if (make === 'BMW' || make === 'Mercedes-Benz') base = 2600000;
+    else if (make === 'Mahindra') base = 1200000;
+    else if (make === 'Tata') base = 850000;
+    else if (make === 'Maruti Suzuki') base = 600000;
+
+    const age = Math.max(0, 2026 - year);
+    const ageDeprec = Math.min(0.65, age * 0.08);
+    const kmDeprec = Math.min(0.25, (kilometers / 100000) * 0.12);
+    const fair = Math.round(base * (1 - ageDeprec - kmDeprec));
+    return {
+      min: Math.max(150000, Math.round((fair * 0.92) / 10000) * 10000),
+      max: Math.max(200000, Math.round((fair * 1.06) / 10000) * 10000),
+      mid: fair,
+    };
+  };
 
   const handleSendOtp = () => {
     setOtpSent(true);
@@ -89,6 +131,20 @@ function SellWorkflowContent() {
   };
 
   const handleFinalSubmit = () => {
+    if (!sellerName.trim()) {
+      alert('Please enter your full name before scheduling inspection.');
+      return;
+    }
+    if (!sellerPhone.trim() || sellerPhone.replace(/\D/g, '').length < 10) {
+      alert('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    if (!feeAcknowledged) {
+      alert('Please acknowledge the inspection service fee to continue.');
+      return;
+    }
+
+    const priceRange = calculateSuggestedPrice();
     const reqId = getNextRequestId();
     const newRequest: SellRequest = {
       id: reqId,
@@ -102,13 +158,16 @@ function SellWorkflowContent() {
       kilometers,
       ownership,
       accidentHistory,
-      sellerName,
-      sellerPhone,
+      sellerName: sellerName.trim(),
+      sellerPhone: sellerPhone.trim(),
       sellerCity,
       preferredInspectionDate,
       preferredInspectionTime,
-      estimatedPriceMin: 0,
-      estimatedPriceMax: 0,
+      estimatedPriceMin: priceRange.min,
+      estimatedPriceMax: priceRange.max,
+      suggestedListingPrice: priceRange.mid,
+      inspectionFee: inspectionFee,
+      inspectionFeeStatus: 'Pay at Doorstep',
       status: 'Inspection Scheduled',
       createdAt: new Date().toISOString(),
     };
@@ -357,22 +416,20 @@ function SellWorkflowContent() {
                 </div>
               </div>
 
-              {/* Photo Upload Simulation */}
-              <div className="p-4 rounded-2xl bg-[#F8F9FA] border-2 border-dashed border-[#E5E7EB] text-center space-y-2">
-                <Upload className="w-6 h-6 text-[#E5325C] mx-auto" />
-                <span className="text-xs font-bold text-[#101216] block">
-                  Upload Car Images (Optional)
-                </span>
-                <p className="text-[11px] text-[#6B7078]">
-                  Front view, Odometer, Interior dashboard.
-                </p>
-                <div className="flex justify-center gap-2 pt-2">
-                  {uploadedPhotos.map((p) => (
-                    <span key={p} className="px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-[10px] font-semibold text-[#237A52]">
-                      ✓ {p}
-                    </span>
-                  ))}
+              {/* Suggested Listing Price Guidance */}
+              <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                    <span>Recars Suggested Market Price Guidance</span>
+                  </span>
+                  <span className="text-xs font-black text-[#E5325C]">
+                    ₹{(calculateSuggestedPrice().min / 100000).toFixed(2)}L – ₹{(calculateSuggestedPrice().max / 100000).toFixed(2)}L
+                  </span>
                 </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Estimated market value based on {year} {make} {model} ({ownership}, {kilometers.toLocaleString('en-IN')} km). This is contextual guidance; your final binding purchase price is determined during physical 200+ point inspection.
+                </p>
               </div>
 
               <div className="pt-4 flex justify-between items-center">
@@ -526,15 +583,36 @@ function SellWorkflowContent() {
                 </div>
               </div>
 
-              {/* Genuine Inspection Guarantee Banner */}
-              <div className="p-4 rounded-2xl bg-[#F0F9F4] border border-[#D1EAD9] flex items-start gap-3">
-                <ShieldCheck className="w-5 h-5 text-[#237A52] flex-shrink-0 mt-0.5" />
-                <div className="text-xs">
-                  <span className="font-bold text-[#237A52] block">No Random Algorithmic Valuations</span>
-                  <p className="text-gray-600 mt-0.5">
-                    We never give misleading random computer valuations online. Our certified automotive engineer will inspect your vehicle physically at your doorstep and make the highest transparent purchase offer on the spot.
-                  </p>
+              {/* Transparent Inspection Charges & Responsibility */}
+              <div className="p-4.5 rounded-2xl bg-blue-50/80 border border-blue-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-blue-600" />
+                    <span>Doorstep Inspection Fee & Transparent Policy</span>
+                  </span>
+                  <span className="text-xs font-black text-[#101216] px-2.5 py-1 rounded-full bg-white border border-blue-200 shadow-2xs">
+                    {isFreeInspection ? '₹0 (Promotional Free Offer)' : `₹${inspectionFee} (Payable at Doorstep)`}
+                  </span>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-blue-900">
+                  <div>• <strong>Coverage:</strong> 200+ mechanical, paint meter, OBD diagnostics & road test.</div>
+                  <div>• <strong>Responsibility:</strong> {isFreeInspection ? 'Waived under active promotional campaign.' : 'Payable by vehicle seller upon engineer arrival.'}</div>
+                  <div>• <strong>Payment Due:</strong> {isFreeInspection ? '₹0 (Free)' : 'At doorstep before technical physical evaluation.'}</div>
+                  <div>• <strong>Deliverable:</strong> Certified digital inspection report & guaranteed highest offer.</div>
+                </div>
+                <label className="flex items-start gap-2.5 pt-2 border-t border-blue-200 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={feeAcknowledged}
+                    onChange={(e) => setFeeAcknowledged(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-[#E5325C] rounded border-gray-300 focus:ring-[#E5325C]"
+                  />
+                  <span className="text-xs font-bold text-gray-900 leading-tight">
+                    {isFreeInspection
+                      ? 'I acknowledge and agree to schedule this promotional free doorstep inspection.'
+                      : `I acknowledge and agree to the ₹${inspectionFee} doorstep inspection service fee payable upon the engineer's arrival.`}
+                  </span>
+                </label>
               </div>
 
               <div className="pt-4 flex justify-between items-center">
@@ -547,9 +625,10 @@ function SellWorkflowContent() {
                 </button>
                 <button
                   onClick={handleFinalSubmit}
-                  className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#E5325C] text-white text-xs font-bold hover:bg-[#D4264E] transition-all shadow-md active:scale-98 cursor-pointer"
+                  disabled={!feeAcknowledged}
+                  className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#E5325C] text-white text-xs font-bold hover:bg-[#D4264E] disabled:bg-gray-400 transition-all shadow-md active:scale-98 cursor-pointer"
                 >
-                  <span>Book Free Doorstep Inspection</span>
+                  <span>{isFreeInspection ? 'Schedule Free Inspection (Promotional)' : `Schedule Doorstep Inspection (₹${inspectionFee})`}</span>
                   <Check className="w-4 h-4 stroke-[3]" />
                 </button>
               </div>
@@ -582,11 +661,15 @@ function SellWorkflowContent() {
                 </div>
                 <div className="flex justify-between items-center pt-1 border-t border-gray-200">
                   <span className="text-[#6B7078]">Inspection Type:</span>
-                  <span className="font-bold text-[#237A52]">Free Doorstep Physical Inspection</span>
+                  <span className="font-bold text-[#101216]">Doorstep Physical Inspection (₹{inspectionFee} Fee)</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[#6B7078]">Price Quote:</span>
-                  <span className="font-bold text-[#E5325C]">Best Quote Given on Inspection</span>
+                  <span className="text-[#6B7078]">Inspection Fee Status:</span>
+                  <span className="font-bold text-amber-600">Payable at Doorstep</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#6B7078]">Suggested Market Value:</span>
+                  <span className="font-bold text-[#E5325C]">₹{(calculateSuggestedPrice().min / 100000).toFixed(2)}L – ₹{(calculateSuggestedPrice().max / 100000).toFixed(2)}L</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[#6B7078]">Preferred Slot:</span>
@@ -594,13 +677,13 @@ function SellWorkflowContent() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[#6B7078]">Inspection Location:</span>
-                  <span className="font-bold text-[#101216]">{sellerAddress}, {sellerCity}</span>
+                  <span className="font-bold text-[#101216]">{sellerAddress || 'Customer Address'}, {sellerCity}</span>
                 </div>
               </div>
 
               <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 max-w-md mx-auto text-left text-xs text-gray-600 leading-relaxed">
                 <p className="font-semibold text-gray-800 mb-1">What happens next?</p>
-                Our certified Recars inspection engineer will contact you on <span className="font-bold text-gray-900">{sellerPhone}</span> before arriving. After a thorough 200+ point physical inspection, you will receive our highest guaranteed price with instant payment and free RC transfer.
+                Our certified Recars inspection engineer will contact you on <span className="font-bold text-gray-900">{sellerPhone}</span> before arriving. After a thorough 200+ point physical inspection, you will receive our highest guaranteed price with instant payment and doorstep RC transfer assistance.
               </div>
 
               <div className="space-y-3 pt-2">

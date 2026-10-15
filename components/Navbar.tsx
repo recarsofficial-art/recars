@@ -120,7 +120,7 @@ export default function Navbar({
                       className="flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
                     >
                       <Shield className="w-4 h-4 text-[#E5325C]" />
-                      <span>Free Doorstep Inspection</span>
+                      <span>Doorstep Inspection (₹499)</span>
                     </Link>
                     <Link
                       href="/why-recars#process"
@@ -309,7 +309,7 @@ export default function Navbar({
               onClick={() => setIsMobileMenuOpen(false)}
               className="block px-3 py-2 text-sm font-semibold text-[#24262A] hover:text-[#E5325C]"
             >
-              Sell Your Car (Free Inspection)
+              Sell Your Car (Doorstep Inspection)
             </Link>
             <Link
               href="/account"

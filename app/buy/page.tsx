@@ -66,6 +66,8 @@ function BuyContent() {
 
   const [selectedFuels, setSelectedFuels] = useState<string[]>([]);
   const [selectedTransmissions, setSelectedTransmissions] = useState<string[]>([]);
+  const [selectedOwnerships, setSelectedOwnerships] = useState<string[]>([]);
+  const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState<number>(() => {
     const b = searchParams.get('budget');
     if (b && b.includes('-')) {
@@ -97,6 +99,8 @@ function BuyContent() {
     setSelectedBodyTypes([]);
     setSelectedFuels([]);
     setSelectedTransmissions([]);
+    setSelectedOwnerships([]);
+    setSelectedAvailability([]);
     setMaxPrice(5000000);
     setMaxKm(80000);
     setMinYear(2018);
@@ -137,6 +141,16 @@ function BuyContent() {
           return false;
         }
 
+        // Ownership
+        if (selectedOwnerships.length > 0 && !selectedOwnerships.includes(car.ownership)) {
+          return false;
+        }
+
+        // Availability
+        if (selectedAvailability.length > 0 && !selectedAvailability.includes(car.availabilityStatus || 'Available')) {
+          return false;
+        }
+
         // Price
         if (car.price > maxPrice) return false;
 
@@ -166,6 +180,8 @@ function BuyContent() {
     selectedBodyTypes,
     selectedFuels,
     selectedTransmissions,
+    selectedOwnerships,
+    selectedAvailability,
     maxPrice,
     maxKm,
     minYear,
@@ -179,6 +195,8 @@ function BuyContent() {
     selectedBodyTypes.length +
     selectedFuels.length +
     selectedTransmissions.length +
+    selectedOwnerships.length +
+    selectedAvailability.length +
     (onlyVerified ? 1 : 0) +
     (onlyRecarsSelect ? 1 : 0) +
     (maxPrice < 5000000 ? 1 : 0) +
@@ -357,6 +375,50 @@ function BuyContent() {
                   ))}
                 </div>
               </div>
+
+              {/* Ownership Count */}
+              <div className="space-y-2.5">
+                <label className="text-xs font-bold text-[#101216] uppercase tracking-wider block">
+                  Ownership
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {['1st Owner', '2nd Owner', '3rd Owner'].map((own) => (
+                    <button
+                      key={own}
+                      onClick={() => toggleItem(selectedOwnerships, setSelectedOwnerships, own)}
+                      className={`px-2 py-1.5 rounded-lg text-xs font-medium border text-center truncate ${
+                        selectedOwnerships.includes(own)
+                          ? 'bg-[#FFF0F3] border-[#E5325C] text-[#E5325C] font-semibold'
+                          : 'bg-white border-[#E5E7EB] text-[#6B7078]'
+                      }`}
+                    >
+                      {own}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Vehicle Availability */}
+              <div className="space-y-2.5">
+                <label className="text-xs font-bold text-[#101216] uppercase tracking-wider block">
+                  Vehicle Status
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {['Available', 'Reserved', 'Sold Out'].map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => toggleItem(selectedAvailability, setSelectedAvailability, st)}
+                      className={`px-1.5 py-1.5 rounded-lg text-[11px] font-medium border text-center truncate ${
+                        selectedAvailability.includes(st)
+                          ? 'bg-[#101216] text-white border-[#101216] font-semibold'
+                          : 'bg-white border-[#E5E7EB] text-[#6B7078]'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </aside>
 
@@ -467,6 +529,28 @@ function BuyContent() {
                     </button>
                   </span>
                 ))}
+                {selectedOwnerships.map((o) => (
+                  <span
+                    key={o}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-xs font-semibold text-[#101216]"
+                  >
+                    {o}
+                    <button onClick={() => toggleItem(selectedOwnerships, setSelectedOwnerships, o)}>
+                      <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                    </button>
+                  </span>
+                ))}
+                {selectedAvailability.map((a) => (
+                  <span
+                    key={a}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-xs font-semibold text-[#101216]"
+                  >
+                    {a}
+                    <button onClick={() => toggleItem(selectedAvailability, setSelectedAvailability, a)}>
+                      <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                    </button>
+                  </span>
+                ))}
                 {searchQuery && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-xs font-semibold text-[#101216]">
                     &quot;{searchQuery}&quot;
@@ -558,6 +642,48 @@ function BuyContent() {
                       }`}
                     >
                       {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#101216] uppercase block mb-2">
+                  Ownership
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['1st Owner', '2nd Owner', '3rd Owner'].map((own) => (
+                    <button
+                      key={own}
+                      onClick={() => toggleItem(selectedOwnerships, setSelectedOwnerships, own)}
+                      className={`p-2 rounded-lg text-xs font-semibold text-center border truncate ${
+                        selectedOwnerships.includes(own)
+                          ? 'bg-[#FFF0F3] border-[#E5325C] text-[#E5325C]'
+                          : 'bg-[#F8F9FA] border-[#E5E7EB] text-[#6B7078]'
+                      }`}
+                    >
+                      {own}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#101216] uppercase block mb-2">
+                  Availability Status
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Available', 'Reserved', 'Sold Out'].map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => toggleItem(selectedAvailability, setSelectedAvailability, st)}
+                      className={`p-2 rounded-lg text-xs font-semibold text-center border truncate ${
+                        selectedAvailability.includes(st)
+                          ? 'bg-[#101216] text-white border-[#101216]'
+                          : 'bg-[#F8F9FA] border-[#E5E7EB] text-[#6B7078]'
+                      }`}
+                    >
+                      {st}
                     </button>
                   ))}
                 </div>

@@ -54,12 +54,12 @@ const FAQS = [
   {
     question: 'What makes Recars different from other pre-owned car platforms?',
     answer:
-      'Unlike unverified classifieds or typical used car dealers, Recars inspects every vehicle through 200+ engineering checkpoints. We offer 100% fixed, transparent pricing with no awkward haggling, a 7-day moneyback guarantee, a complimentary 1-year pan-India warranty, and complete doorstep RC ownership transfer.'
+      'Unlike unverified classifieds or typical used car dealers, Recars inspects every vehicle through 200+ engineering checkpoints. We offer transparent market-guided pricing with online negotiation options, verified vehicle documentation, and complete doorstep RC ownership transfer assistance.'
   },
   {
-    question: 'How does the Recars 7-Day Money Back Guarantee work?',
+    question: 'How does the Recars Price Negotiation work?',
     answer:
-      'Drive your newly purchased car in your daily commute for up to 7 days or 500 kilometers. If you feel it is not the perfect fit for any reason, simply request a return for a 100% full refund with zero questions asked.'
+      'Found a car you love? Use the "Interested" or "Make an Offer" button on any vehicle page to submit your proposed price. Our pricing desk reviews offers against live market data and either accepts or proposes a fair counteroffer in real time.'
   },
   {
     question: 'Are prices fixed or can I bargain?',
@@ -92,7 +92,7 @@ const REVIEWS = [
     city: 'Bengaluru',
     car: '2021 Honda City ZX CVT',
     rating: 5,
-    comment: 'I used to dread buying used cars because of manipulative middlemen. Recars is completely different: fixed fair pricing, zero pushy sales tactics, and the 7-day moneyback guarantee gave me total peace of mind.',
+    comment: 'I used to dread buying used cars because of manipulative middlemen. Recars is completely different: transparent pricing guidance, direct online negotiation, and thorough inspection details gave me total peace of mind.',
     date: 'Verified Buyer • 1 month ago'
   },
   {
@@ -371,14 +371,14 @@ export default function HomePage() {
                 <RefreshCw className="w-6 h-6 text-[#E5325C]" />
               </div>
               <h3 className="text-lg font-bold text-[#101216] mb-2">
-                7-Day Moneyback Guarantee
+                Fair Price Negotiations
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                Take the car home and test it in your routine for 7 days or 500 km. If you don't absolutely love it, return it for a 100% full refund with zero questions.
+                Review suggested market price guidance and submit your offer directly online. Transparent counteroffers with mutual agreement.
               </p>
               <div className="mt-4 pt-4 border-t border-gray-200/60 flex items-center gap-1.5 text-xs font-semibold text-[#E5325C]">
                 <Award className="w-3.5 h-3.5" />
-                <span>100% refund protection</span>
+                <span>Market-Guided Value</span>
               </div>
             </div>
 
@@ -388,14 +388,14 @@ export default function HomePage() {
                 <Award className="w-6 h-6 text-[#E5325C]" />
               </div>
               <h3 className="text-lg font-bold text-[#101216] mb-2">
-                1-Year Pan-India Warranty
+                Verified Diagnostic Standards
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                Complimentary coverage on engine, transmission, steering system, and electronics, supported by 24/7 pan-India roadside breakdown assistance.
+                Every vehicle undergoes technical checks on engine compression, transmission, structural panels, and electrical systems by qualified engineers.
               </p>
               <div className="mt-4 pt-4 border-t border-gray-200/60 flex items-center gap-1.5 text-xs font-semibold text-[#E5325C]">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>24/7 Roadside Assistance</span>
+                <span>Certified Automotive Report</span>
               </div>
             </div>
 
@@ -405,14 +405,14 @@ export default function HomePage() {
                 <HeartHandshake className="w-6 h-6 text-[#E5325C]" />
               </div>
               <h3 className="text-lg font-bold text-[#101216] mb-2">
-                Free Doorstep RC Transfer
+                RC Transfer Assistance
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                Our in-house legal and RTO operations team completes all legal clearances, police reports, and delivers your updated RC smartcard directly home.
+                Our in-house legal and RTO operations team assists with legal clearances, transfer documentation, and delivers your updated RC smartcard.
               </p>
               <div className="mt-4 pt-4 border-t border-gray-200/60 flex items-center gap-1.5 text-xs font-semibold text-[#E5325C]">
                 <Clock className="w-3.5 h-3.5" />
-                <span>Real-time SMS status updates</span>
+                <span>Doorstep RTO Documentation</span>
               </div>
             </div>
           </div>
@@ -518,10 +518,10 @@ export default function HomePage() {
                   3
                 </div>
                 <h3 className="text-lg font-bold text-[#101216] mb-2">
-                  Drive Home with Complete Peace
+                  Drive Home with Confidence
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  Complete instant paperless payment or quick loan disbursal. Drive away backed by our 7-Day Moneyback Guarantee and 1-Year Comprehensive Warranty.
+                  Complete seamless paperless payment or quick loan disbursal. Drive away with certified vehicle diagnostics and full legal title assistance.
                 </p>
                 <div className="mt-5">
                   <Link href="/finance" className="text-xs font-bold text-[#E5325C] hover:underline inline-flex items-center gap-1">
@@ -544,14 +544,14 @@ export default function HomePage() {
                   1
                 </div>
                 <h3 className="text-lg font-bold text-[#101216] mb-2">
-                  Free Doorstep Inspection
+                  Doorstep Inspection Booking
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  Skip unreliable computer estimations. A certified engineer visits your doorstep for an authentic 200+ point physical evaluation and instant top price.
+                  Tell us about your car and book a physical evaluation at your home or office with transparent inspection service fee (₹499).
                 </p>
                 <div className="mt-5">
                   <Link href="/sell" className="text-xs font-bold text-[#E5325C] hover:underline inline-flex items-center gap-1">
-                    <span>Book free inspection</span>
+                    <span>Book inspection</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
@@ -565,14 +565,14 @@ export default function HomePage() {
                   2
                 </div>
                 <h3 className="text-lg font-bold text-[#101216] mb-2">
-                  Free Doorstep Inspection
+                  200+ Point Evaluation
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  Schedule a convenient inspection slot. A certified automotive engineer evaluates your car at your home or office in just 30 minutes with zero charge.
+                  A certified automotive engineer conducts thorough mechanical, paint, and OBD diagnostics, delivering our highest competitive purchase offer.
                 </p>
                 <div className="mt-5">
                   <Link href="/sell" className="text-xs font-bold text-[#E5325C] hover:underline inline-flex items-center gap-1">
-                    <span>Book inspection</span>
+                    <span>View evaluation criteria</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
@@ -586,10 +586,10 @@ export default function HomePage() {
                   3
                 </div>
                 <h3 className="text-lg font-bold text-[#101216] mb-2">
-                  Instant Payment & Free RC Transfer
+                  Instant Payment & RC Transfer Support
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  Accept our final best price offer and receive 100% payment credited directly to your bank account before handover. We assume full RC ownership liability.
+                  Accept our final best offer and receive 100% payment credited directly to your bank account before vehicle handover. We manage all transfer paperwork.
                 </p>
                 <div className="mt-5">
                   <Link href="/sell" className="text-xs font-bold text-[#E5325C] hover:underline inline-flex items-center gap-1">
@@ -623,13 +623,13 @@ export default function HomePage() {
                 Want to Sell Your Car Today? Get up to ₹35,000 More.
               </h2>
               <p className="text-sm sm:text-base text-blue-100 mt-3 leading-relaxed">
-                Skip dealer commissions and endless stranger test drives. Get a free doorstep physical evaluation, guaranteed highest price, and instant bank transfer on the spot.
+                Skip dealer commissions and endless stranger visits. Get a certified doorstep physical evaluation, guaranteed highest price, and instant bank transfer on the spot.
               </p>
 
               <div className="mt-6 flex flex-wrap items-center gap-5 text-xs font-semibold text-white/90">
                 <span className="flex items-center gap-1.5">
                   <Check className="w-4 h-4 text-emerald-300" />
-                  <span>Free Doorstep Pickup</span>
+                  <span>Doorstep Inspection</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Check className="w-4 h-4 text-emerald-300" />
@@ -637,7 +637,7 @@ export default function HomePage() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Check className="w-4 h-4 text-emerald-300" />
-                  <span>Zero RC Transfer Liability</span>
+                  <span>RC Legal Transfer Support</span>
                 </span>
               </div>
             </div>
@@ -647,7 +647,7 @@ export default function HomePage() {
                 href="/sell"
                 className="px-8 py-4 rounded-2xl bg-white text-[#E5325C] hover:bg-gray-100 font-bold text-sm tracking-tight transition-all shadow-md active:scale-98 text-center"
               >
-                Sell Your Car (Book Free Inspection)
+                Sell Your Car (Book Inspection)
               </Link>
             </div>
 
@@ -829,7 +829,7 @@ export default function HomePage() {
               Frequently Asked Questions About Recars
             </h2>
             <p className="text-xs sm:text-sm text-gray-600 mt-2">
-              Everything you need to know about our certified inspections, pricing model, warranty, and return policies.
+              Everything you need to know about our certified inspections, transparent pricing model, ownership verification, and vehicle purchasing.
             </p>
           </div>
 

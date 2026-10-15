@@ -5,7 +5,7 @@ import ClientProviders from '@/components/ClientProviders';
 export const metadata: Metadata = {
   title: 'Recars — Trust Every Drive. Value Every Rupee.',
   description:
-    'Discover verified used cars in India with 200+ point inspection, transparent pricing, 7-day moneyback guarantee, and hassle-free RC transfer. Buy or sell pre-owned cars with total confidence.',
+    'Discover verified used cars in India with 200+ point inspection, transparent market pricing, verified ownership, and reliable RC transfer assistance. Buy or sell pre-owned cars with total confidence.',
   keywords: [
     'Used Cars',
     'Pre-owned Cars',

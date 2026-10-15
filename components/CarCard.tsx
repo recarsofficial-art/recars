@@ -26,6 +26,23 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
           />
         </Link>
 
+        {/* Top-Left Availability Badge */}
+        <div className="absolute top-3 left-3 z-10">
+          {car.availabilityStatus === 'Sold Out' ? (
+            <span className="px-2.5 py-1 rounded-md bg-slate-900/90 backdrop-blur-xs text-[10px] font-extrabold text-white tracking-wide uppercase border border-slate-700 shadow-sm">
+              Sold Out
+            </span>
+          ) : car.availabilityStatus === 'Reserved' ? (
+            <span className="px-2.5 py-1 rounded-md bg-amber-600/90 backdrop-blur-xs text-[10px] font-extrabold text-white tracking-wide uppercase border border-amber-400 shadow-sm">
+              Reserved
+            </span>
+          ) : (
+            <span className="px-2.5 py-1 rounded-md bg-emerald-600/90 backdrop-blur-xs text-[10px] font-extrabold text-white tracking-wide uppercase border border-emerald-400 shadow-sm">
+              Available
+            </span>
+          )}
+        </div>
+
         {/* Wishlist Button */}
         <button
           onClick={(e) => {
@@ -57,13 +74,15 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
             {car.make} {car.model}
           </h3>
 
-          {/* Sub specs: Year • KM • Fuel */}
+          {/* Sub specs: Year • KM • Fuel • Ownership */}
           <p className="text-xs text-[#6B7078] mt-1 font-medium flex items-center gap-1.5 flex-wrap">
             <span>{car.year}</span>
             <span>•</span>
             <span>{formatKM(car.kilometers)}</span>
             <span>•</span>
             <span>{car.fuelType}</span>
+            <span>•</span>
+            <span className="font-semibold text-gray-800">{car.ownership || '1st Owner'}</span>
           </p>
 
           {/* Price */}
@@ -98,7 +117,7 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
             href={`/cars/${car.id}`}
             className="text-[11px] font-bold text-[#E5325C] hover:text-[#D4264E] group-hover:translate-x-0.5 transition-all inline-flex items-center gap-0.5"
           >
-            <span>Details</span>
+            <span>Interested</span>
             <ArrowRight className="w-3 h-3" />
           </Link>
         </div>

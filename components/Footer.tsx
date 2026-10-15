@@ -7,7 +7,7 @@ export default function Footer() {
     <footer className="bg-[#F8F9FA] text-[#101216] border-t border-gray-200 pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Trust Badges Strip (Clean Light Cards with Carsales Blue Icons) */}
+        {/* Trust Badges Strip (Clean Light Cards) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pb-12 border-b border-gray-200">
           <div className="flex items-start gap-3.5">
             <div className="p-2.5 rounded-xl bg-white border border-gray-200 text-[#E5325C] shadow-2xs">
@@ -24,8 +24,8 @@ export default function Footer() {
               <RefreshCw className="w-5 h-5 text-[#E5325C]" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-[#101216]">7-Day Moneyback</h4>
-              <p className="text-xs text-gray-500 mt-0.5">100% refund guarantee if not completely satisfied</p>
+              <h4 className="text-sm font-bold text-[#101216]">Fair Price Negotiation</h4>
+              <p className="text-xs text-gray-500 mt-0.5">Transparent market pricing with instant offer workflow</p>
             </div>
           </div>
 
@@ -34,8 +34,8 @@ export default function Footer() {
               <Award className="w-5 h-5 text-[#E5325C]" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-[#101216]">1-Year Warranty</h4>
-              <p className="text-xs text-gray-500 mt-0.5">Comprehensive engine & gearbox coverage</p>
+              <h4 className="text-sm font-bold text-[#101216]">Verified Standards</h4>
+              <p className="text-xs text-gray-500 mt-0.5">Thorough mechanical, engine & title verification</p>
             </div>
           </div>
 
@@ -44,8 +44,8 @@ export default function Footer() {
               <HeartHandshake className="w-5 h-5 text-[#E5325C]" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-[#101216]">Free RC Transfer</h4>
-              <p className="text-xs text-gray-500 mt-0.5">Hassle-free doorstep legal ownership transfer</p>
+              <h4 className="text-sm font-bold text-[#101216]">RC Transfer Assistance</h4>
+              <p className="text-xs text-gray-500 mt-0.5">End-to-end legal title & ownership documentation support</p>
             </div>
           </div>
         </div>
@@ -54,10 +54,13 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-10 py-12 border-b border-gray-200">
           {/* Brand info */}
           <div className="md:col-span-2 space-y-4">
-            <Logo size="md" />
+            <div>
+              <Logo size="md" />
+              <p className="text-xs font-semibold text-[#E5325C] mt-1 tracking-tight">Trust Every Drive. Value Every Rupee.</p>
+            </div>
 
             <p className="text-xs text-gray-600 leading-relaxed max-w-sm">
-              Recars is India&apos;s most trusted verified pre-owned car marketplace. We combine rigorous 200+ point inspection engineering, fixed transparent pricing, and doorstep convenience so every Indian can buy and sell with utmost confidence.
+              Recars is India&apos;s most trusted verified pre-owned car marketplace. We combine rigorous 200+ point inspection engineering, transparent pricing, and doorstep convenience so every Indian can buy and sell with utmost confidence.
             </p>
             
             <div className="pt-2 space-y-2.5 text-xs text-gray-600">
@@ -111,7 +114,7 @@ export default function Footer() {
             </h5>
             <ul className="space-y-2.5 text-xs text-gray-600">
               <li><Link href="/sell" className="hover:text-[#E5325C] transition-colors">Sell Your Car</Link></li>
-              <li><Link href="/sell" className="hover:text-[#E5325C] transition-colors">Free Doorstep Inspection</Link></li>
+              <li><Link href="/sell" className="hover:text-[#E5325C] transition-colors">Doorstep Inspection (₹499)</Link></li>
               <li><Link href="/why-recars#inspection" className="hover:text-[#E5325C] transition-colors">200+ Point Inspection</Link></li>
               <li><Link href="/finance" className="hover:text-[#E5325C] transition-colors">Car Loan & EMI Calculator</Link></li>
               <li><Link href="/insurance" className="hover:text-[#E5325C] transition-colors">Comprehensive Insurance</Link></li>

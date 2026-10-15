@@ -1,7 +1,11 @@
 export type CarBodyType = 'Hatchback' | 'Sedan' | 'SUV' | 'Luxury' | 'MUV' | 'Electric';
 export type FuelType = 'Petrol' | 'Diesel' | 'Electric' | 'CNG' | 'Hybrid';
 export type TransmissionType = 'Manual' | 'Automatic';
-export type OwnershipType = '1st Owner' | '2nd Owner' | '3rd Owner';
+export type OwnershipType = '1st Owner' | '2nd Owner' | '3rd Owner' | '4th Owner +';
+export type VehicleAvailability = 'Available' | 'Reserved' | 'Sold Out';
+export type InsuranceStatus = 'Valid' | 'Expired' | 'Unavailable';
+export type InsuranceType = 'Comprehensive' | 'Zero Depreciation' | 'Third Party';
+export type FinanceAvailability = 'Available' | 'Not Available' | 'Subject to Approval';
 
 export interface CarSpecification {
   engine: string;
@@ -58,6 +62,17 @@ export interface Car {
   features: string[];
   description: string;
   createdAt: string;
+
+  // New fields for Recars enhanced system
+  availabilityStatus?: VehicleAvailability;
+  manufacturingYear?: number;
+  registrationYear?: number;
+  insuranceStatus?: InsuranceStatus;
+  insuranceExpiry?: string;
+  insuranceType?: InsuranceType;
+  financeAvailable?: FinanceAvailability;
+  suggestedPriceMin?: number;
+  suggestedPriceMax?: number;
 }
 
 export interface SellRequest {
@@ -79,6 +94,9 @@ export interface SellRequest {
   preferredInspectionTime: string;
   estimatedPriceMin: number;
   estimatedPriceMax: number;
+  inspectionFee?: number;
+  inspectionFeeStatus?: 'Pending' | 'Pay at Doorstep' | 'Paid' | 'Waived';
+  suggestedListingPrice?: number;
   status: 'Pending' | 'Inspection Scheduled' | 'Inspection Completed' | 'Offer Accepted' | 'Car Purchased' | 'Rejected' | string;
   createdAt: string;
 }
@@ -130,10 +148,44 @@ export interface CarInquiry {
   userPhone: string;
   userEmail: string;
   city: string;
-  inquiryType: 'Price Quote / Best Offer' | 'Inspection Report Request' | 'Home Delivery Inquiry' | 'Loan & Financing' | 'General Query';
+  inquiryType: 'Interested in Vehicle' | 'Price Quote / Best Offer' | 'Inspection Report Request' | 'Home Delivery Inquiry' | 'Loan & Financing' | 'General Query' | 'Sell / Doorstep Inspection Request';
   message: string;
   status: 'New' | 'In Progress' | 'Contacted' | 'Closed';
   createdAt: string;
+}
+
+export interface NegotiationOfferHistoryItem {
+  id: string;
+  sender: 'customer' | 'admin';
+  senderName: string;
+  amount: number;
+  message?: string;
+  timestamp: string;
+}
+
+export interface Negotiation {
+  id: string;
+  carId: string;
+  carTitle: string;
+  carImage?: string;
+  listedPrice: number;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string;
+  customerOffer: number;
+  counterOffer?: number;
+  finalPrice?: number;
+  status: 'Pending' | 'Counteroffer' | 'Accepted' | 'Rejected' | 'Expired';
+  notes?: string;
+  offerHistory: NegotiationOfferHistoryItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InspectionConfig {
+  sellerInspectionFee: number;
+  buyerInspectionFee: number;
+  freeInspectionActive: boolean;
 }
 
 export interface AuthUser {
@@ -143,4 +195,5 @@ export interface AuthUser {
   email: string;
   city: string;
 }
+
 

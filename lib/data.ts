@@ -463,12 +463,12 @@ export const INITIAL_CARS: Car[] = [
 
 export const TRUST_BENEFITS = [
   { id: 1, title: '200+ Point Inspection', desc: 'Rigorous engineering check with detailed digital report', icon: 'shield-check' },
-  { id: 2, title: 'Verified Documents', desc: '100% legal title, RTO records and clean insurance check', icon: 'file-check' },
-  { id: 3, title: 'Transparent Pricing', desc: 'Fixed fair prices with zero hidden charges or dealer markups', icon: 'currency-inr' },
-  { id: 4, title: '7-Day Return Option', desc: 'Love the car or return it for 100% refund, no questions asked', icon: 'rotate-ccw' },
-  { id: 5, title: 'Easy Financing', desc: 'Instant loan approvals from top banks starting at 8.75%', icon: 'credit-card' },
-  { id: 6, title: 'Hassle-Free RC Transfer', desc: 'Free doorstep RTO paperwork handling and fast transfer', icon: 'file-text' },
-  { id: 7, title: 'Dedicated Support', desc: 'Personal relationship manager for test drives and delivery', icon: 'headset' },
+  { id: 2, title: 'Verified Documents', desc: '100% legal title, RTO records and verified ownership history', icon: 'file-check' },
+  { id: 3, title: 'Transparent Pricing', desc: 'Data-driven fair pricing with interactive price negotiations', icon: 'currency-inr' },
+  { id: 4, title: 'Recars Certified Quality', desc: 'Strict mechanical, electrical, and structural evaluation standards', icon: 'shield-check' },
+  { id: 5, title: 'Easy Financing', desc: 'Competitive loan partnerships with top banks subject to approval', icon: 'credit-card' },
+  { id: 6, title: 'RC Transfer Assistance', desc: 'Doorstep RTO legal documentation and title transfer support', icon: 'file-text' },
+  { id: 7, title: 'Dedicated Support', desc: 'Personal relationship manager from vehicle enquiry to handover', icon: 'headset' },
 ];
 
 export const HOW_IT_WORKS_STEPS = [

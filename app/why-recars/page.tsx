@@ -34,28 +34,33 @@ export default function WhyRecarsPage() {
       unorganized: 'High risk of meter tampering',
     },
     {
+      feature: 'Quality Verification',
+      recars: '200+ Point engineering check with digital report',
+      unorganized: 'Basic cosmetic polish without diagnostic scan',
+    },
+    {
       feature: 'Accidental Chassis Verification',
-      recars: 'Strict zero accidental panel policy',
+      recars: 'Strict zero structural accident policy',
       unorganized: 'Often concealed with superficial paint jobs',
     },
     {
-      feature: 'Return / Refund Policy',
-      recars: '7-Day No Questions Asked 100% Moneyback',
-      unorganized: 'No returns or refund whatsoever',
+      feature: 'Pricing & Negotiation',
+      recars: 'Data-backed market guidance with direct online negotiation',
+      unorganized: 'Arbitrary dealer margins and artificial markups',
     },
     {
-      feature: 'Warranty Coverage',
-      recars: '1-Year Comprehensive Engine & Gearbox Warranty',
-      unorganized: 'No warranty once you leave the lot',
+      feature: 'Inspection Standard',
+      recars: 'Certified mechanical, electronic & diagnostic checks',
+      unorganized: 'No mechanical inspection or technical warranty',
     },
     {
       feature: 'Pricing Transparency',
-      recars: 'Fixed fair market price with zero dealer fees',
-      unorganized: 'Arbitrary dealer margins and hidden charges',
+      recars: 'Fair market evaluation with transparent inspection charges',
+      unorganized: 'Arbitrary dealer margins and hidden commissions',
     },
     {
       feature: 'RC Ownership Transfer',
-      recars: 'Free doorstep RTO transfer handled end-to-end',
+      recars: 'Doorstep RTO legal transfer assistance and documentation',
       unorganized: 'Customer left to deal with RTO agents & delays',
     },
   ];
@@ -109,9 +114,9 @@ export default function WhyRecarsPage() {
               <div className="w-12 h-12 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#E5325C] shadow-xs">
                 <RotateCcw className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-base text-[#101216]">7-Day Moneyback Guarantee</h3>
+              <h3 className="font-bold text-base text-[#101216]">Fair Price Negotiations</h3>
               <p className="text-xs text-[#6B7078] leading-relaxed">
-                Take 7 days or up to 500 km to test your car in daily traffic, with your family, and on highways. If you don&apos;t absolutely love it, return it for a 100% refund.
+                Submit an offer directly from any vehicle listing. Our pricing desk reviews your offer with data-driven counterproposals for full mutual agreement.
               </p>
             </div>
 
@@ -119,9 +124,9 @@ export default function WhyRecarsPage() {
               <div className="w-12 h-12 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#E5325C] shadow-xs">
                 <IndianRupee className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-base text-[#101216]">Zero Haggling, Fixed Prices</h3>
+              <h3 className="font-bold text-base text-[#101216]">Data-Driven Market Guidance</h3>
               <p className="text-xs text-[#6B7078] leading-relaxed">
-                No awkward bargaining or inflated dealer markups. Our algorithmic pricing reflects real market transaction benchmarks so every rupee you spend delivers true worth.
+                No arbitrary bargaining or inflated dealer markups. Real market transaction benchmarks and transparent pricing suggestions guide every decision.
               </p>
             </div>
 
@@ -129,9 +134,9 @@ export default function WhyRecarsPage() {
               <div className="w-12 h-12 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#E5325C] shadow-xs">
                 <Award className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-base text-[#101216]">1-Year Comprehensive Warranty</h3>
+              <h3 className="font-bold text-base text-[#101216]">Rigorous Engineering Standards</h3>
               <p className="text-xs text-[#6B7078] leading-relaxed">
-                Drive stress-free with pan-India coverage for engine internals, transmission gearboxes, ECUs, and steering racks across 1,000+ authorized service centers.
+                Comprehensive 200+ mechanical diagnostics including engine compression, transmission gearshifts, ECU health, and chassis integrity.
               </p>
             </div>
 
@@ -149,7 +154,7 @@ export default function WhyRecarsPage() {
               <div className="w-12 h-12 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#E5325C] shadow-xs">
                 <FileText className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-base text-[#101216]">Doorstep RC Transfer</h3>
+              <h3 className="font-bold text-base text-[#101216]">Doorstep RC Transfer Assistance</h3>
               <p className="text-xs text-[#6B7078] leading-relaxed">
                 Our in-house RTO legal desk handles all biometric signatures, transfer paperwork, and delivery of your new smart card RC directly to your home address.
               </p>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -25,15 +25,20 @@ import {
   Clock,
   ArrowRight,
   X,
+  TrendingUp,
+  Tag,
+  AlertTriangle,
+  Banknote,
+  Send,
+  CheckCircle,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CarCard from '@/components/CarCard';
 import { useRecarsState } from '@/lib/store';
 import { formatINR, formatKM, calculateEMI } from '@/lib/formatters';
-import { Car, TestDriveBooking } from '@/lib/types';
+import { Car, CarInquiry } from '@/lib/types';
 import { useAuth } from '@/lib/authContext';
-
 import { Suspense } from 'react';
 
 interface PageProps {
@@ -50,16 +55,56 @@ function CarDetailInner({ params }: PageProps) {
     wishlistIds,
     toggleWishlist,
     isWishlisted,
-    cars,
-    addTestDrive,
+    cars: storeCars,
     addInquiry,
   } = useRecarsState();
 
+  const [liveCars, setLiveCars] = useState<Car[]>([]);
+
+  useEffect(() => {
+    const fetchCars = () => {
+      fetch('/api/cars')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.cars?.length > 0) setLiveCars(d.cars);
+        })
+        .catch(() => {});
+    };
+    fetchCars();
+    window.addEventListener('focus', fetchCars);
+    return () => window.removeEventListener('focus', fetchCars);
+  }, []);
+
+  const cars = liveCars.length > 0 ? liveCars : storeCars;
   const car = cars.find((c) => c.id === unwrappedParams.id) || cars[0];
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isTestDriveModalOpen, setIsTestDriveModalOpen] = useState(false);
+
+  // Interested Modal State
+  const [isInterestedModalOpen, setIsInterestedModalOpen] = useState(false);
+  const [interestedName, setInterestedName] = useState('');
+  const [interestedPhone, setInterestedPhone] = useState('');
+  const [interestedEmail, setInterestedEmail] = useState('');
+  const [interestedNotes, setInterestedNotes] = useState('');
+  const [interestedSubmitted, setInterestedSubmitted] = useState(false);
+  const [interestedLoading, setInterestedLoading] = useState(false);
+
+  // Negotiation Modal State
+  const [isNegotiateModalOpen, setIsNegotiateModalOpen] = useState(false);
+  const [offerAmount, setOfferAmount] = useState<number>(Math.round(car.price * 0.95));
+  const [offerCustomerName, setOfferCustomerName] = useState('');
+  const [offerCustomerPhone, setOfferCustomerPhone] = useState('');
+  const [offerCustomerEmail, setOfferCustomerEmail] = useState('');
+  const [offerNotes, setOfferNotes] = useState('');
+  const [offerSubmitted, setOfferSubmitted] = useState(false);
+  const [offerLoading, setOfferLoading] = useState(false);
+  const [offerError, setOfferError] = useState<string | null>(null);
+
+  // Callback Modal State
   const [isCallbackModalOpen, setIsCallbackModalOpen] = useState(false);
-  const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [cbName, setCbName] = useState('');
+  const [cbPhone, setCbPhone] = useState('');
+  const [cbSubmitted, setCbSubmitted] = useState(false);
+
   const [activeInspectionTab, setActiveInspectionTab] = useState<'engine' | 'exterior' | 'interior' | 'tyres'>('engine');
 
   // EMI Calculator states
@@ -69,16 +114,24 @@ function CarDetailInner({ params }: PageProps) {
 
   const { user } = useAuth();
 
-  // Test drive form
-  const [tdName, setTdName] = useState(user?.name || '');
-  const [tdPhone, setTdPhone] = useState(user?.phone ? `+91 ${user.phone}` : '');
-  const [tdDate, setTdDate] = useState('Tomorrow, 11:00 AM');
-  const [tdType, setTdType] = useState<'Home Test Drive' | 'Recars Hub Visit'>('Home Test Drive');
-
-  // Callback form
-  const [cbName, setCbName] = useState('');
-  const [cbPhone, setCbPhone] = useState('');
-  const [cbSubmitted, setCbSubmitted] = useState(false);
+  useEffect(() => {
+    if (user) {
+      if (user.name) {
+        setInterestedName(user.name);
+        setOfferCustomerName(user.name);
+        setCbName(user.name);
+      }
+      if (user.phone) {
+        setInterestedPhone(user.phone);
+        setOfferCustomerPhone(user.phone);
+        setCbPhone(user.phone);
+      }
+      if (user.email) {
+        setInterestedEmail(user.email);
+        setOfferCustomerEmail(user.email);
+      }
+    }
+  }, [user]);
 
   const calculatedMonthlyEmi = calculateEMI(
     Math.max(100000, car.price - downPayment),
@@ -89,31 +142,110 @@ function CarDetailInner({ params }: PageProps) {
   const images = car.galleryImages && car.galleryImages.length > 0 ? car.galleryImages : [car.image];
   const similarCars = cars.filter((c) => c.id !== car.id && (c.bodyType === car.bodyType || c.make === car.make)).slice(0, 3);
 
-  const handleTestDriveSubmit = (e: React.FormEvent) => {
+  // Dynamic Vehicle Age Calculation
+  const currentYear = new Date().getFullYear();
+  const mfgYear = car.manufacturingYear || car.year;
+  const regYear = car.registrationYear || car.specifications?.regYear || car.year;
+  const vehicleAgeYears = Math.max(0, currentYear - mfgYear);
+  const vehicleAgeFormatted = vehicleAgeYears === 0 ? 'Under 1 Year Old' : `${vehicleAgeYears} ${vehicleAgeYears === 1 ? 'Year' : 'Years'} Old`;
+
+  // Dynamic Insurance Validity
+  const insuranceValidDateStr = car.insuranceExpiry || car.specifications?.insuranceValidTill || 'Nov 2026';
+  const insuranceStatus = car.insuranceStatus || 'Valid';
+  const insuranceType = car.insuranceType || 'Comprehensive';
+
+  // Availability status
+  const availabilityStatus = car.availabilityStatus || 'Available';
+  const isSoldOut = availabilityStatus === 'Sold Out';
+  const isReserved = availabilityStatus === 'Reserved';
+
+  // Pricing Suggestions
+  const suggestedMin = car.suggestedPriceMin || Math.round(car.price * 0.94);
+  const suggestedMax = car.suggestedPriceMax || Math.round(car.price * 1.04);
+  const suggestedOfferMin = Math.round(car.price * 0.92);
+  const suggestedOfferMax = Math.round(car.price * 0.98);
+
+  const handleInterestedSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newBooking: TestDriveBooking = {
-      id: `TD-${Math.floor(100000 + Math.random() * 900000)}`,
+    setInterestedLoading(true);
+    const newInquiry: CarInquiry = {
+      id: `inq-${Date.now()}`,
       carId: car.id,
-      carTitle: `${car.make} ${car.model} (${car.year})`,
+      carTitle: `${car.year} ${car.make} ${car.model} ${car.variant}`,
       carImage: car.image,
       carPrice: car.price,
-      userName: tdName,
-      userPhone: tdPhone,
-      userEmail: user?.email || 'Recars.in@gmail.com',
+      userName: interestedName || 'Interested Customer',
+      userPhone: interestedPhone,
+      userEmail: interestedEmail || user?.email || 'Recars.in@gmail.com',
       city: car.city,
-      preferredDate: tdDate,
-      preferredTimeSlot: 'Morning Slot (10 AM - 1 PM)',
-      type: tdType,
-      status: 'Confirmed',
+      inquiryType: 'Interested in Vehicle',
+      message: interestedNotes || `Customer expressed interest in ${car.make} ${car.model}.`,
+      status: 'New',
       createdAt: new Date().toISOString(),
     };
-    addTestDrive(newBooking);
-    setBookingConfirmed(true);
+
+    try {
+      await fetch('/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newInquiry),
+      });
+      addInquiry(newInquiry);
+      setInterestedSubmitted(true);
+    } catch {
+      addInquiry(newInquiry);
+      setInterestedSubmitted(true);
+    } finally {
+      setInterestedLoading(false);
+    }
+  };
+
+  const handleNegotiationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOfferError(null);
+
+    if (!offerAmount || offerAmount <= 0) {
+      setOfferError('Please enter a valid offer amount.');
+      return;
+    }
+    if (!offerCustomerPhone || offerCustomerPhone.length < 10) {
+      setOfferError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    setOfferLoading(true);
+    try {
+      const res = await fetch('/api/negotiations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          carId: car.id,
+          carTitle: `${car.year} ${car.make} ${car.model}`,
+          carImage: car.image,
+          listedPrice: car.price,
+          customerName: offerCustomerName || 'Prospective Buyer',
+          customerPhone: offerCustomerPhone,
+          customerEmail: offerCustomerEmail || user?.email || 'Recars.in@gmail.com',
+          customerOffer: Number(offerAmount),
+          notes: offerNotes || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOfferSubmitted(true);
+      } else {
+        setOfferError(data.error || 'Failed to submit offer.');
+      }
+    } catch (err: any) {
+      setOfferError(err.message || 'Network error submitting offer.');
+    } finally {
+      setOfferLoading(false);
+    }
   };
 
   const handleCallbackSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addInquiry({
+    const newInq: CarInquiry = {
       id: `inq-${Date.now()}`,
       carId: car.id,
       carTitle: `${car.year} ${car.make} ${car.model}`,
@@ -124,10 +256,16 @@ function CarDetailInner({ params }: PageProps) {
       userEmail: user?.email || 'Recars.in@gmail.com',
       city: car.city,
       inquiryType: 'Price Quote / Best Offer',
-      message: 'Customer requested instant callback regarding vehicle availability and test drive booking.',
+      message: 'Customer requested instant callback regarding vehicle details and availability.',
       status: 'New',
       createdAt: new Date().toISOString(),
-    });
+    };
+    fetch('/api/inquiries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newInq),
+    }).catch(() => {});
+    addInquiry(newInq);
     setCbSubmitted(true);
     setTimeout(() => {
       setIsCallbackModalOpen(false);
@@ -220,7 +358,31 @@ function CarDetailInner({ params }: PageProps) {
                 </div>
 
                 {/* Badges on Gallery */}
-                <div className="absolute top-4 left-4 flex gap-2">
+                <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+                  {/* Availability Badge */}
+                  {isSoldOut ? (
+                    <span className="px-3 py-1 rounded-full text-xs font-black bg-slate-900/90 text-white border border-slate-700 flex items-center gap-1 shadow-md">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Sold Out</span>
+                    </span>
+                  ) : isReserved ? (
+                    <span className="px-3 py-1 rounded-full text-xs font-black bg-amber-500/95 text-white border border-amber-400 flex items-center gap-1 shadow-md">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Reserved</span>
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-600/90 text-white border border-emerald-400 flex items-center gap-1 shadow-md">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>Available</span>
+                    </span>
+                  )}
+
+                  {/* Ownership Count */}
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/90 backdrop-blur-xs text-[#101216] border border-gray-200 flex items-center gap-1 shadow-xs">
+                    <Award className="w-3.5 h-3.5 text-[#E5325C]" />
+                    <span>{car.ownership || '1st Owner'}</span>
+                  </span>
+
                   {car.isVerified && (
                     <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#F0F9F4] text-[#237A52] border border-[#D1EAD9] flex items-center gap-1 shadow-xs">
                       <Check className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -256,14 +418,43 @@ function CarDetailInner({ params }: PageProps) {
 
             {/* 2. Key Highlights Strip */}
             <div className="bg-white rounded-3xl border border-[#E5E7EB] p-6 shadow-xs">
-              <h2 className="text-lg font-bold text-[#101216] mb-4">Car Overview</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-[#101216]">Vehicle Overview & History</h2>
+                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg">
+                  Reg: {car.specifications?.rto || `${car.city} RTO`}
+                </span>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
                   <div className="flex items-center gap-1.5 text-xs text-[#6B7078] mb-1">
                     <Calendar className="w-4 h-4 text-[#E5325C]" />
                     <span>Reg. Year</span>
                   </div>
-                  <span className="font-bold text-sm text-[#101216]">{car.year}</span>
+                  <span className="font-bold text-sm text-[#101216]">{regYear}</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                  <div className="flex items-center gap-1.5 text-xs text-[#6B7078] mb-1">
+                    <Calendar className="w-4 h-4 text-[#E5325C]" />
+                    <span>Mfg. Year</span>
+                  </div>
+                  <span className="font-bold text-sm text-[#101216]">{mfgYear}</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                  <div className="flex items-center gap-1.5 text-xs text-[#6B7078] mb-1">
+                    <Clock className="w-4 h-4 text-[#E5325C]" />
+                    <span>Vehicle Age</span>
+                  </div>
+                  <span className="font-bold text-sm text-[#101216]">{vehicleAgeFormatted}</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                  <div className="flex items-center gap-1.5 text-xs text-[#6B7078] mb-1">
+                    <Award className="w-4 h-4 text-[#E5325C]" />
+                    <span>Ownership</span>
+                  </div>
+                  <span className="font-bold text-sm text-[#101216]">{car.ownership || '1st Owner'}</span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
@@ -292,10 +483,28 @@ function CarDetailInner({ params }: PageProps) {
 
                 <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
                   <div className="flex items-center gap-1.5 text-xs text-[#6B7078] mb-1">
-                    <Award className="w-4 h-4 text-[#E5325C]" />
-                    <span>Ownership</span>
+                    <Banknote className="w-4 h-4 text-[#E5325C]" />
+                    <span>Finance Status</span>
                   </div>
-                  <span className="font-bold text-sm text-[#101216]">{car.ownership}</span>
+                  <span className="font-bold text-sm text-emerald-700">{car.financeAvailable || 'Available'}</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] sm:col-span-2">
+                  <div className="flex items-center justify-between text-xs text-[#6B7078] mb-1">
+                    <span className="flex items-center gap-1.5">
+                      <FileCheck className="w-4 h-4 text-[#E5325C]" />
+                      <span>Insurance Validity</span>
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      insuranceStatus === 'Valid' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {insuranceStatus}
+                    </span>
+                  </div>
+                  <div className="font-bold text-xs text-[#101216] flex items-center justify-between">
+                    <span>{insuranceType}</span>
+                    <span className="text-gray-500 font-medium">Expires: {insuranceValidDateStr}</span>
+                  </div>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
@@ -303,17 +512,7 @@ function CarDetailInner({ params }: PageProps) {
                     <MapPin className="w-4 h-4 text-[#E5325C]" />
                     <span>RTO Location</span>
                   </div>
-                  <span className="font-bold text-sm text-[#101216]">{car.specifications.rto}</span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
-                  <div className="flex items-center gap-1.5 text-xs text-[#6B7078] mb-1">
-                    <FileCheck className="w-4 h-4 text-[#E5325C]" />
-                    <span>Insurance</span>
-                  </div>
-                  <span className="font-bold text-sm text-[#101216] truncate" title={car.specifications.insuranceValidTill}>
-                    {car.specifications.insuranceValidTill}
-                  </span>
+                  <span className="font-bold text-sm text-[#101216] truncate block">{car.specifications?.rto || car.city}</span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
@@ -321,7 +520,7 @@ function CarDetailInner({ params }: PageProps) {
                     <Sparkles className="w-4 h-4 text-[#E5325C]" />
                     <span>Exterior Color</span>
                   </div>
-                  <span className="font-bold text-sm text-[#101216]">{car.specifications.color}</span>
+                  <span className="font-bold text-sm text-[#101216]">{car.specifications?.color || 'Standard'}</span>
                 </div>
               </div>
             </div>
@@ -618,6 +817,19 @@ function CarDetailInner({ params }: PageProps) {
                 <p className="text-xs text-[#6B7078] mt-0.5">{car.variant}</p>
               </div>
 
+              {/* Availability Notice */}
+              {isSoldOut ? (
+                <div className="p-3.5 rounded-2xl bg-slate-900 text-white flex items-center gap-2.5 text-xs font-bold shadow-sm">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>This vehicle is Sold Out. Enquiries are currently closed.</span>
+                </div>
+              ) : isReserved ? (
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-2.5 text-xs font-medium">
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Vehicle is currently reserved. You may express interest in case the booking opens.</span>
+                </div>
+              ) : null}
+
               {/* Price Display */}
               <div className="p-4 rounded-2xl bg-[#FFF0F3] border border-[#FFD6DF]">
                 <div className="flex items-baseline justify-between">
@@ -631,26 +843,65 @@ function CarDetailInner({ params }: PageProps) {
                   )}
                 </div>
                 <p className="text-[11px] text-[#6B7078] mt-1">
-                  Fixed Transparent Price • Zero Dealer Commission
+                  Transparent Listed Price • Zero Brokerage Commission
+                </p>
+              </div>
+
+              {/* Suggested Pricing Guidance Card */}
+              <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] space-y-2 text-xs">
+                <div className="flex items-center justify-between font-bold text-[#101216]">
+                  <span className="flex items-center gap-1.5 text-gray-700">
+                    <TrendingUp className="w-3.5 h-3.5 text-[#E5325C]" />
+                    <span>Suggested Market Value</span>
+                  </span>
+                  <span className="text-gray-900 font-extrabold">{formatINR(suggestedMin)} – {formatINR(suggestedMax)}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-[#6B7078]">
+                  <span>Suggested Offer Range:</span>
+                  <span className="font-bold text-[#E5325C]">{formatINR(suggestedOfferMin)} – {formatINR(suggestedOfferMax)}</span>
+                </div>
+                <p className="text-[10px] text-gray-500 leading-tight pt-1.5 border-t border-gray-200">
+                  Estimates are data-backed suggestions based on make, variant, year, odometer & condition, not guaranteed valuations.
                 </p>
               </div>
 
               {/* Action Buttons */}
-              <div className="space-y-3">
+              <div className="space-y-2.5">
+                {/* 1. Interested Button */}
                 <button
-                  onClick={() => setIsTestDriveModalOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold text-sm text-white bg-[#E5325C] hover:bg-[#D4264E] transition-all shadow-md active:scale-98"
+                  onClick={() => setIsInterestedModalOpen(true)}
+                  disabled={isSoldOut}
+                  className={`w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold text-sm shadow-md transition-all active:scale-98 ${
+                    isSoldOut
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'text-white bg-[#E5325C] hover:bg-[#D4264E]'
+                  }`}
                 >
-                  <Calendar className="w-4 h-4" />
-                  <span>Book Free Test Drive</span>
+                  <Heart className="w-4 h-4 fill-current" />
+                  <span>{isSoldOut ? 'Vehicle Sold Out' : 'Interested'}</span>
                 </button>
 
+                {/* 2. Make an Offer / Negotiate Price Button */}
+                <button
+                  onClick={() => setIsNegotiateModalOpen(true)}
+                  disabled={isSoldOut}
+                  className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-2xl font-bold text-sm transition-all border ${
+                    isSoldOut
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                      : 'text-[#101216] bg-white border-gray-300 hover:border-[#E5325C] hover:text-[#E5325C] hover:bg-[#FFF0F3]/40'
+                  }`}
+                >
+                  <Tag className="w-4 h-4 text-[#E5325C]" />
+                  <span>Make an Offer / Negotiate Price</span>
+                </button>
+
+                {/* 3. Request Callback Button */}
                 <button
                   onClick={() => setIsCallbackModalOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-2xl font-bold text-sm text-[#101216] bg-white border border-[#E5E7EB] hover:bg-[#FFF0F3] hover:border-[#E5325C] transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-bold text-xs text-[#101216] bg-white border border-[#E5E7EB] hover:bg-gray-50 transition-all"
                 >
-                  <Phone className="w-4 h-4 text-[#E5325C]" />
-                  <span>Request Callback</span>
+                  <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
+                  <span>Request Instant Callback</span>
                 </button>
 
                 <div className="grid grid-cols-2 gap-2 pt-1">
@@ -663,7 +914,7 @@ function CarDetailInner({ params }: PageProps) {
                   </a>
 
                   <a
-                    href={`https://wa.me/919908796677?text=Hello%20Recars%2C%20I%20am%20inquiring%20about%20the%20${encodeURIComponent(car.year + ' ' + car.make + ' ' + car.model)}%20(${encodeURIComponent(car.id)})%20listed%20at%20${encodeURIComponent(formatINR(car.price))}.`}
+                    href={`https://wa.me/919908796677?text=Hello%20Recars%2C%20I%20am%20interested%20in%20the%20${encodeURIComponent(car.year + ' ' + car.make + ' ' + car.model)}%20(${encodeURIComponent(car.id)})%20listed%20at%20${encodeURIComponent(formatINR(car.price))}.`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-bold text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all"
@@ -673,19 +924,19 @@ function CarDetailInner({ params }: PageProps) {
                 </div>
               </div>
 
-              {/* Recars Assured Pillars */}
+              {/* Recars Assured Pillars (Genuine, transparent guarantees) */}
               <div className="pt-4 border-t border-[#E5E7EB] space-y-2.5 text-xs text-[#24262A]">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#237A52] flex-shrink-0" />
-                  <span>7-Day Full Money Back Guarantee</span>
+                  <span>200+ Point Comprehensive Inspection Certified</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#237A52] flex-shrink-0" />
-                  <span>1-Year Comprehensive Warranty Included</span>
+                  <span>Verified Ownership & Clear Title Guarantee</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#237A52] flex-shrink-0" />
-                  <span>Free Doorstep RC Ownership Transfer</span>
+                  <span>RC Ownership Transfer Assistance</span>
                 </div>
               </div>
             </div>
@@ -693,7 +944,7 @@ function CarDetailInner({ params }: PageProps) {
             {/* EMI Calculator Card */}
             <div className="bg-white rounded-3xl border border-[#E5E7EB] p-6 shadow-xs space-y-4">
               <h3 className="font-bold text-sm text-[#101216] flex items-center justify-between">
-                <span>Instant EMI Calculator</span>
+                <span>Indicative EMI Calculator</span>
                 <span className="text-[#E5325C] font-black">{formatINR(calculatedMonthlyEmi)}/mo</span>
               </h3>
 
@@ -737,8 +988,8 @@ function CarDetailInner({ params }: PageProps) {
                 </div>
               </div>
 
-              <div className="pt-2 text-[11px] text-[#6B7078] text-center">
-                Low interest rates from 8.75% with HDFC, ICICI, SBI & Axis
+              <div className="pt-2 text-[10px] text-[#6B7078] text-center leading-relaxed">
+                Disclaimer: Financing availability and indicative EMIs are subject to lender credit approval, eligibility criteria, and KYC verification. Recars facilitates loan applications through partner banks.
               </div>
             </div>
           </div>
@@ -762,22 +1013,22 @@ function CarDetailInner({ params }: PageProps) {
         )}
       </main>
 
-      {/* Test Drive Booking Modal */}
-      {isTestDriveModalOpen && (
+      {/* Interested in this Vehicle Modal */}
+      {isInterestedModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-[#E5E7EB] overflow-hidden">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-[#E5E7EB] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-[#E5E7EB] flex items-center justify-between bg-[#FFF0F3]">
               <div className="flex items-center gap-2.5">
-                <Calendar className="w-5 h-5 text-[#E5325C]" />
+                <Heart className="w-5 h-5 text-[#E5325C] fill-current" />
                 <div>
-                  <h3 className="font-bold text-base text-[#101216]">Book Free Test Drive</h3>
+                  <h3 className="font-bold text-base text-[#101216]">Express Interest</h3>
                   <p className="text-xs text-[#6B7078]">{car.make} {car.model} ({car.year})</p>
                 </div>
               </div>
               <button
                 onClick={() => {
-                  setIsTestDriveModalOpen(false);
-                  setBookingConfirmed(false);
+                  setIsInterestedModalOpen(false);
+                  setInterestedSubmitted(false);
                 }}
                 className="p-1.5 rounded-full text-gray-400 hover:text-gray-700"
               >
@@ -785,104 +1036,268 @@ function CarDetailInner({ params }: PageProps) {
               </button>
             </div>
 
-            {bookingConfirmed ? (
+            {interestedSubmitted ? (
               <div className="p-8 text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-[#F0F9F4] text-[#237A52] flex items-center justify-center mx-auto border border-[#D1EAD9]">
                   <Check className="w-8 h-8 stroke-[3]" />
                 </div>
-                <h4 className="text-xl font-black text-[#101216]">Test Drive Confirmed!</h4>
+                <h4 className="text-xl font-black text-[#101216]">Interest Registered!</h4>
                 <p className="text-xs sm:text-sm text-[#6B7078] max-w-sm mx-auto">
-                  Your test drive for <span className="font-bold text-[#101216]">{car.make} {car.model}</span> has been scheduled for {tdDate}. Our relationship manager will bring the car to your doorstep.
+                  Thank you! Your interest in the <span className="font-bold text-[#101216]">{car.make} {car.model}</span> has been saved in our system. Our vehicle specialist will connect with you shortly.
                 </p>
-                <div className="pt-2 flex justify-center gap-3">
-                  <Link
-                    href="/account?tab=bookings"
-                    className="px-6 py-2.5 rounded-full bg-[#E5325C] text-white text-xs font-bold"
+                <div className="pt-2 flex justify-center">
+                  <button
+                    onClick={() => {
+                      setIsInterestedModalOpen(false);
+                      setInterestedSubmitted(false);
+                    }}
+                    className="px-6 py-2.5 rounded-full bg-[#E5325C] text-white text-xs font-bold shadow-md"
                   >
-                    View in My Bookings
-                  </Link>
+                    Done
+                  </button>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleTestDriveSubmit} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-[#101216] mb-1">
-                    Select Test Drive Mode
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setTdType('Home Test Drive')}
-                      className={`p-3 rounded-xl text-xs font-bold text-center border transition-all ${
-                        tdType === 'Home Test Drive'
-                          ? 'bg-[#FFF0F3] border-[#E5325C] text-[#E5325C]'
-                          : 'bg-[#F8F9FA] border-[#E5E7EB] text-[#6B7078]'
-                      }`}
-                    >
-                      Doorstep Home Delivery
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTdType('Recars Hub Visit')}
-                      className={`p-3 rounded-xl text-xs font-bold text-center border transition-all ${
-                        tdType === 'Recars Hub Visit'
-                          ? 'bg-[#FFF0F3] border-[#E5325C] text-[#E5325C]'
-                          : 'bg-[#F8F9FA] border-[#E5E7EB] text-[#6B7078]'
-                      }`}
-                    >
-                      Visit {car.city} Hub
-                    </button>
+              <form onSubmit={handleInterestedSubmit} className="p-6 space-y-4">
+                <div className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-200">
+                  <img src={car.image} alt={car.model} className="w-16 h-12 rounded-xl object-cover" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-xs text-gray-900 truncate">{car.make} {car.model} {car.variant}</h4>
+                    <p className="text-xs font-extrabold text-[#E5325C]">{formatINR(car.price)}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-bold text-[#101216] mb-1">Your Name</label>
+                    <label className="block text-xs font-bold text-[#101216] mb-1">Your Full Name</label>
                     <input
                       type="text"
                       required
-                      placeholder="Enter full name"
-                      value={tdName}
-                      onChange={(e) => setTdName(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none focus:border-[#E5325C]"
+                      placeholder="e.g. Rahul Sharma"
+                      value={interestedName}
+                      onChange={(e) => setInterestedName(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none focus:border-[#E5325C]"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-xs font-bold text-[#101216] mb-1">Mobile Number</label>
+                    <label className="block text-xs font-bold text-[#101216] mb-1">Mobile Number (10 digits)</label>
                     <input
                       type="tel"
                       required
-                      placeholder="10-digit mobile number"
-                      value={tdPhone}
-                      onChange={(e) => setTdPhone(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none focus:border-[#E5325C]"
+                      placeholder="9876543210"
+                      value={interestedPhone}
+                      onChange={(e) => setInterestedPhone(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none focus:border-[#E5325C]"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-[#101216] mb-1">
-                    Preferred Date & Time Slot
-                  </label>
-                  <select
-                    value={tdDate}
-                    onChange={(e) => setTdDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none"
-                  >
-                    <option value="Tomorrow, 11:00 AM">Tomorrow, 11:00 AM</option>
-                    <option value="Tomorrow, 03:00 PM">Tomorrow, 03:00 PM</option>
-                    <option value="Day After, 10:30 AM">Day After, 10:30 AM</option>
-                    <option value="This Weekend, 11:00 AM">This Weekend, 11:00 AM</option>
-                  </select>
+                  <div>
+                    <label className="block text-xs font-bold text-[#101216] mb-1">Email Address (Optional)</label>
+                    <input
+                      type="email"
+                      placeholder="name@example.com"
+                      value={interestedEmail}
+                      onChange={(e) => setInterestedEmail(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none focus:border-[#E5325C]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#101216] mb-1">Questions or Specific Requests (Optional)</label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g., When can I see the car? Is finance available?"
+                      value={interestedNotes}
+                      onChange={(e) => setInterestedNotes(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none focus:border-[#E5325C]"
+                    />
+                  </div>
                 </div>
 
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full py-3.5 rounded-2xl bg-[#E5325C] text-white font-bold text-sm hover:bg-[#D4264E] transition-all shadow-md active:scale-98"
+                    disabled={interestedLoading}
+                    className="w-full py-3.5 rounded-2xl bg-[#E5325C] text-white font-bold text-sm hover:bg-[#D4264E] transition-all shadow-md active:scale-98 disabled:opacity-50"
                   >
-                    Confirm Free Booking
+                    {interestedLoading ? 'Submitting Interest...' : 'Confirm My Interest'}
                   </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Negotiation / Make an Offer Modal */}
+      {isNegotiateModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-[#E5E7EB] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-[#E5E7EB] flex items-center justify-between bg-[#FFF0F3]">
+              <div className="flex items-center gap-2.5">
+                <Tag className="w-5 h-5 text-[#E5325C]" />
+                <div>
+                  <h3 className="font-bold text-base text-[#101216]">Submit Price Offer</h3>
+                  <p className="text-xs text-[#6B7078]">Direct negotiation with Recars pricing desk</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsNegotiateModalOpen(false);
+                  setOfferSubmitted(false);
+                  setOfferError(null);
+                }}
+                className="p-1.5 rounded-full text-gray-400 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {offerSubmitted ? (
+              <div className="p-8 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-[#F0F9F4] text-[#237A52] flex items-center justify-center mx-auto border border-[#D1EAD9]">
+                  <Check className="w-8 h-8 stroke-[3]" />
+                </div>
+                <h4 className="text-xl font-black text-[#101216]">Offer Submitted!</h4>
+                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-700 max-w-xs mx-auto">
+                  <span className="block text-[10px] text-gray-500 uppercase font-bold">Your Proposed Offer</span>
+                  <span className="text-lg font-black text-[#E5325C]">{formatINR(offerAmount)}</span>
+                  <span className="block text-[10px] text-gray-500 mt-1">Listed: {formatINR(car.price)}</span>
+                </div>
+                <p className="text-xs sm:text-sm text-[#6B7078] max-w-sm mx-auto">
+                  Your offer has been submitted directly to the Recars admin desk for <span className="font-bold text-[#101216]">{car.make} {car.model}</span>. Our team will review and respond with an acceptance or counteroffer.
+                </p>
+                <div className="pt-2 flex justify-center">
+                  <button
+                    onClick={() => {
+                      setIsNegotiateModalOpen(false);
+                      setOfferSubmitted(false);
+                    }}
+                    className="px-6 py-2.5 rounded-full bg-[#E5325C] text-white text-xs font-bold shadow-md"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleNegotiationSubmit} className="p-6 space-y-4">
+                {offerError && (
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                    <span>{offerError}</span>
+                  </div>
+                )}
+
+                {/* Car & Pricing Guidance */}
+                <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-xs text-gray-900">{car.make} {car.model} {car.variant}</h4>
+                      <p className="text-[11px] text-gray-500">{car.year} • {car.fuelType} • {formatKM(car.kilometers)}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-gray-500 block">Listed Price</span>
+                      <span className="text-sm font-black text-gray-900">{formatINR(car.price)}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-200 flex items-center justify-between text-xs">
+                    <span className="text-gray-600 font-medium flex items-center gap-1">
+                      <TrendingUp className="w-3.5 h-3.5 text-[#E5325C]" />
+                      <span>Suggested Offer Range:</span>
+                    </span>
+                    <span className="font-bold text-[#E5325C]">{formatINR(suggestedOfferMin)} – {formatINR(suggestedOfferMax)}</span>
+                  </div>
+                </div>
+
+                {/* Offer Input & Quick % Chips */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-[#101216]">Your Offer Amount (₹)</label>
+                    <span className="text-xs font-black text-[#E5325C]">{formatINR(offerAmount)}</span>
+                  </div>
+                  <input
+                    type="number"
+                    required
+                    min={Math.round(car.price * 0.7)}
+                    max={car.price}
+                    step={5000}
+                    value={offerAmount}
+                    onChange={(e) => setOfferAmount(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 text-sm font-bold bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none focus:border-[#E5325C]"
+                  />
+                  <div className="grid grid-cols-4 gap-1.5 mt-2">
+                    {[
+                      { label: '-3%', val: Math.round(car.price * 0.97) },
+                      { label: '-5%', val: Math.round(car.price * 0.95) },
+                      { label: '-7%', val: Math.round(car.price * 0.93) },
+                      { label: '-10%', val: Math.round(car.price * 0.90) },
+                    ].map((opt) => (
+                      <button
+                        type="button"
+                        key={opt.label}
+                        onClick={() => setOfferAmount(opt.val)}
+                        className={`py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                          offerAmount === opt.val
+                            ? 'bg-[#E5325C] text-white border-[#E5325C]'
+                            : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {opt.label} ({Math.round(opt.val / 1000)}k)
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Customer Details */}
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-[#101216] mb-1">Your Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Full Name"
+                      value={offerCustomerName}
+                      onChange={(e) => setOfferCustomerName(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none focus:border-[#E5325C]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#101216] mb-1">Mobile (10 digits)</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Mobile Number"
+                      value={offerCustomerPhone}
+                      onChange={(e) => setOfferCustomerPhone(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none focus:border-[#E5325C]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#101216] mb-1">Offer Notes / Message (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Immediate cash settlement ready if offer accepted."
+                    value={offerNotes}
+                    onChange={(e) => setOfferNotes(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={offerLoading}
+                    className="w-full py-3.5 rounded-2xl bg-[#E5325C] text-white font-bold text-sm hover:bg-[#D4264E] transition-all shadow-md active:scale-98 disabled:opacity-50"
+                  >
+                    {offerLoading ? 'Transmitting Offer...' : `Submit Offer: ${formatINR(offerAmount)}`}
+                  </button>
+                  <p className="text-[10px] text-gray-400 text-center mt-2">
+                    Your offer will be saved in the Recars Admin Portal for review and response.
+                  </p>
                 </div>
               </form>
             )}
@@ -934,18 +1349,33 @@ function CarDetailInner({ params }: PageProps) {
         </div>
       )}
 
-      {/* Mobile Sticky Enquiry Bar */}
+      {/* Mobile Sticky Action Bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E5E7EB] p-3 flex items-center justify-between shadow-2xl">
         <div>
           <span className="text-[10px] text-[#6B7078] block">Recars Price</span>
           <span className="text-base font-black text-[#101216]">{formatINR(car.price)}</span>
         </div>
-        <button
-          onClick={() => setIsTestDriveModalOpen(true)}
-          className="px-5 py-2.5 rounded-full bg-[#E5325C] text-white text-xs font-bold shadow-md"
-        >
-          Book Test Drive
-        </button>
+        <div className="flex items-center gap-2">
+          {!isSoldOut && (
+            <button
+              onClick={() => setIsNegotiateModalOpen(true)}
+              className="px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-800"
+            >
+              Negotiate
+            </button>
+          )}
+          <button
+            onClick={() => setIsInterestedModalOpen(true)}
+            disabled={isSoldOut}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold shadow-md ${
+              isSoldOut
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-[#E5325C] text-white'
+            }`}
+          >
+            {isSoldOut ? 'Sold Out' : 'Interested'}
+          </button>
+        </div>
       </div>
 
       <Footer />

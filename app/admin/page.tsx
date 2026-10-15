@@ -37,12 +37,18 @@ import {
   RefreshCw,
   Upload,
   Image as ImageIcon,
+  Handshake,
+  Sliders,
+  TrendingUp,
+  Banknote,
+  Send,
+  SlidersHorizontal,
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
 import { useRecarsState } from '@/lib/store';
 import { formatINR, formatKM } from '@/lib/formatters';
-import { Car as CarType, CarInquiry, SellRequest, TestDriveBooking } from '@/lib/types';
+import { Car as CarType, CarInquiry, SellRequest, TestDriveBooking, Negotiation, InspectionConfig, VehicleAvailability } from '@/lib/types';
 import { MAKES, CITIES } from '@/lib/data';
 
 const AVAILABLE_IMAGES = [
@@ -70,7 +76,7 @@ export default function AdminDashboardPage() {
     updateInquiryStatus,
   } = useRecarsState();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'inquiries' | 'leads' | 'testdrives' | 'customers'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'negotiations' | 'inquiries' | 'leads' | 'testdrives' | 'customers' | 'settings'>('overview');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -93,18 +99,36 @@ export default function AdminDashboardPage() {
   const [liveInquiries, setLiveInquiries] = useState<CarInquiry[]>([]);
   const [liveCustomers, setLiveCustomers] = useState<any[]>([]);
   const [liveTestDrives, setLiveTestDrives] = useState<TestDriveBooking[]>([]);
+  const [liveNegotiations, setLiveNegotiations] = useState<Negotiation[]>([]);
+  const [inspectionConfig, setInspectionConfig] = useState<InspectionConfig>({
+    sellerInspectionFee: 499,
+    buyerInspectionFee: 999,
+    freeInspectionActive: false,
+  });
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
+
+  // Counter Offer Modal state
+  const [isCounterModalOpen, setIsCounterModalOpen] = useState(false);
+  const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
+  const [counterOfferAmount, setCounterOfferAmount] = useState<number>(0);
+  const [counterOfferNotes, setCounterOfferNotes] = useState<string>('');
+
+  // Negotiations filter state
+  const [negotiationStatusFilter, setNegotiationStatusFilter] = useState<string>('All');
+  const [negotiationSearch, setNegotiationSearch] = useState<string>('');
 
   const syncAllFromSupabase = async () => {
     setIsSyncing(true);
     try {
-      const [carsRes, sellRes, inqRes, custRes, tdRes] = await Promise.all([
+      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes] = await Promise.all([
         fetch('/api/cars').then((r) => r.json()).catch(() => null),
         fetch('/api/sell').then((r) => r.json()).catch(() => null),
         fetch('/api/inquiries').then((r) => r.json()).catch(() => null),
         fetch('/api/customers').then((r) => r.json()).catch(() => null),
         fetch('/api/test-drive').then((r) => r.json()).catch(() => null),
+        fetch('/api/negotiations').then((r) => r.json()).catch(() => null),
+        fetch('/api/settings').then((r) => r.json()).catch(() => null),
       ]);
 
       if (carsRes?.cars) setLiveCars(carsRes.cars);
@@ -112,6 +136,8 @@ export default function AdminDashboardPage() {
       if (inqRes?.inquiries) setLiveInquiries(inqRes.inquiries);
       if (custRes?.customers) setLiveCustomers(custRes.customers);
       if (tdRes?.testDrives) setLiveTestDrives(tdRes.testDrives);
+      if (negRes?.negotiations) setLiveNegotiations(negRes.negotiations);
+      if (setRes?.config) setInspectionConfig(setRes.config);
       setLastSyncTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (e) {
       console.error('Error syncing admin with Supabase:', e);
@@ -277,12 +303,21 @@ export default function AdminDashboardPage() {
   const [newModel, setNewModel] = useState('Venue');
   const [newVariant, setNewVariant] = useState('SX 1.0 Turbo DCT');
   const [newYear, setNewYear] = useState(2023);
+  const [newMfgYear, setNewMfgYear] = useState(2022);
+  const [newRegYear, setNewRegYear] = useState(2023);
   const [newPrice, setNewPrice] = useState(1050000);
   const [newKm, setNewKm] = useState(22000);
   const [newFuel, setNewFuel] = useState<'Petrol' | 'Diesel' | 'Electric' | 'Hybrid' | 'CNG'>('Petrol');
   const [newTransmission, setNewTransmission] = useState<'Manual' | 'Automatic'>('Automatic');
   const [newBodyType, setNewBodyType] = useState<'SUV' | 'Sedan' | 'Hatchback' | 'Luxury' | 'MUV' | 'Electric'>('SUV');
   const [newOwnership, setNewOwnership] = useState<'1st Owner' | '2nd Owner' | '3rd Owner'>('1st Owner');
+  const [newAvailability, setNewAvailability] = useState<VehicleAvailability>('Available');
+  const [newInsuranceStatus, setNewInsuranceStatus] = useState<'Valid' | 'Expired' | 'Unavailable'>('Valid');
+  const [newInsuranceExpiry, setNewInsuranceExpiry] = useState('Nov 2026');
+  const [newInsuranceType, setNewInsuranceType] = useState<'Comprehensive' | 'Zero Depreciation' | 'Third Party'>('Comprehensive');
+  const [newFinanceAvailable, setNewFinanceAvailable] = useState<'Available' | 'Not Available' | 'Subject to Approval'>('Available');
+  const [newSuggestedMin, setNewSuggestedMin] = useState(980000);
+  const [newSuggestedMax, setNewSuggestedMax] = useState(1080000);
   const [newCity, setNewCity] = useState('Hyderabad');
   const [newLocationArea, setNewLocationArea] = useState('Hitec City Automotive Hub');
   const [newImage, setNewImage] = useState('/car-creta-hd.jpg');
@@ -300,6 +335,123 @@ export default function AdminDashboardPage() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleUpdateCarAvailability = async (carId: string, availabilityStatus: string) => {
+    try {
+      const res = await fetch('/api/cars', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: carId, availabilityStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Vehicle availability updated to "${availabilityStatus}"`);
+        await syncAllFromSupabase();
+      } else {
+        showToast('Failed to update availability');
+      }
+    } catch {
+      showToast('Error updating vehicle availability');
+    }
+  };
+
+  const handleAcceptNegotiation = async (neg: Negotiation) => {
+    try {
+      const res = await fetch('/api/negotiations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: neg.id,
+          status: 'Accepted',
+          notes: 'Offer accepted by Recars administrator.',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Offer from ${neg.customerName} for ${formatINR(neg.customerOffer)} ACCEPTED!`);
+        await syncAllFromSupabase();
+      } else {
+        showToast(data.error || 'Failed to accept offer.');
+      }
+    } catch {
+      showToast('Error accepting offer.');
+    }
+  };
+
+  const handleRejectNegotiation = async (neg: Negotiation) => {
+    if (!confirm(`Reject offer of ${formatINR(neg.customerOffer)} from ${neg.customerName}?`)) return;
+    try {
+      const res = await fetch('/api/negotiations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: neg.id,
+          status: 'Rejected',
+          notes: 'Offer declined by pricing desk.',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Offer from ${neg.customerName} marked as Rejected.`);
+        await syncAllFromSupabase();
+      } else {
+        showToast(data.error || 'Failed to reject offer.');
+      }
+    } catch {
+      showToast('Error rejecting offer.');
+    }
+  };
+
+  const handleSubmitCounterOffer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedNegotiation) return;
+    try {
+      const res = await fetch('/api/negotiations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedNegotiation.id,
+          status: 'Counteroffer',
+          counterOffer: Number(counterOfferAmount),
+          notes: counterOfferNotes || `Recars team proposed counteroffer of ${formatINR(Number(counterOfferAmount))}.`,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Counteroffer of ${formatINR(Number(counterOfferAmount))} transmitted to ${selectedNegotiation.customerName}!`);
+        setIsCounterModalOpen(false);
+        setSelectedNegotiation(null);
+        await syncAllFromSupabase();
+      } else {
+        showToast(data.error || 'Failed to send counteroffer.');
+      }
+    } catch {
+      showToast('Error transmitting counteroffer.');
+    }
+  };
+
+  const handleSaveInspectionConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: 'inspection_config',
+          value: inspectionConfig,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Inspection charges and policies successfully updated & live!');
+        await syncAllFromSupabase();
+      } else {
+        showToast('Failed to update inspection charges.');
+      }
+    } catch {
+      showToast('Error saving inspection configuration.');
+    }
   };
 
   const handleImageFileUpload = async (files: FileList | File[]) => {
@@ -364,6 +516,7 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     const created: CarType = {
       id: `recars-${Date.now()}`,
+      createdAt: new Date().toISOString(),
       make: newMake,
       model: newModel,
       variant: newVariant,
@@ -375,6 +528,15 @@ export default function AdminDashboardPage() {
       transmission: newTransmission,
       bodyType: newBodyType,
       ownership: newOwnership,
+      availabilityStatus: newAvailability,
+      manufacturingYear: Number(newMfgYear),
+      registrationYear: Number(newRegYear),
+      insuranceStatus: newInsuranceStatus,
+      insuranceExpiry: newInsuranceExpiry,
+      insuranceType: newInsuranceType,
+      financeAvailable: newFinanceAvailable,
+      suggestedPriceMin: Number(newSuggestedMin),
+      suggestedPriceMax: Number(newSuggestedMax),
       city: newCity,
       locationArea: newLocationArea || `${newCity} Hub`,
       image: newImage || '/car-creta-hd.jpg',
@@ -393,13 +555,12 @@ export default function AdminDashboardPage() {
         fuelTankCapacity: '45 Litres',
         groundClearance: '195 mm',
         rto: `${newCity.slice(0, 2).toUpperCase()}-09`,
-        regYear: newYear,
-        insuranceValidTill: 'Nov 2026',
+        regYear: newRegYear,
+        insuranceValidTill: newInsuranceExpiry,
         color: 'Polar White',
       },
       features: ['Touchscreen Infotainment', 'Apple CarPlay & Android Auto', 'Push Button Start', 'Reverse Camera', 'ABS with EBD'],
       description: newDescription,
-      createdAt: new Date().toISOString(),
     };
 
     addCarListing(created);
@@ -493,6 +654,19 @@ export default function AdminDashboardPage() {
       td.city.toLowerCase().includes(testDriveSearch.toLowerCase());
     const matchesStatus =
       testDriveStatusFilter === 'All' || td.status === testDriveStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredNegotiations = liveNegotiations.filter((neg) => {
+    const q = negotiationSearch.toLowerCase();
+    const matchesSearch =
+      !negotiationSearch ||
+      neg.customerName.toLowerCase().includes(q) ||
+      neg.customerPhone.includes(q) ||
+      (neg.customerEmail && neg.customerEmail.toLowerCase().includes(q)) ||
+      neg.carTitle.toLowerCase().includes(q);
+    const matchesStatus =
+      negotiationStatusFilter === 'All' || neg.status === negotiationStatusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -800,6 +974,38 @@ export default function AdminDashboardPage() {
                 </span>
               </button>
 
+              {/* Dedicated Section: Negotiations */}
+              <button
+                onClick={() => {
+                  setActiveTab('negotiations');
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left cursor-pointer ${
+                  activeTab === 'negotiations'
+                    ? 'bg-[#FFF0F3] text-[#E5325C] shadow-xs ring-1 ring-[#FFD6DF]'
+                    : 'text-gray-700 hover:text-black hover:bg-gray-100/70'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                    activeTab === 'negotiations' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    <Handshake className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="block">Negotiations</span>
+                    <span className="text-[10px] font-normal text-gray-400 block">Offers & counteroffers</span>
+                  </div>
+                </div>
+                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                  liveNegotiations.some((n) => n.status === 'Pending')
+                    ? 'bg-[#E5325C] text-white animate-pulse'
+                    : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {liveNegotiations.length}
+                </span>
+              </button>
+
               <button
                 onClick={() => {
                   setActiveTab('inquiries');
@@ -915,6 +1121,36 @@ export default function AdminDashboardPage() {
                   {testDrives.length}
                 </span>
               </button>
+
+              {/* Dedicated Section: Inspection & Platform Settings */}
+              <button
+                onClick={() => {
+                  setActiveTab('settings');
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left cursor-pointer ${
+                  activeTab === 'settings'
+                    ? 'bg-[#FFF0F3] text-[#E5325C] shadow-xs ring-1 ring-[#FFD6DF]'
+                    : 'text-gray-700 hover:text-black hover:bg-gray-100/70'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                    activeTab === 'settings' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    <SlidersHorizontal className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="block">Inspection Settings</span>
+                    <span className="text-[10px] font-normal text-gray-400 block">Fee policy & rules</span>
+                  </div>
+                </div>
+                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                  activeTab === 'settings' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  ₹{inspectionConfig.sellerInspectionFee}
+                </span>
+              </button>
             </nav>
           </div>
 
@@ -1011,10 +1247,12 @@ export default function AdminDashboardPage() {
                 <h2 className="text-base font-extrabold text-[#101216]">
                   {activeTab === 'overview' && 'Dashboard Overview (All Dedicated Sections)'}
                   {activeTab === 'cars' && 'Vehicle Inventory Workspace'}
+                  {activeTab === 'negotiations' && 'Customer Price Negotiations Workspace'}
                   {activeTab === 'inquiries' && 'Customer Car Inquiries Workspace'}
                   {activeTab === 'leads' && 'Customer Sell Requests Workspace'}
                   {activeTab === 'customers' && 'Registered Customers Directory'}
                   {activeTab === 'testdrives' && 'Test Drive Appointments Workspace'}
+                  {activeTab === 'settings' && 'Inspection Fees & Business Policies'}
                 </h2>
               </div>
               <p className="text-[11px] text-gray-500 hidden md:block">
@@ -1552,10 +1790,10 @@ export default function AdminDashboardPage() {
                   <thead className="bg-[#101216] text-white">
                     <tr>
                       <th className="p-4">Car Model</th>
-                      <th className="p-4">Specs</th>
-                      <th className="p-4">Price</th>
-                      <th className="p-4">Hub Location</th>
-                      <th className="p-4">Inspection</th>
+                      <th className="p-4">Specs & Ownership</th>
+                      <th className="p-4">Price & Suggested</th>
+                      <th className="p-4">Availability Status</th>
+                      <th className="p-4">Insurance & Finance</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -1569,27 +1807,69 @@ export default function AdminDashboardPage() {
                             </div>
                             <div>
                               <h4 className="font-bold text-sm text-[#101216]">{car.make} {car.model}</h4>
-                              <p className="text-[11px] text-gray-500">{car.variant}</p>
+                              <p className="text-[11px] text-gray-500">{car.variant} • {car.city}</p>
                             </div>
                           </div>
                         </td>
                         <td className="p-4 text-gray-600">
-                          <div>{car.year} • {formatKM(car.kilometers)}</div>
-                          <div className="text-[11px] text-gray-400">{car.fuelType} • {car.transmission}</div>
+                          <div className="font-semibold text-gray-900">
+                            {car.year} • {formatKM(car.kilometers)}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              {car.ownership || '1st Owner'}
+                            </span>
+                            <span className="text-[10px] text-gray-400">
+                              Mfg: {car.manufacturingYear || car.year} • Reg: {car.registrationYear || car.year}
+                            </span>
+                          </div>
                         </td>
                         <td className="p-4">
                           <span className="font-extrabold text-sm text-[#101216]">{formatINR(car.price)}</span>
-                          <span className="block text-[10px] text-gray-400">EMI {formatINR(car.emiPerMonth)}/mo</span>
-                        </td>
-                        <td className="p-4 text-gray-600">
-                          <span className="font-semibold text-gray-800">{car.city}</span>
-                          <span className="block text-[10px] text-gray-400">{car.locationArea}</span>
+                          {car.suggestedPriceMin && car.suggestedPriceMax ? (
+                            <span className="block text-[10px] text-emerald-600 font-bold">
+                              Sug: {formatINR(car.suggestedPriceMin)} - {formatINR(car.suggestedPriceMax)}
+                            </span>
+                          ) : (
+                            <span className="block text-[10px] text-gray-400">EMI {formatINR(car.emiPerMonth)}/mo</span>
+                          )}
                         </td>
                         <td className="p-4">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F0F9F4] text-[#237A52] border border-[#D1EAD9]">
-                            <Check className="w-3 h-3 stroke-[2.5]" />
-                            <span>{car.inspectionScore}/100</span>
-                          </span>
+                          <select
+                            value={car.availabilityStatus || 'Available'}
+                            onChange={(e) => handleUpdateCarAvailability(car.id, e.target.value)}
+                            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
+                              car.availabilityStatus === 'Sold Out'
+                                ? 'bg-red-50 text-red-700 border-red-200'
+                                : car.availabilityStatus === 'Reserved'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            }`}
+                          >
+                            <option value="Available">🟢 Available</option>
+                            <option value="Reserved">🟡 Reserved</option>
+                            <option value="Sold Out">🔴 Sold Out</option>
+                          </select>
+                        </td>
+                        <td className="p-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-bold text-gray-500">Ins:</span>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                car.insuranceStatus === 'Expired'
+                                  ? 'bg-red-50 text-red-700 border border-red-200'
+                                  : 'bg-blue-50 text-blue-700 border border-blue-200'
+                              }`}>
+                                {car.insuranceStatus || 'Valid'} ({car.insuranceExpiry || 'Active'})
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-bold text-gray-500">Loan:</span>
+                              <span className="text-[11px] font-semibold text-gray-700">
+                                {car.financeAvailable || 'Available'}
+                              </span>
+                            </div>
+                          </div>
                         </td>
                         <td className="p-4 text-right">
                           <div className="inline-flex items-center gap-2 justify-end">
@@ -2211,6 +2491,318 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
+        {/* ========================================================
+            TAB: NEGOTIATIONS (OFFERS & COUNTEROFFERS WORKSPACE)
+        ========================================================= */}
+        {activeTab === 'negotiations' && (
+          <div className="space-y-4">
+            {/* Filter & Search Bar */}
+            <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search customer, phone, car..."
+                  value={negotiationSearch}
+                  onChange={(e) => setNegotiationSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                />
+              </div>
+
+              {/* Status Filter Badges */}
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+                {['All', 'Pending', 'Counteroffer', 'Accepted', 'Rejected', 'Expired'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setNegotiationStatusFilter(st)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      negotiationStatusFilter === st
+                        ? 'bg-[#E5325C] text-white shadow-2xs'
+                        : 'bg-[#F8F9FA] text-gray-600 hover:text-black border border-[#E5E7EB]'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Negotiations Table */}
+            <div className="bg-white rounded-3xl border border-[#E5E7EB] overflow-hidden shadow-2xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#101216] text-white">
+                    <tr>
+                      <th className="p-4">Customer Details</th>
+                      <th className="p-4">Vehicle Listing</th>
+                      <th className="p-4">Offer Breakdown</th>
+                      <th className="p-4">Status & History</th>
+                      <th className="p-4 text-right">Negotiation Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E5E7EB]">
+                    {filteredNegotiations.map((neg) => {
+                      const discountAmount = neg.listedPrice - neg.customerOffer;
+                      const discountPercent = neg.listedPrice > 0 ? Math.round((discountAmount / neg.listedPrice) * 100) : 0;
+                      const statusStyles = {
+                        'Pending': 'bg-amber-50 text-amber-700 border-amber-200',
+                        'Counteroffer': 'bg-purple-50 text-purple-700 border-purple-200',
+                        'Accepted': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                        'Rejected': 'bg-red-50 text-red-700 border-red-200',
+                        'Expired': 'bg-gray-100 text-gray-600 border-gray-200',
+                      }[neg.status] || 'bg-gray-100 text-gray-700 border-gray-200';
+
+                      return (
+                        <tr key={neg.id} className="hover:bg-[#FFF0F3]/30 transition-colors">
+                          <td className="p-4">
+                            <div>
+                              <h4 className="font-bold text-sm text-[#101216]">{neg.customerName}</h4>
+                              <div className="flex items-center gap-2 mt-1 text-gray-500">
+                                <Phone className="w-3.5 h-3.5 text-gray-400" />
+                                <span className="font-mono">{neg.customerPhone}</span>
+                              </div>
+                              {neg.customerEmail && (
+                                <div className="flex items-center gap-2 mt-0.5 text-gray-500 text-[11px]">
+                                  <Mail className="w-3.5 h-3.5 text-gray-400" />
+                                  <span>{neg.customerEmail}</span>
+                                </div>
+                              )}
+                              <p className="text-[10px] text-gray-400 mt-1">
+                                {new Date(neg.createdAt).toLocaleDateString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            </div>
+                          </td>
+
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              {neg.carImage && (
+                                <img
+                                  src={neg.carImage}
+                                  alt={neg.carTitle}
+                                  className="w-14 h-10 rounded-lg object-cover bg-gray-100 border border-gray-200 flex-shrink-0"
+                                />
+                              )}
+                              <div>
+                                <h5 className="font-bold text-[#101216]">{neg.carTitle}</h5>
+                                <p className="text-[11px] text-gray-500 mt-0.5">
+                                  Listed: <span className="font-extrabold text-gray-800">{formatINR(neg.listedPrice)}</span>
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-4">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold uppercase text-gray-400">Offer:</span>
+                                <span className="text-sm font-black text-[#E5325C]">
+                                  {formatINR(neg.customerOffer)}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-gray-500 mt-0.5">
+                                Discount: {formatINR(discountAmount)} ({discountPercent}%)
+                              </p>
+                              {neg.counterOffer && (
+                                <p className="text-[11px] font-bold text-purple-700 mt-1">
+                                  Counter: {formatINR(neg.counterOffer)}
+                                </p>
+                              )}
+                              {neg.finalPrice && (
+                                <p className="text-[11px] font-extrabold text-emerald-700 mt-1">
+                                  Agreed: {formatINR(neg.finalPrice)}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="p-4">
+                            <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${statusStyles}`}>
+                              {neg.status}
+                            </span>
+                            {neg.notes && (
+                              <p className="text-[11px] text-gray-600 mt-1.5 italic max-w-xs">
+                                "{neg.notes}"
+                              </p>
+                            )}
+                            {neg.offerHistory && neg.offerHistory.length > 0 && (
+                              <div className="mt-1 text-[10px] text-gray-400">
+                                {neg.offerHistory.length} round(s) recorded
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {neg.status === 'Pending' || neg.status === 'Counteroffer' ? (
+                                <>
+                                  <button
+                                    onClick={() => handleAcceptNegotiation(neg)}
+                                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer"
+                                    title="Accept customer offer"
+                                  >
+                                    Accept
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedNegotiation(neg);
+                                      setCounterOfferAmount(neg.customerOffer + 10000);
+                                      setCounterOfferNotes('');
+                                      setIsCounterModalOpen(true);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition-colors cursor-pointer"
+                                    title="Propose a counteroffer"
+                                  >
+                                    Counter
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectNegotiation(neg)}
+                                    className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-xs transition-colors cursor-pointer"
+                                    title="Decline offer"
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-[11px] font-bold text-gray-400">
+                                  Resolved
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredNegotiations.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-gray-500">
+                          <Handshake className="w-8 h-8 mx-auto mb-2 opacity-40 text-gray-400" />
+                          No negotiations found matching your criteria.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            TAB: INSPECTION CHARGES & BUSINESS POLICIES
+        ========================================================= */}
+        {activeTab === 'settings' && (
+          <div className="max-w-2xl bg-white rounded-3xl border border-[#E5E7EB] p-6 sm:p-8 space-y-6 shadow-2xs">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
+                  <SlidersHorizontal className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg text-[#101216]">Inspection Charges & Policy Configuration</h3>
+                  <p className="text-xs text-gray-500">Transparent pricing for vehicle inspections across buyers and sellers</p>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveInspectionConfig} className="space-y-5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">
+                    Seller Doorstep Inspection Fee (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={100}
+                    value={inspectionConfig.sellerInspectionFee}
+                    onChange={(e) =>
+                      setInspectionConfig((prev) => ({
+                        ...prev,
+                        sellerInspectionFee: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Charged when seller schedules a doorstep inspection.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">
+                    Buyer Comprehensive Diagnostic Fee (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={100}
+                    value={inspectionConfig.buyerInspectionFee}
+                    onChange={(e) =>
+                      setInspectionConfig((prev) => ({
+                        ...prev,
+                        buyerInspectionFee: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Charged when buyer requests third-party diagnostic verification.
+                  </p>
+                </div>
+              </div>
+
+              {/* Promotional free inspection toggle */}
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={inspectionConfig.freeInspectionActive}
+                    onChange={(e) =>
+                      setInspectionConfig((prev) => ({
+                        ...prev,
+                        freeInspectionActive: e.target.checked,
+                      }))
+                    }
+                    className="mt-0.5 w-4 h-4 text-[#E5325C] rounded border-gray-300 focus:ring-[#E5325C]"
+                  />
+                  <div>
+                    <span className="font-bold text-gray-900 block">
+                      Promotional Waiver: Free Inspections Active
+                    </span>
+                    <span className="text-[11px] text-gray-600 block mt-0.5">
+                      When enabled, customer inspection charges are waived to ₹0. Do NOT advertise inspections as free unless this business toggle is explicitly enabled.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Policy explanation notice */}
+              <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] space-y-2">
+                <h4 className="font-bold text-[#101216]">Transparent Customer Responsibility Policy</h4>
+                <ul className="list-disc list-inside space-y-1 text-gray-600 text-[11px]">
+                  <li>Inspection covers 200+ multi-point diagnostic checks: engine, transmission, steering, brakes, suspension, electricals, and RTO document audit.</li>
+                  <li>Customer acknowledges charges prior to booking confirmation.</li>
+                  <li>No customer is charged without affirmative authorization and consent.</li>
+                </ul>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                >
+                  Save & Publish Inspection Settings
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
       </main>
 
       {/* ========================================================
@@ -2409,7 +3001,7 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block font-bold text-[#101216] mb-1">Hub City</label>
                   <select
@@ -2424,7 +3016,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-[#101216] mb-1">Ownership</label>
+                  <label className="block font-bold text-[#101216] mb-1">Ownership Count</label>
                   <select
                     value={newOwnership}
                     onChange={(e) => setNewOwnership(e.target.value as any)}
@@ -2433,6 +3025,119 @@ export default function AdminDashboardPage() {
                     <option value="1st Owner">1st Owner</option>
                     <option value="2nd Owner">2nd Owner</option>
                     <option value="3rd Owner">3rd Owner</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">Availability Status</label>
+                  <select
+                    value={newAvailability}
+                    onChange={(e) => setNewAvailability(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  >
+                    <option value="Available">Available</option>
+                    <option value="Reserved">Reserved</option>
+                    <option value="Sold Out">Sold Out</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">Mfg Year</label>
+                  <input
+                    type="number"
+                    min={2010}
+                    max={2026}
+                    value={newMfgYear}
+                    onChange={(e) => setNewMfgYear(Number(e.target.value))}
+                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">Reg Year</label>
+                  <input
+                    type="number"
+                    min={2010}
+                    max={2026}
+                    value={newRegYear}
+                    onChange={(e) => setNewRegYear(Number(e.target.value))}
+                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">Sug Min Price (₹)</label>
+                  <input
+                    type="number"
+                    step={10000}
+                    value={newSuggestedMin}
+                    onChange={(e) => setNewSuggestedMin(Number(e.target.value))}
+                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">Sug Max Price (₹)</label>
+                  <input
+                    type="number"
+                    step={10000}
+                    value={newSuggestedMax}
+                    onChange={(e) => setNewSuggestedMax(Number(e.target.value))}
+                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">Insurance Status</label>
+                  <select
+                    value={newInsuranceStatus}
+                    onChange={(e) => setNewInsuranceStatus(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  >
+                    <option value="Valid">Valid</option>
+                    <option value="Expired">Expired</option>
+                    <option value="Unavailable">Unavailable</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">Insurance Expiry</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Nov 2026"
+                    value={newInsuranceExpiry}
+                    onChange={(e) => setNewInsuranceExpiry(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">Insurance Type</label>
+                  <select
+                    value={newInsuranceType}
+                    onChange={(e) => setNewInsuranceType(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  >
+                    <option value="Comprehensive">Comprehensive</option>
+                    <option value="Zero Depreciation">Zero Depreciation</option>
+                    <option value="Third Party">Third Party</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">Finance Availability</label>
+                  <select
+                    value={newFinanceAvailable}
+                    onChange={(e) => setNewFinanceAvailable(e.target.value as any)}
+                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  >
+                    <option value="Available">Available</option>
+                    <option value="Subject to Approval">Subject to Approval</option>
+                    <option value="Not Available">Not Available</option>
                   </select>
                 </div>
               </div>
@@ -2678,6 +3383,99 @@ export default function AdminDashboardPage() {
                   className="px-6 py-2.5 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
                 >
                   Publish Vehicle to Recars
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          COUNTEROFFER MODAL (NEGOTIATION)
+      ========================================================= */}
+      {isCounterModalOpen && selectedNegotiation && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-[#E5E7EB] p-6 space-y-4 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold">
+                  <Handshake className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-[#101216]">Propose Counteroffer</h3>
+                  <p className="text-[11px] text-gray-500">Respond directly to {selectedNegotiation.customerName}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsCounterModalOpen(false);
+                  setSelectedNegotiation(null);
+                }}
+                className="p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Vehicle:</span>
+                <span className="font-bold text-gray-900">{selectedNegotiation.carTitle}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Listed Price:</span>
+                <span className="font-bold text-gray-900">{formatINR(selectedNegotiation.listedPrice)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Customer Offer:</span>
+                <span className="font-black text-[#E5325C]">{formatINR(selectedNegotiation.customerOffer)}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmitCounterOffer} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-[#101216] mb-1">
+                  Proposed Counteroffer (₹)
+                </label>
+                <input
+                  type="number"
+                  required
+                  step={5000}
+                  value={counterOfferAmount}
+                  onChange={(e) => setCounterOfferAmount(Number(e.target.value))}
+                  className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-bold text-sm text-purple-700 focus:outline-none focus:border-purple-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#101216] mb-1">
+                  Message / Remarks to Customer
+                </label>
+                <textarea
+                  rows={2}
+                  value={counterOfferNotes}
+                  onChange={(e) => setCounterOfferNotes(e.target.value)}
+                  placeholder="e.g. Best price considering vehicle condition, verified service history and new battery."
+                  className="w-full px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-medium text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCounterModalOpen(false);
+                    setSelectedNegotiation(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 font-bold text-xs text-gray-700 hover:bg-gray-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 font-bold text-xs text-white shadow-md cursor-pointer transition-colors"
+                >
+                  Send Counteroffer
                 </button>
               </div>
             </form>

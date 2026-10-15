@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { createClient } from '@supabase/supabase-js';
-import { Car, SellRequest, TestDriveBooking, CarInquiry } from './types';
+import { Car, SellRequest, TestDriveBooking, CarInquiry, Negotiation, InspectionConfig } from './types';
 
 function getDatabaseConnectionString(): string {
   const envUrl = process.env.DATABASE_URL || '';
@@ -123,6 +123,15 @@ export async function dbGetCars(filter?: {
     ],
     description: r.description || `${r.year} ${r.make} ${r.model} verified by Recars engineers.`,
     createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    availabilityStatus: (r.availability_status as any) || 'Available',
+    manufacturingYear: r.manufacturing_year || r.year,
+    registrationYear: r.registration_year || r.year,
+    insuranceStatus: (r.insurance_status as any) || 'Valid',
+    insuranceExpiry: r.insurance_expiry || '2026-11-20',
+    insuranceType: (r.insurance_type as any) || 'Comprehensive',
+    financeAvailable: (r.finance_available as any) || 'Available',
+    suggestedPriceMin: r.suggested_price_min ? Number(r.suggested_price_min) : Math.round(Number(r.price) * 0.95),
+    suggestedPriceMax: r.suggested_price_max ? Number(r.suggested_price_max) : Math.round(Number(r.price) * 1.05),
   }));
 }
 
@@ -175,6 +184,15 @@ export async function dbGetCarById(id: string): Promise<Car | null> {
     ],
     description: r.description || `${r.year} ${r.make} ${r.model} verified by Recars engineers.`,
     createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    availabilityStatus: (r.availability_status as any) || 'Available',
+    manufacturingYear: r.manufacturing_year || r.year,
+    registrationYear: r.registration_year || r.year,
+    insuranceStatus: (r.insurance_status as any) || 'Valid',
+    insuranceExpiry: r.insurance_expiry || '2026-11-20',
+    insuranceType: (r.insurance_type as any) || 'Comprehensive',
+    financeAvailable: (r.finance_available as any) || 'Available',
+    suggestedPriceMin: r.suggested_price_min ? Number(r.suggested_price_min) : Math.round(Number(r.price) * 0.95),
+    suggestedPriceMax: r.suggested_price_max ? Number(r.suggested_price_max) : Math.round(Number(r.price) * 1.05),
   };
 }
 
@@ -183,14 +201,27 @@ export async function dbInsertCar(car: Car): Promise<void> {
     INSERT INTO public.cars (
       id, make, model, variant, year, price, original_price, emi_per_month,
       kilometers, fuel_type, transmission, body_type, ownership, city,
-      location_area, image, gallery_images, score, is_verified, is_select, description
+      location_area, image, gallery_images, score, is_verified, is_select, description,
+      availability_status, manufacturing_year, registration_year, insurance_status,
+      insurance_expiry, insurance_type, finance_available, suggested_price_min, suggested_price_max
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
+      $22, $23, $24, $25, $26, $27, $28, $29, $30
     )
     ON CONFLICT (id) DO UPDATE SET
       price = EXCLUDED.price,
       kilometers = EXCLUDED.kilometers,
       score = EXCLUDED.score,
+      availability_status = EXCLUDED.availability_status,
+      ownership = EXCLUDED.ownership,
+      manufacturing_year = EXCLUDED.manufacturing_year,
+      registration_year = EXCLUDED.registration_year,
+      insurance_status = EXCLUDED.insurance_status,
+      insurance_expiry = EXCLUDED.insurance_expiry,
+      insurance_type = EXCLUDED.insurance_type,
+      finance_available = EXCLUDED.finance_available,
+      suggested_price_min = EXCLUDED.suggested_price_min,
+      suggested_price_max = EXCLUDED.suggested_price_max,
       updated_at = now();
   `;
   await pool.query(sql, [
@@ -206,7 +237,7 @@ export async function dbInsertCar(car: Car): Promise<void> {
     car.fuelType,
     car.transmission,
     car.bodyType,
-    car.ownership,
+    car.ownership || '1st Owner',
     car.city,
     car.locationArea || null,
     car.image,
@@ -215,7 +246,24 @@ export async function dbInsertCar(car: Car): Promise<void> {
     car.isVerified ?? true,
     car.isRecarsSelect ?? true,
     car.description || null,
+    car.availabilityStatus || 'Available',
+    car.manufacturingYear || car.year,
+    car.registrationYear || car.year,
+    car.insuranceStatus || 'Valid',
+    car.insuranceExpiry || '2026-11-20',
+    car.insuranceType || 'Comprehensive',
+    car.financeAvailable || 'Available',
+    car.suggestedPriceMin || Math.round(car.price * 0.95),
+    car.suggestedPriceMax || Math.round(car.price * 1.05),
   ]);
+}
+
+export async function dbUpdateCarAvailability(id: string, status: string): Promise<boolean> {
+  const res = await pool.query(
+    'UPDATE public.cars SET availability_status = $1, updated_at = now() WHERE id = $2',
+    [status, id]
+  );
+  return (res.rowCount || 0) > 0;
 }
 
 export async function dbDeleteCar(id: string): Promise<boolean> {
@@ -546,3 +594,255 @@ export async function dbInsertTestDrive(td: TestDriveBooking): Promise<void> {
     td.status,
   ]);
 }
+
+// ========================================================
+// 6. NEGOTIATIONS DATABASE OPERATIONS
+// ========================================================
+
+export async function dbGetNegotiations(filter?: {
+  carId?: string;
+  customerPhone?: string;
+  status?: string;
+}): Promise<Negotiation[]> {
+  let sql = 'SELECT * FROM public.negotiations WHERE 1=1';
+  const values: any[] = [];
+  let idx = 1;
+
+  if (filter?.carId) {
+    sql += ` AND car_id = $${idx++}`;
+    values.push(filter.carId);
+  }
+  if (filter?.customerPhone) {
+    sql += ` AND customer_phone = $${idx++}`;
+    values.push(filter.customerPhone);
+  }
+  if (filter?.status && filter.status !== 'All') {
+    sql += ` AND status = $${idx++}`;
+    values.push(filter.status);
+  }
+
+  sql += ' ORDER BY updated_at DESC';
+
+  const { rows } = await pool.query(sql, values);
+  return rows.map((r) => ({
+    id: r.id,
+    carId: r.car_id,
+    carTitle: r.car_title,
+    carImage: r.car_image,
+    listedPrice: Number(r.listed_price),
+    customerName: r.customer_name,
+    customerPhone: r.customer_phone,
+    customerEmail: r.customer_email,
+    customerOffer: Number(r.customer_offer),
+    counterOffer: r.counter_offer ? Number(r.counter_offer) : undefined,
+    finalPrice: r.final_price ? Number(r.final_price) : undefined,
+    status: r.status,
+    notes: r.notes,
+    offerHistory: typeof r.offer_history === 'string' ? JSON.parse(r.offer_history) : (r.offer_history || []),
+    createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+  }));
+}
+
+export async function dbGetNegotiationById(id: string): Promise<Negotiation | null> {
+  const { rows } = await pool.query('SELECT * FROM public.negotiations WHERE id = $1 LIMIT 1', [id]);
+  if (!rows.length) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    carId: r.car_id,
+    carTitle: r.car_title,
+    carImage: r.car_image,
+    listedPrice: Number(r.listed_price),
+    customerName: r.customer_name,
+    customerPhone: r.customer_phone,
+    customerEmail: r.customer_email,
+    customerOffer: Number(r.customer_offer),
+    counterOffer: r.counter_offer ? Number(r.counter_offer) : undefined,
+    finalPrice: r.final_price ? Number(r.final_price) : undefined,
+    status: r.status,
+    notes: r.notes,
+    offerHistory: typeof r.offer_history === 'string' ? JSON.parse(r.offer_history) : (r.offer_history || []),
+    createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+  };
+}
+
+export async function dbCreateNegotiation(neg: Negotiation): Promise<void> {
+  if (neg.customerPhone) {
+    try {
+      await dbUpsertCustomer({
+        id: '',
+        name: neg.customerName,
+        phone: neg.customerPhone,
+        email: neg.customerEmail,
+      });
+    } catch (e) {
+      console.warn('Customer upsert notice:', e);
+    }
+  }
+
+  const initialHistory = neg.offerHistory && neg.offerHistory.length > 0 ? neg.offerHistory : [
+    {
+      id: `off-${Date.now()}`,
+      sender: 'customer',
+      senderName: neg.customerName,
+      amount: neg.customerOffer,
+      message: neg.notes || 'Initial customer offer',
+      timestamp: new Date().toISOString(),
+    }
+  ];
+
+  const sql = `
+    INSERT INTO public.negotiations (
+      id, car_id, car_title, car_image, listed_price,
+      customer_name, customer_phone, customer_email,
+      customer_offer, counter_offer, final_price, status, notes,
+      offer_history, created_at, updated_at
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, now(), now()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      customer_offer = EXCLUDED.customer_offer,
+      notes = EXCLUDED.notes,
+      offer_history = EXCLUDED.offer_history,
+      updated_at = now();
+  `;
+
+  await pool.query(sql, [
+    neg.id,
+    neg.carId,
+    neg.carTitle,
+    neg.carImage || null,
+    neg.listedPrice,
+    neg.customerName,
+    neg.customerPhone,
+    neg.customerEmail || null,
+    neg.customerOffer,
+    neg.counterOffer || null,
+    neg.finalPrice || null,
+    neg.status || 'Pending',
+    neg.notes || null,
+    JSON.stringify(initialHistory),
+  ]);
+}
+
+export async function dbUpdateNegotiationStatus(
+  id: string,
+  action: 'accept' | 'reject' | 'counter' | 'customer_accept',
+  payload: {
+    counterOffer?: number;
+    finalPrice?: number;
+    notes?: string;
+    actorName?: string;
+  }
+): Promise<Negotiation | null> {
+  const current = await dbGetNegotiationById(id);
+  if (!current) return null;
+
+  let newStatus = current.status;
+  let counterOffer = current.counterOffer;
+  let finalPrice = current.finalPrice;
+  const history = [...(current.offerHistory || [])];
+
+  if (action === 'accept') {
+    newStatus = 'Accepted';
+    finalPrice = payload.finalPrice || current.customerOffer;
+    history.push({
+      id: `off-${Date.now()}`,
+      sender: 'admin',
+      senderName: payload.actorName || 'Recars Sales Team',
+      amount: finalPrice,
+      message: payload.notes || 'Offer accepted by Recars. Ready for booking.',
+      timestamp: new Date().toISOString(),
+    });
+  } else if (action === 'reject') {
+    newStatus = 'Rejected';
+    history.push({
+      id: `off-${Date.now()}`,
+      sender: 'admin',
+      senderName: payload.actorName || 'Recars Sales Team',
+      amount: current.customerOffer,
+      message: payload.notes || 'Offer could not be accepted at this time.',
+      timestamp: new Date().toISOString(),
+    });
+  } else if (action === 'counter') {
+    newStatus = 'Counteroffer';
+    counterOffer = payload.counterOffer || current.listedPrice;
+    history.push({
+      id: `off-${Date.now()}`,
+      sender: 'admin',
+      senderName: payload.actorName || 'Recars Pricing Desk',
+      amount: counterOffer,
+      message: payload.notes || `Counteroffer proposed: ₹${counterOffer.toLocaleString('en-IN')}`,
+      timestamp: new Date().toISOString(),
+    });
+  } else if (action === 'customer_accept') {
+    newStatus = 'Accepted';
+    finalPrice = current.counterOffer || current.customerOffer;
+    history.push({
+      id: `off-${Date.now()}`,
+      sender: 'customer',
+      senderName: current.customerName,
+      amount: finalPrice,
+      message: 'Customer accepted the counteroffer!',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  const sql = `
+    UPDATE public.negotiations SET
+      status = $1,
+      counter_offer = $2,
+      final_price = $3,
+      notes = COALESCE($4, notes),
+      offer_history = $5,
+      updated_at = now()
+    WHERE id = $6
+    RETURNING *;
+  `;
+
+  await pool.query(sql, [
+    newStatus,
+    counterOffer || null,
+    finalPrice || null,
+    payload.notes || null,
+    JSON.stringify(history),
+    id,
+  ]);
+
+  return await dbGetNegotiationById(id);
+}
+
+// ========================================================
+// 7. SYSTEM SETTINGS & INSPECTION CONFIG OPERATIONS
+// ========================================================
+
+export async function dbGetInspectionConfig(): Promise<InspectionConfig> {
+  const defaultConf: InspectionConfig = {
+    sellerInspectionFee: 499,
+    buyerInspectionFee: 999,
+    freeInspectionActive: false,
+  };
+  try {
+    const { rows } = await pool.query("SELECT value FROM public.settings WHERE key = 'inspection_config' LIMIT 1");
+    if (!rows.length) return defaultConf;
+    const val = typeof rows[0].value === 'string' ? JSON.parse(rows[0].value) : rows[0].value;
+    return { ...defaultConf, ...val };
+  } catch (e) {
+    return defaultConf;
+  }
+}
+
+export async function dbUpdateInspectionConfig(config: Partial<InspectionConfig>): Promise<InspectionConfig> {
+  const current = await dbGetInspectionConfig();
+  const updated: InspectionConfig = { ...current, ...config };
+  await pool.query(
+    `INSERT INTO public.settings (key, value, updated_at)
+     VALUES ('inspection_config', $1, now())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+    [JSON.stringify(updated)]
+  );
+  return updated;
+}
+
