@@ -515,7 +515,7 @@ export default function TwoColumnFilterDrawer({
                   </label>
                   <label className="flex items-center justify-between p-3 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50">
                     <div>
-                      <span className="text-xs font-bold text-gray-900 block">200+ Point Verified</span>
+                      <span className="text-xs font-bold text-gray-900 block">28+ Point Verified</span>
                       <span className="text-[10px] text-gray-500 block">Diagnostically scanned and inspected</span>
                     </div>
                     <input

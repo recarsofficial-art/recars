@@ -15,7 +15,7 @@ export default function Footer() {
             </div>
 
             <p className="text-xs text-gray-600 leading-relaxed max-w-sm">
-              Recars is India&apos;s most trusted verified pre-owned car marketplace. We combine rigorous 200+ point inspection engineering, transparent pricing, and doorstep convenience so every Indian can buy and sell with utmost confidence.
+              Recars is India&apos;s most trusted verified pre-owned car marketplace. We combine rigorous 28+ point inspection engineering, transparent pricing, and doorstep convenience so every Indian can buy and sell with utmost confidence.
             </p>
             
             <div className="pt-2 space-y-2.5 text-xs text-gray-600">
@@ -70,7 +70,7 @@ export default function Footer() {
             <ul className="space-y-2.5 text-xs text-gray-600">
               <li><Link href="/sell" className="hover:text-[#E5325C] transition-colors">Sell Your Car</Link></li>
               <li><Link href="/sell" className="hover:text-[#E5325C] transition-colors">Doorstep Inspection (₹499)</Link></li>
-              <li><Link href="/why-recars#inspection" className="hover:text-[#E5325C] transition-colors">200+ Point Inspection</Link></li>
+              <li><Link href="/why-recars#inspection" className="hover:text-[#E5325C] transition-colors">28+ Point Inspection</Link></li>
               <li><Link href="/finance" className="hover:text-[#E5325C] transition-colors">Car Loan & EMI Calculator</Link></li>
               <li><Link href="/insurance" className="hover:text-[#E5325C] transition-colors">Comprehensive Insurance</Link></li>
               <li><Link href="/why-recars#rc-transfer" className="hover:text-[#E5325C] transition-colors">RC Transfer Assistance</Link></li>

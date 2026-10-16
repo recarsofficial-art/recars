@@ -427,7 +427,7 @@ export default function CarSearchModal({
                     <ShieldCheck className="w-4 h-4" />
                   </div>
                   <span className="text-xs sm:text-sm font-medium font-body text-gray-800 group-hover:text-[#E5325C]">
-                    200+ Point Inspection
+                    28+ Point Inspection
                   </span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#E5325C] group-hover:translate-x-0.5 transition-all" />

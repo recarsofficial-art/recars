@@ -182,7 +182,7 @@ export default function SellProcessSection() {
               Pick a day
             </h3>
             <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed max-w-[240px] mb-3">
-              At home or your nearest Recars Car Hub, for a 200+ point inspection and final best offer. Easy
+              At home or your nearest Recars Car Hub, for a 28+ point inspection and final best offer. Easy
             </p>
             <Link
               href="/sell"

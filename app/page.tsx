@@ -58,7 +58,7 @@ const FAQS = [
   {
     question: 'What makes Recars different from other pre-owned car platforms?',
     answer:
-      'Unlike unverified classifieds or typical used car dealers, Recars inspects every vehicle through 200+ engineering checkpoints. We offer transparent market-guided pricing with online negotiation options, verified vehicle documentation, and complete doorstep RC ownership transfer assistance.'
+      'Unlike unverified classifieds or typical used car dealers, Recars inspects every vehicle through 28+ engineering checkpoints. We offer transparent market-guided pricing with online negotiation options, verified vehicle documentation, and complete doorstep RC ownership transfer assistance.'
   },
   {
     question: 'How does the Recars Price Negotiation work?',
@@ -419,7 +419,7 @@ function HomePageContent() {
                     </span>
                   </h3>
                   <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    Certified 200+ point engineering check with 5-day return policy
+                    Certified 28+ point engineering check with 5-day return policy
                   </p>
                 </div>
 
@@ -563,7 +563,7 @@ function HomePageContent() {
                 <CheckCircle2 className="w-6 h-6 text-[#E5325C]" />
               </div>
               <h3 className="text-lg font-bold text-[#101216] mb-2">
-                200+ Point Inspection
+                28+ Point Inspection
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                 Automotive engineers test cylinder compression, suspension dynamics, OBD-II onboard diagnostics, and verify zero structural flood or accident damage.
@@ -774,7 +774,7 @@ function HomePageContent() {
                   2
                 </div>
                 <h3 className="text-lg font-bold text-[#101216] mb-2">
-                  200+ Point Evaluation
+                  28+ Point Evaluation
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                   A certified automotive engineer conducts thorough mechanical, paint, and OBD diagnostics, delivering our highest competitive purchase offer.
@@ -1037,7 +1037,7 @@ function HomePageContent() {
               <div className="flex items-center justify-between pt-2">
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Powered by 200+ point verified database</span>
+                  <span>Powered by 28+ point verified database</span>
                 </div>
                 <button
                   type="button"

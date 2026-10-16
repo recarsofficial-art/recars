@@ -25,7 +25,7 @@ export default function WhyRecarsPage() {
   const comparisonRows = [
     {
       feature: 'Inspection Rigor',
-      recars: '200+ Point Certified Engineering Check',
+      recars: '28+ Point Certified Engineering Check',
       unorganized: 'Basic visual check or none',
     },
     {
@@ -35,7 +35,7 @@ export default function WhyRecarsPage() {
     },
     {
       feature: 'Quality Verification',
-      recars: '200+ Point engineering check with digital report',
+      recars: '28+ Point engineering check with digital report',
       unorganized: 'Basic cosmetic polish without diagnostic scan',
     },
     {
@@ -104,7 +104,7 @@ export default function WhyRecarsPage() {
               <div className="w-12 h-12 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#E5325C] shadow-xs">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-base text-[#101216]">200+ Point Inspection</h3>
+              <h3 className="font-bold text-base text-[#101216]">28+ Point Inspection</h3>
               <p className="text-xs text-[#6B7078] leading-relaxed">
                 Automotive specialists evaluate engine compression, hydraulic brakes, body panels, OBD-II scanner electronics, and electrical harness. If it doesn&apos;t meet our standards, we reject it.
               </p>
@@ -136,7 +136,7 @@ export default function WhyRecarsPage() {
               </div>
               <h3 className="font-bold text-base text-[#101216]">Rigorous Engineering Standards</h3>
               <p className="text-xs text-[#6B7078] leading-relaxed">
-                Comprehensive 200+ mechanical diagnostics including engine compression, transmission gearshifts, ECU health, and chassis integrity.
+                Comprehensive 28+ mechanical diagnostics including engine compression, transmission gearshifts, ECU health, and chassis integrity.
               </p>
             </div>
 

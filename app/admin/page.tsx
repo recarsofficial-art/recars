@@ -2788,7 +2788,7 @@ export default function AdminDashboardPage() {
               <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] space-y-2">
                 <h4 className="font-bold text-[#101216]">Transparent Customer Responsibility Policy</h4>
                 <ul className="list-disc list-inside space-y-1 text-gray-600 text-[11px]">
-                  <li>Inspection covers 200+ multi-point diagnostic checks: engine, transmission, steering, brakes, suspension, electricals, and RTO document audit.</li>
+                  <li>Inspection covers 28+ multi-point diagnostic checks: engine, transmission, steering, brakes, suspension, electricals, and RTO document audit.</li>
                   <li>Customer acknowledges charges prior to booking confirmation.</li>
                   <li>No customer is charged without affirmative authorization and consent.</li>
                 </ul>
@@ -3337,7 +3337,7 @@ export default function AdminDashboardPage() {
                     onChange={(e) => setNewIsVerified(e.target.checked)}
                     className="w-4 h-4 text-[#E5325C] rounded border-gray-300 focus:ring-[#E5325C]"
                   />
-                  <span>Mark as 200+ Point Verified</span>
+                  <span>Mark as 28+ Point Verified</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800">

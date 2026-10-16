@@ -525,7 +525,7 @@ function CarDetailInner({ params }: PageProps) {
               </div>
             </div>
 
-            {/* 3. Detailed 200+ Point Inspection Report */}
+            {/* 3. Detailed 28+ Point Inspection Report */}
             <div className="bg-white rounded-3xl border border-[#E5E7EB] p-6 shadow-xs space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E5E7EB]">
                 <div>
@@ -534,7 +534,7 @@ function CarDetailInner({ params }: PageProps) {
                     <span>Official Inspection Certified</span>
                   </div>
                   <h2 className="text-xl font-black text-[#101216]">
-                    200+ Point Inspection Report
+                    28+ Point Inspection Report
                   </h2>
                 </div>
 
@@ -928,7 +928,7 @@ function CarDetailInner({ params }: PageProps) {
               <div className="pt-4 border-t border-[#E5E7EB] space-y-2.5 text-xs text-[#24262A]">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#237A52] flex-shrink-0" />
-                  <span>200+ Point Comprehensive Inspection Certified</span>
+                  <span>28+ Point Comprehensive Inspection Certified</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#237A52] flex-shrink-0" />

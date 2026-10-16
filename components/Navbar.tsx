@@ -112,7 +112,7 @@ export default function Navbar({
                       className="flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
                     >
                       <Shield className="w-4 h-4 text-[#E5325C]" />
-                      <span>200+ Point Inspection</span>
+                      <span>28+ Point Inspection</span>
                     </Link>
                     <Link
                       href="/sell"

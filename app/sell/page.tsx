@@ -455,7 +455,7 @@ function SellWorkflowContent() {
                   </span>
                 </div>
                 <p className="text-[11px] text-amber-800 leading-relaxed">
-                  Estimated market value based on {year} {make} {model} ({ownership}, {kilometers.toLocaleString('en-IN')} km). This is contextual guidance; your final binding purchase price is determined during physical 200+ point inspection.
+                  Estimated market value based on {year} {make} {model} ({ownership}, {kilometers.toLocaleString('en-IN')} km). This is contextual guidance; your final binding purchase price is determined during physical 28+ point inspection.
                 </p>
               </div>
 
@@ -642,7 +642,7 @@ function SellWorkflowContent() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-blue-900">
-                  <div>• <strong>Coverage:</strong> 200+ mechanical, paint meter, OBD diagnostics & road test.</div>
+                  <div>• <strong>Coverage:</strong> 28+ mechanical, paint meter, OBD diagnostics & road test.</div>
                   <div>• <strong>Responsibility:</strong> Payable by vehicle seller upon engineer arrival.</div>
                   <div>• <strong>Payment Due:</strong> At doorstep before technical physical evaluation.</div>
                   <div>• <strong>Deliverable:</strong> Certified digital inspection report & guaranteed highest offer.</div>
@@ -728,7 +728,7 @@ function SellWorkflowContent() {
 
               <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 max-w-md mx-auto text-left text-xs text-gray-600 leading-relaxed">
                 <p className="font-semibold text-gray-800 mb-1">What happens next?</p>
-                Our certified Recars inspection engineer will contact you on <span className="font-bold text-gray-900">{sellerPhone}</span> before arriving. After a thorough 200+ point physical inspection, you will receive our highest guaranteed price with instant payment and doorstep RC transfer assistance.
+                Our certified Recars inspection engineer will contact you on <span className="font-bold text-gray-900">{sellerPhone}</span> before arriving. After a thorough 28+ point physical inspection, you will receive our highest guaranteed price with instant payment and doorstep RC transfer assistance.
               </div>
 
               <div className="space-y-3 pt-2">
