@@ -1,17 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import {
   Search,
   MapPin,
   ChevronDown,
-  Sparkles,
   ArrowRight,
-  ShieldCheck,
-  CreditCard,
-  FileCheck2,
   Car,
   Tag,
   CheckCircle2,
@@ -165,146 +159,84 @@ export default function RecarsHomeHub({
         </div>
 
         {/* ========================================================
-            4. THE 4 SERVICE CARDS (2x2 GRID AS IN SCREENSHOT 1)
+            4. THE 2 PRIMARY SERVICE CARDS: BUY USED CAR & SELL CAR
         ========================================================= */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+        <div className="grid grid-cols-2 gap-3.5 sm:gap-6 mb-6">
           {/* CARD 1: BUY USED CAR */}
           <button
             type="button"
             onClick={() => onSelectTab('buy')}
-            className={`group text-left p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all relative overflow-hidden flex flex-col justify-between ${
+            className={`group text-left p-4 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer min-h-[140px] sm:min-h-[160px] ${
               activeTab === 'buy'
-                ? 'bg-white text-[#101216] border-[#E5325C] shadow-lg ring-2 ring-[#E5325C]/20'
-                : 'bg-white text-[#101216] border-white/20 hover:border-white/50 shadow-sm'
+                ? 'bg-white text-[#101216] border-[#E5325C] shadow-xl ring-2 ring-[#E5325C]/25 scale-[1.01]'
+                : 'bg-white text-[#101216] border-white/20 hover:border-white/60 shadow-md hover:shadow-lg'
             }`}
           >
             {/* Top row with tag and active indicator */}
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="inline-block px-2 py-0.5 rounded-full bg-[#FFF0E6] text-[#E05300] text-[9px] sm:text-[10px] font-extrabold tracking-tight">
+            <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
+              <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#FFF0E6] text-[#E05300] text-[10px] sm:text-xs font-extrabold tracking-tight">
                 UP TO 20% OFF
               </span>
               {activeTab === 'buy' && (
-                <span className="w-2.5 h-2.5 rounded-full bg-[#E5325C]" />
+                <span className="w-3 h-3 rounded-full bg-[#E5325C] ring-4 ring-[#FFF0F3]" />
               )}
             </div>
 
             <div>
-              <h3 className="text-sm sm:text-base font-black text-[#101216] group-hover:text-[#E5325C] transition-colors">
+              <h3 className="text-base sm:text-xl font-black text-[#101216] group-hover:text-[#E5325C] transition-colors tracking-tight">
                 Buy used car
               </h3>
-              <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-1 mt-0.5">
-                Certified 200+ points
+              <p className="text-xs sm:text-sm text-gray-500 line-clamp-1 mt-0.5 sm:mt-1">
+                Certified 200+ points • 5-day return
               </p>
             </div>
 
-            {/* Car illustration / graphic */}
-            <div className="mt-3 flex items-center justify-between">
-              <div className="w-8 h-8 rounded-full bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
-                <Car className="w-4 h-4" />
+            {/* Car illustration / action */}
+            <div className="mt-4 flex items-center justify-between pt-2 border-t border-gray-100">
+              <div className="w-9 h-9 rounded-xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
+                <Car className="w-5 h-5" />
               </div>
-              <div className="text-[11px] font-bold text-[#E5325C] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                <span>Browse</span>
+              <div className="text-xs sm:text-sm font-extrabold text-[#E5325C] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                <span>Browse Cars</span>
                 <span>→</span>
               </div>
             </div>
           </button>
 
-          {/* CARD 2: GET LOANS */}
-          <Link
-            href="/finance"
-            className="group text-left p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white text-[#101216] border border-white/20 hover:border-white/50 shadow-sm transition-all flex flex-col justify-between"
-          >
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="inline-block px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#1D4ED8] text-[9px] sm:text-[10px] font-extrabold tracking-tight">
-                Lowest Rates
-              </span>
-            </div>
-
-            <div>
-              <h3 className="text-sm sm:text-base font-black text-[#101216] group-hover:text-[#1D4ED8] transition-colors">
-                Get loans
-              </h3>
-              <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-1 mt-0.5">
-                Flexible terms at lowest rates.
-              </p>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between">
-              <div className="w-8 h-8 rounded-full bg-[#EFF6FF] text-[#1D4ED8] flex items-center justify-center">
-                <CreditCard className="w-4 h-4" />
-              </div>
-              <div className="text-[11px] font-bold text-[#1D4ED8] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                <span>From 8.99%</span>
-                <span>→</span>
-              </div>
-            </div>
-          </Link>
-
-          {/* CARD 3: GET INSURED */}
-          <Link
-            href="/insurance"
-            className="group text-left p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white text-[#101216] border border-white/20 hover:border-white/50 shadow-sm transition-all flex flex-col justify-between"
-          >
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="inline-block px-2 py-0.5 rounded-full bg-[#F0FDF4] text-[#15803D] text-[9px] sm:text-[10px] font-extrabold tracking-tight">
-                Instant Policy
-              </span>
-            </div>
-
-            <div>
-              <h3 className="text-sm sm:text-base font-black text-[#101216] group-hover:text-[#15803D] transition-colors">
-                Get insured
-              </h3>
-              <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-1 mt-0.5">
-                For your car, health & life
-              </p>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between">
-              <div className="w-8 h-8 rounded-full bg-[#F0FDF4] text-[#15803D] flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="text-[11px] font-bold text-[#15803D] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                <span>Save Up to 70%</span>
-                <span>→</span>
-              </div>
-            </div>
-          </Link>
-
-          {/* CARD 4: SELL CAR */}
+          {/* CARD 2: SELL CAR */}
           <button
             type="button"
             onClick={() => onSelectTab('sell')}
-            className={`group text-left p-4 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all relative overflow-hidden flex flex-col justify-between ${
+            className={`group text-left p-4 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer min-h-[140px] sm:min-h-[160px] ${
               activeTab === 'sell'
-                ? 'bg-white text-[#101216] border-[#E5325C] shadow-lg ring-2 ring-[#E5325C]/20'
-                : 'bg-white text-[#101216] border-white/20 hover:border-white/50 shadow-sm'
+                ? 'bg-white text-[#101216] border-[#E5325C] shadow-xl ring-2 ring-[#E5325C]/25 scale-[1.01]'
+                : 'bg-white text-[#101216] border-white/20 hover:border-white/60 shadow-md hover:shadow-lg'
             }`}
           >
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="inline-block px-2 py-0.5 rounded-full bg-[#FFF0F3] text-[#E5325C] text-[9px] sm:text-[10px] font-extrabold tracking-tight">
+            <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
+              <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#FFF0F3] text-[#E5325C] text-[10px] sm:text-xs font-extrabold tracking-tight">
                 Instant Valuation
               </span>
               {activeTab === 'sell' && (
-                <span className="w-2.5 h-2.5 rounded-full bg-[#E5325C]" />
+                <span className="w-3 h-3 rounded-full bg-[#E5325C] ring-4 ring-[#FFF0F3]" />
               )}
             </div>
 
             <div>
-              <h3 className="text-sm sm:text-base font-black text-[#101216] group-hover:text-[#E5325C] transition-colors">
+              <h3 className="text-base sm:text-xl font-black text-[#101216] group-hover:text-[#E5325C] transition-colors tracking-tight">
                 Sell car
               </h3>
-              <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-1 mt-0.5">
-                15000+ buyer network
+              <p className="text-xs sm:text-sm text-gray-500 line-clamp-1 mt-0.5 sm:mt-1">
+                15000+ buyer network • Best price guarantee
               </p>
             </div>
 
-            <div className="mt-3 flex items-center justify-between">
-              <div className="w-8 h-8 rounded-full bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
-                <Tag className="w-4 h-4" />
+            <div className="mt-4 flex items-center justify-between pt-2 border-t border-gray-100">
+              <div className="w-9 h-9 rounded-xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
+                <Tag className="w-5 h-5" />
               </div>
-              <div className="text-[11px] font-bold text-[#E5325C] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                <span>Get Offer</span>
+              <div className="text-xs sm:text-sm font-extrabold text-[#E5325C] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                <span>Get Offer (SellRight)</span>
                 <span>→</span>
               </div>
             </div>
