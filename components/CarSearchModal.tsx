@@ -45,7 +45,7 @@ const SEARCH_BRANDS = [
   {
     name: 'Hyundai',
     filterMake: 'Hyundai',
-    logo: '/images/brands/hyundai-emblem.svg',
+    logo: '/images/brands/hyundai-emblem.png',
     className: 'w-9 h-6 sm:w-10 sm:h-6.5 object-contain',
   },
   {

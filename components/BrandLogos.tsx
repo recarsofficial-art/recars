@@ -20,9 +20,9 @@ export function BrandLogo({ brand, className }: BrandLogoProps) {
     case 'Hyundai':
       return (
         <img
-          src="/images/brands/hyundai.svg"
+          src="/images/brands/hyundai-full.png"
           alt="Hyundai"
-          className={className || "h-4 sm:h-4.5 w-auto max-w-[95px] sm:max-w-[110px] object-contain"}
+          className={className || "h-6 sm:h-7 w-auto max-w-[85px] sm:max-w-[95px] object-contain"}
           loading="lazy"
         />
       );
@@ -184,9 +184,9 @@ export function BrandEmblem({ brand, className }: BrandLogoProps) {
     case 'Hyundai':
       return (
         <img
-          src="/images/brands/hyundai-emblem.svg"
+          src="/images/brands/hyundai-emblem.png"
           alt="Hyundai"
-          className={className || "w-9 h-6.5 object-contain"}
+          className={className || "w-9 h-6 object-contain"}
           loading="lazy"
         />
       );
