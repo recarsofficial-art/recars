@@ -167,3 +167,131 @@ export function BrandLogo({ brand, className }: BrandLogoProps) {
       );
   }
 }
+
+export function BrandEmblem({ brand, className }: BrandLogoProps) {
+  switch (brand) {
+    case 'Maruti':
+    case 'Maruti Suzuki':
+      return (
+        <img
+          src="/images/brands/suzuki-emblem.svg"
+          alt="Maruti Suzuki"
+          className={className || "w-8 h-8 object-contain"}
+          loading="lazy"
+        />
+      );
+
+    case 'Hyundai':
+      return (
+        <img
+          src="/images/brands/hyundai-emblem.svg"
+          alt="Hyundai"
+          className={className || "w-9 h-6.5 object-contain"}
+          loading="lazy"
+        />
+      );
+
+    case 'Tata':
+      return (
+        <img
+          src="/images/brands/tata-emblem.svg"
+          alt="Tata"
+          className={className || "w-8.5 h-8 object-contain"}
+          loading="lazy"
+        />
+      );
+
+    case 'Honda':
+      return (
+        <img
+          src="/images/brands/honda-badge.svg"
+          alt="Honda"
+          className={className || "w-8 h-8 object-contain"}
+          loading="lazy"
+        />
+      );
+
+    case 'Mahindra':
+      return (
+        <img
+          src="/images/brands/mahindra-emblem.png"
+          alt="Mahindra"
+          className={className || "w-8.5 h-8.5 object-contain"}
+          loading="lazy"
+        />
+      );
+
+    case 'Kia':
+      return (
+        <img
+          src="/images/brands/kia.svg"
+          alt="Kia"
+          className={className || "w-9 h-auto object-contain"}
+          loading="lazy"
+        />
+      );
+
+    case 'Toyota':
+      return (
+        <img
+          src="/images/brands/toyota-emblem.svg"
+          alt="Toyota"
+          className={className || "w-9 h-6.5 object-contain"}
+          loading="lazy"
+        />
+      );
+
+    case 'Renault':
+      return (
+        <img
+          src="/images/brands/renault-diamond.svg"
+          alt="Renault"
+          className={className || "w-7 h-9 object-contain"}
+          loading="lazy"
+        />
+      );
+
+    case 'Volkswagen':
+      return (
+        <img
+          src="/images/brands/volkswagen-emblem.svg"
+          alt="Volkswagen"
+          className={className || "w-8 h-8 object-contain"}
+          loading="lazy"
+        />
+      );
+
+    case 'MG':
+      return (
+        <img
+          src="/images/brands/mg.svg"
+          alt="MG"
+          className={className || "w-8 h-8 object-contain"}
+          loading="lazy"
+        />
+      );
+
+    case 'Ford':
+      return (
+        <img
+          src="/images/brands/ford.svg"
+          alt="Ford"
+          className={className || "w-10 h-auto object-contain"}
+          loading="lazy"
+        />
+      );
+
+    case 'BMW':
+      return (
+        <img
+          src="/images/brands/bmw.svg"
+          alt="BMW"
+          className={className || "w-8 h-8 object-contain"}
+          loading="lazy"
+        />
+      );
+
+    default:
+      return <BrandLogo brand={brand} className={className} />;
+  }
+}

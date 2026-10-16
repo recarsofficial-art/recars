@@ -39,102 +39,62 @@ const SEARCH_BRANDS = [
   {
     name: 'Maruti',
     filterMake: 'Maruti Suzuki',
-    svg: (
-      <svg viewBox="0 0 40 40" className="w-8 h-8" fill="none">
-        <path d="M10 8 L30 8 L18 20 L30 20 L30 32 L10 32 L22 20 L10 20 Z" fill="#D32F2F" />
-        <path d="M10 8 L24 8 L14 18 L10 18 Z M26 22 L30 22 L30 32 L16 32 Z" fill="#1E40AF" />
-      </svg>
-    ),
+    logo: '/images/brands/suzuki-emblem.svg',
+    className: 'w-7.5 h-7.5 sm:w-8.5 sm:h-8.5 object-contain',
   },
   {
     name: 'Hyundai',
     filterMake: 'Hyundai',
-    svg: (
-      <svg viewBox="0 0 50 32" className="w-9 h-6" fill="none">
-        <ellipse cx="25" cy="16" rx="23" ry="14" stroke="#002C6C" strokeWidth="2.5" />
-        <path
-          d="M17 9 C17 9 20 16 19 23 M33 9 C33 9 30 16 31 23 M17 16 C22 14 28 17 33 16"
-          stroke="#002C6C"
-          strokeWidth="2.8"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    logo: '/images/brands/hyundai-emblem.svg',
+    className: 'w-9 h-6 sm:w-10 sm:h-6.5 object-contain',
   },
   {
     name: 'Tata',
     filterMake: 'Tata',
-    svg: (
-      <svg viewBox="0 0 40 28" className="w-8 h-6" fill="none">
-        <ellipse cx="20" cy="14" rx="18" ry="12" stroke="#005B94" strokeWidth="2.2" />
-        <path
-          d="M11 9 C15 11 18 17 18 23 M29 9 C25 11 22 17 22 23 M11 11 H29"
-          stroke="#005B94"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    logo: '/images/brands/tata-emblem.svg',
+    className: 'w-8.5 h-7.5 sm:w-9.5 sm:h-8 object-contain',
   },
   {
     name: 'Honda',
     filterMake: 'Honda',
-    svg: (
-      <svg viewBox="0 0 36 32" className="w-8 h-6" fill="none">
-        <rect x="2" y="2" width="32" height="28" rx="6" stroke="#C41230" strokeWidth="2.2" />
-        <path
-          d="M9 7 L12 25 M27 7 L24 25 M11 15 H25"
-          stroke="#C41230"
-          strokeWidth="2.8"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    logo: '/images/brands/honda-badge.svg',
+    className: 'w-7.5 h-7.5 sm:w-8.5 sm:h-8.5 object-contain',
   },
   {
     name: 'Mahindra',
     filterMake: 'Mahindra',
-    svg: (
-      <svg viewBox="0 0 36 28" className="w-8 h-6" fill="none">
-        <path
-          d="M4 22 L14 6 L18 12 L22 6 L32 22 M14 22 L18 16 L22 22"
-          stroke="#D32F2F"
-          strokeWidth="2.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
+    logo: '/images/brands/mahindra-emblem.png',
+    className: 'w-8 h-8 sm:w-9 sm:h-9 object-contain',
   },
   {
     name: 'Kia',
     filterMake: 'Kia',
-    svg: (
-      <div className="px-1.5 py-0.5 rounded bg-black flex items-center justify-center">
-        <span className="text-white font-black text-[11px] tracking-[0.16em]">KИ</span>
-      </div>
-    ),
+    logo: '/images/brands/kia.svg',
+    className: 'w-9 h-auto sm:w-10 object-contain',
   },
   {
     name: 'Toyota',
     filterMake: 'Toyota',
-    svg: (
-      <svg viewBox="0 0 44 32" className="w-9 h-6" fill="none">
-        <ellipse cx="22" cy="16" rx="20" ry="14" stroke="#D32F2F" strokeWidth="2.2" />
-        <ellipse cx="22" cy="11" rx="10" ry="5" stroke="#D32F2F" strokeWidth="2" />
-        <ellipse cx="22" cy="18" rx="4" ry="11" stroke="#D32F2F" strokeWidth="2" />
-      </svg>
-    ),
+    logo: '/images/brands/toyota-emblem.svg',
+    className: 'w-9 h-6 sm:w-10 sm:h-6.5 object-contain',
   },
   {
     name: 'Renault',
     filterMake: 'Renault',
-    svg: (
-      <svg viewBox="0 0 32 36" className="w-6 h-7" fill="none">
-        <path d="M16 2 L28 18 L16 34 L4 18 Z" stroke="#FDB813" strokeWidth="3" strokeLinejoin="round" />
-        <path d="M16 9 L22 18 L16 27 L10 18 Z" stroke="#333333" strokeWidth="2" strokeLinejoin="round" />
-      </svg>
-    ),
+    logo: '/images/brands/renault-diamond.svg',
+    className: 'w-6 h-8 sm:w-7 sm:h-9 object-contain',
+  },
+  {
+    name: 'Volkswagen',
+    filterMake: 'Volkswagen',
+    logo: '/images/brands/volkswagen-emblem.svg',
+    className: 'w-8 h-8 sm:w-9 sm:h-9 object-contain',
+  },
+  {
+    name: 'MG',
+    filterMake: 'MG',
+    logo: '/images/brands/mg.svg',
+    className: 'w-7.5 h-7.5 sm:w-8.5 sm:h-8.5 object-contain',
   },
 ];
 
@@ -351,7 +311,12 @@ export default function CarSearchModal({
                   className="flex flex-col items-center gap-2 min-w-[70px] sm:min-w-[80px] group cursor-pointer"
                 >
                   <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white border border-gray-200/90 group-hover:border-[#E5325C] group-hover:shadow-md flex items-center justify-center p-3 transition-all duration-200 group-hover:scale-105 shadow-2xs">
-                    {b.svg}
+                    <img
+                      src={b.logo}
+                      alt={b.name}
+                      className={b.className}
+                      loading="lazy"
+                    />
                   </div>
                   <span className="text-xs font-semibold font-nav text-gray-800 group-hover:text-[#E5325C] transition-colors">
                     {b.name}
