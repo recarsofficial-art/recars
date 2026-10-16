@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -31,11 +31,15 @@ import {
   FileCheck,
   MapPin,
   CheckCircle2,
+  Tag,
+  Filter,
 } from 'lucide-react';
 import { MAKES, MODELS_BY_MAKE, CITIES } from '@/lib/data';
 import SimpleHeader from '@/components/SimpleHeader';
+import RecarsHomeHub from '@/components/RecarsHomeHub';
 import SpinnyHero from '@/components/SpinnyHero';
 import CarCard from '@/components/CarCard';
+import DreamCarWizardModal, { BUDGET_BRACKETS } from '@/components/DreamCarWizardModal';
 import Footer from '@/components/Footer';
 import { useRecarsState } from '@/lib/store';
 
@@ -105,9 +109,18 @@ const REVIEWS = [
   }
 ];
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter();
-  const { wishlistIds, toggleWishlist, isWishlisted, cars: storeCars } = useRecarsState();
+  const searchParams = useSearchParams();
+  const {
+    wishlistIds,
+    toggleWishlist,
+    isWishlisted,
+    cars: storeCars,
+    selectedCity,
+    changeCity,
+  } = useRecarsState();
+
   const [liveCars, setLiveCars] = useState<any[]>([]);
 
   useEffect(() => {
@@ -125,6 +138,17 @@ export default function HomePage() {
   }, []);
 
   const cars = liveCars.length > 0 ? liveCars : storeCars;
+
+  // Active Mode: 'buy' | 'sell' (initialized from ?tab=sell or default 'buy')
+  const [activeTab, setActiveTab] = useState<'buy' | 'sell'>(() => {
+    return searchParams.get('tab') === 'sell' ? 'sell' : 'buy';
+  });
+
+  const [hubSearchQuery, setHubSearchQuery] = useState('');
+  const [selectedBudgetBracket, setSelectedBudgetBracket] = useState<string | null>(null);
+  const [selectedBodyTypeFilter, setSelectedBodyTypeFilter] = useState<string>('All');
+  const [selectedBrand, setSelectedBrand] = useState('All');
+  const [isDreamWizardOpen, setIsDreamWizardOpen] = useState(false);
 
   // Search Filters
   const [selectedMake, setSelectedMake] = useState('');
@@ -156,10 +180,11 @@ export default function HomePage() {
     setCondition('All');
     setMinPrice('');
     setMaxPrice('');
+    setSelectedBudgetBracket(null);
+    setSelectedBodyTypeFilter('All');
+    setSelectedBrand('All');
+    setHubSearchQuery('');
   };
-
-  // Brand Filter State synced with SpinnyHero
-  const [selectedBrand, setSelectedBrand] = useState('All');
 
   const handleHeroSelectBrand = (brand: string) => {
     setSelectedBrand(brand);
@@ -171,16 +196,86 @@ export default function HomePage() {
     }, 80);
   };
 
-  const displayedCars = selectedBrand === 'All'
-    ? cars.slice(0, 8)
-    : cars.filter((c) => {
+  const handleTabChange = (tab: 'buy' | 'sell') => {
+    setActiveTab(tab);
+    if (tab === 'sell') {
+      setTimeout(() => {
+        const el = document.getElementById('sell-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    } else {
+      setTimeout(() => {
+        const el = document.getElementById('buy-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    }
+  };
+
+  const handleHubSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (hubSearchQuery.trim()) {
+      setActiveTab('buy');
+      setTimeout(() => {
+        const el = document.getElementById('buy-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    }
+  };
+
+  // Filtered cars for buying
+  const displayedCars = useMemo(() => {
+    return cars.filter((c) => {
+      // Hub Search Query
+      if (hubSearchQuery.trim()) {
+        const q = hubSearchQuery.toLowerCase();
+        const matchTitle = `${c.make} ${c.model} ${c.variant}`.toLowerCase().includes(q);
+        const matchCity = c.city.toLowerCase().includes(q);
+        if (!matchTitle && !matchCity) return false;
+      }
+
+      // Brand
+      if (selectedBrand !== 'All') {
         const b = selectedBrand.toLowerCase();
         const make = c.make.toLowerCase();
         if (b === 'maruti suzuki' || b === 'maruti') {
-          return make.includes('maruti') || make.includes('suzuki');
+          if (!make.includes('maruti') && !make.includes('suzuki')) return false;
+        } else if (!make.includes(b)) {
+          return false;
         }
-        return make.includes(b);
-      });
+      }
+
+      // Body Type
+      if (selectedBodyTypeFilter !== 'All') {
+        if (c.bodyType.toLowerCase() !== selectedBodyTypeFilter.toLowerCase()) return false;
+      }
+
+      // Budget Bracket
+      if (selectedBudgetBracket) {
+        const bracket = BUDGET_BRACKETS.find((b) => b.id === selectedBudgetBracket);
+        if (bracket) {
+          if (c.price < bracket.min || c.price > bracket.max) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [cars, hubSearchQuery, selectedBrand, selectedBodyTypeFilter, selectedBudgetBracket]);
+
+  const countMatchesForWizard = (wizardFilters: {
+    minPrice: number;
+    maxPrice: number;
+    bodyTypes: string[];
+    fuels: string[];
+    transmissions: string[];
+  }) => {
+    return cars.filter((car) => {
+      if (car.price < wizardFilters.minPrice || car.price > wizardFilters.maxPrice) return false;
+      if (wizardFilters.bodyTypes.length > 0 && !wizardFilters.bodyTypes.includes(car.bodyType)) return false;
+      if (wizardFilters.fuels.length > 0 && !wizardFilters.fuels.includes(car.fuelType)) return false;
+      if (wizardFilters.transmissions.length > 0 && !wizardFilters.transmissions.includes(car.transmission)) return false;
+      return true;
+    }).length;
+  };
 
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -210,124 +305,247 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-[#101216] font-sans selection:bg-[#E5325C] selection:text-white">
       {/* ========================================================
-          1. SIMPLE HEADER (EXACT SCREENSHOT: [S] Recars, Buy Car v, Call us at 727-727-7275)
+          1. SIMPLE HEADER WITH BUY CAR & SELL CAR BUTTONS
       ========================================================= */}
-      <SimpleHeader />
-
-      {/* ========================================================
-          2. SPINNY SELLRIGHT HERO (EXACT SCREENSHOT: SellRight, Headline, Card, Brands, Ambassador)
-      ========================================================= */}
-      <SpinnyHero
-        onSelectBrand={handleHeroSelectBrand}
-        selectedBrand={selectedBrand}
+      <SimpleHeader
+        activeTab={activeTab}
+        onSelectTab={handleTabChange}
       />
 
       {/* ========================================================
-          3. TRENDING PRE-OWNED CARS SECTION
+          2. RECARS HOME HUB (MATCHING SCREENSHOT 1:
+             CITY + AQI + SEARCH + BLUE BANNER + 4 SERVICE CARDS)
       ========================================================= */}
-      <section id="featured-cars" className="bg-[#F8F9FA] py-14 sm:py-16 border-t border-gray-200 scroll-mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-[#E5325C]">
-                FEATURED INVENTORY
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-[#101216] tracking-tight mt-1 flex items-center gap-2.5">
-                <span>
-                  {selectedBrand === 'All' ? 'Trending Pre-Owned Cars' : `${selectedBrand} Pre-Owned Cars`}
-                </span>
-                {selectedBrand !== 'All' && (
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#FFF0F3] text-[#E5325C] border border-[#FFD6DF]">
-                    {displayedCars.length} {displayedCars.length === 1 ? 'car available' : 'cars available'}
+      <RecarsHomeHub
+        activeTab={activeTab}
+        onSelectTab={handleTabChange}
+        searchQuery={hubSearchQuery}
+        onSearchChange={setHubSearchQuery}
+        onSearchSubmit={handleHubSearchSubmit}
+        selectedCity={selectedCity}
+        onSelectCity={changeCity}
+      />
+
+      {/* ========================================================
+          3. CONDITIONAL MAIN VIEW: SELLRIGHT (SCREENSHOT 2) OR BUY CARS
+      ========================================================= */}
+      {activeTab === 'sell' ? (
+        /* SELL CAR VIEW (EXACT SCREENSHOT 2: SellRight, Headline, Form, Brands, Ambassador) */
+        <div id="sell-section" className="scroll-mt-16 animate-in fade-in duration-200">
+          <SpinnyHero
+            onSelectBrand={handleHeroSelectBrand}
+            selectedBrand={selectedBrand}
+          />
+        </div>
+      ) : (
+        /* BUY CAR VIEW: ALL RELATED CARS FOR BUYING WITH BUDGET FILTERS & 3-STEP WIZARD */
+        <section id="buy-section" className="bg-[#F8F9FA] py-10 sm:py-14 border-t border-gray-200 scroll-mt-16 animate-in fade-in duration-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+            
+            {/* 3-Step Dream Car Wizard Banner */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#4A0E4E] via-[#670080] to-[#E5325C] p-5 sm:p-7 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-bold backdrop-blur-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    Dream Car Matcher
                   </span>
-                )}
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                {selectedBrand === 'All'
-                  ? 'Hand-picked verified inventory ready for immediate home delivery'
-                  : `Certified 200+ point inspection pre-owned ${selectedBrand} cars`}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {selectedBrand !== 'All' && (
-                <button
-                  onClick={() => setSelectedBrand('All')}
-                  className="text-xs font-bold text-gray-500 hover:text-[#E5325C] underline cursor-pointer"
-                >
-                  Clear Brand Filter
-                </button>
-              )}
-              <Link
-                href={selectedBrand === 'All' ? '/buy' : `/buy?make=${encodeURIComponent(selectedBrand)}`}
-                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#E5325C] hover:text-[#D4264E] bg-white px-3.5 py-2 rounded-xl border border-[#E5E7EB] hover:border-[#E5325C] shadow-2xs transition-all"
-              >
-                <span>{selectedBrand === 'All' ? 'View all cars' : `View all ${selectedBrand} in Marketplace`}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Quick Brand Filter Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 scrollbar-none">
-            {['All', 'Hyundai', 'Maruti Suzuki', 'Tata', 'Honda', 'Toyota', 'Mahindra', 'BMW', 'Kia'].map((brand) => (
-              <button
-                key={brand}
-                onClick={() => setSelectedBrand(brand)}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  selectedBrand.toLowerCase() === brand.toLowerCase()
-                    ? 'bg-[#E5325C] text-white shadow-xs'
-                    : 'bg-white text-gray-600 hover:text-black hover:border-gray-300 border border-[#E5E7EB]'
-                }`}
-              >
-                {brand}
-              </button>
-            ))}
-          </div>
-
-          {displayedCars.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {displayedCars.map((car) => (
-                <CarCard
-                  key={car.id}
-                  car={car}
-                  isWishlisted={isWishlisted(car.id)}
-                  onToggleWishlist={toggleWishlist}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white rounded-3xl border border-[#E5E7EB] p-10 text-center space-y-4 shadow-2xs">
-              <div className="w-14 h-14 rounded-2xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center mx-auto">
-                <Car className="w-7 h-7" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base text-[#101216]">
-                  Looking for a verified {selectedBrand}?
-                </h3>
-                <p className="text-xs text-gray-500 max-w-md mx-auto mt-1">
-                  We have incoming {selectedBrand} vehicles undergoing our 200+ point engineering inspection. Check our full marketplace catalog or reserve early.
+                  <span className="text-xs text-white/80 font-medium">3 Simple Steps</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black">
+                  Your dream car, in 3 steps
+                </h2>
+                <p className="text-xs sm:text-sm text-white/85 max-w-lg">
+                  Pick your budget bracket, preferred body style, and transmission to find your perfect certified ride.
                 </p>
               </div>
-              <div className="pt-2 flex items-center justify-center gap-3">
-                <Link
-                  href={`/buy?make=${encodeURIComponent(selectedBrand)}`}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-bold transition-all shadow-sm"
-                >
-                  <span>Explore Marketplace for {selectedBrand}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-                <button
-                  onClick={() => setSelectedBrand('All')}
-                  className="px-4 py-2.5 rounded-full bg-gray-100 hover:bg-gray-200 text-xs font-bold text-gray-700 transition-colors cursor-pointer"
-                >
-                  Show All Available Cars
-                </button>
+              <button
+                type="button"
+                onClick={() => setIsDreamWizardOpen(true)}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-white text-[#670080] hover:bg-[#FAF5FF] text-xs sm:text-sm font-extrabold shadow-md transition-transform active:scale-95 cursor-pointer self-start md:self-center"
+              >
+                <span>What&apos;s your budget?</span>
+                <span className="w-6 h-6 rounded-full bg-[#F6EEFF] text-[#670080] flex items-center justify-center text-xs font-black">→</span>
+              </button>
+            </div>
+
+            {/* Quick Budget Filters (from Screenshot 1 Brackets) */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#101216]">
+                    Filter By Budget
+                  </span>
+                  <span className="text-[11px] text-gray-500 font-medium hidden sm:inline">
+                    Instant price range filter
+                  </span>
+                </div>
+                {selectedBudgetBracket && (
+                  <button
+                    onClick={() => setSelectedBudgetBracket(null)}
+                    className="text-xs font-bold text-[#E5325C] hover:underline cursor-pointer"
+                  >
+                    Reset Budget
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+                {BUDGET_BRACKETS.map((bracket) => {
+                  const isSelected = selectedBudgetBracket === bracket.id;
+                  return (
+                    <button
+                      key={bracket.id}
+                      type="button"
+                      onClick={() => setSelectedBudgetBracket(isSelected ? null : bracket.id)}
+                      className={`p-3 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#F6EEFF] border-[#670080] text-[#670080] shadow-xs ring-1 ring-[#670080]'
+                          : 'bg-[#F8F9FA] border-gray-200 text-[#24262A] hover:border-gray-300'
+                      }`}
+                    >
+                      <span>{bracket.label}</span>
+                      {isSelected && <span className="text-[10px] text-[#670080] font-normal mt-0.5">Active</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          )}
-        </div>
-      </section>
+
+            {/* Results Header: Available Count, Body Style Pills, View All Link */}
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#E5325C]">
+                    VERIFIED CARS FOR BUYING
+                  </span>
+                  <h3 className="text-2xl sm:text-3xl font-black text-[#101216] tracking-tight mt-1 flex items-center gap-2.5">
+                    <span>
+                      {selectedBrand === 'All' ? 'Available Cars for Buying' : `${selectedBrand} Cars for Buying`}
+                    </span>
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#FFF0F3] text-[#E5325C] border border-[#FFD6DF]">
+                      {displayedCars.length} {displayedCars.length === 1 ? 'car available' : 'cars available'}
+                    </span>
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+                    Certified 200+ point engineering check with 5-day return policy
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {(selectedBrand !== 'All' || selectedBudgetBracket || selectedBodyTypeFilter !== 'All' || hubSearchQuery) && (
+                    <button
+                      onClick={handleClearAll}
+                      className="text-xs font-bold text-gray-500 hover:text-[#E5325C] underline cursor-pointer"
+                    >
+                      Clear all filters
+                    </button>
+                  )}
+                  <Link
+                    href="/buy"
+                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white bg-[#E5325C] hover:bg-[#D4264E] px-4 py-2 rounded-xl shadow-xs transition-all"
+                  >
+                    <span>Full Buying Marketplace</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Quick Brand Filter Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mr-1 shrink-0">Brand:</span>
+                {['All', 'Hyundai', 'Maruti Suzuki', 'Tata', 'Honda', 'Toyota', 'Mahindra', 'BMW', 'Kia'].map((brand) => (
+                  <button
+                    key={brand}
+                    onClick={() => setSelectedBrand(brand)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                      selectedBrand.toLowerCase() === brand.toLowerCase()
+                        ? 'bg-[#101216] text-white shadow-xs'
+                        : 'bg-white text-gray-600 hover:text-black border border-gray-200'
+                    }`}
+                  >
+                    {brand}
+                  </button>
+                ))}
+              </div>
+
+              {/* Quick Body Style Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mr-1 shrink-0">Style:</span>
+                {['All', 'SUV', 'Sedan', 'Hatchback', 'Electric', 'MUV', 'Luxury'].map((style) => (
+                  <button
+                    key={style}
+                    onClick={() => setSelectedBodyTypeFilter(style)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                      selectedBodyTypeFilter.toLowerCase() === style.toLowerCase()
+                        ? 'bg-[#E5325C] text-white shadow-xs'
+                        : 'bg-white text-gray-600 hover:text-black border border-gray-200'
+                    }`}
+                  >
+                    {style}
+                  </button>
+                ))}
+              </div>
+
+              {/* Cars Grid */}
+              {displayedCars.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
+                  {displayedCars.map((car) => (
+                    <CarCard
+                      key={car.id}
+                      car={car}
+                      isWishlisted={isWishlisted(car.id)}
+                      onToggleWishlist={toggleWishlist}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white rounded-3xl border border-[#E5E7EB] p-10 text-center space-y-4 shadow-2xs">
+                  <div className="w-14 h-14 rounded-2xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center mx-auto">
+                    <Car className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-[#101216]">
+                      No matching cars found for this criteria
+                    </h3>
+                    <p className="text-xs text-gray-500 max-w-md mx-auto mt-1">
+                      Try clearing your budget bracket or brand filter to see all available inventory.
+                    </p>
+                  </div>
+                  <div className="pt-2 flex items-center justify-center gap-3">
+                    <button
+                      onClick={handleClearAll}
+                      className="px-5 py-2.5 rounded-full bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    >
+                      Reset Filters
+                    </button>
+                    <Link
+                      href="/buy"
+                      className="px-5 py-2.5 rounded-full bg-gray-100 hover:bg-gray-200 text-xs font-bold text-gray-700 transition-colors"
+                    >
+                      Browse All Cars
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Dream Car 3-Step Wizard Modal */}
+      <DreamCarWizardModal
+        isOpen={isDreamWizardOpen}
+        onClose={() => setIsDreamWizardOpen(false)}
+        onApply={(filters) => {
+          const params = new URLSearchParams();
+          if (filters.minPrice) params.set('minPrice', filters.minPrice.toString());
+          if (filters.maxPrice) params.set('maxPrice', filters.maxPrice.toString());
+          if (filters.bodyTypes.length > 0) params.set('type', filters.bodyTypes[0]);
+          router.push(`/buy?${params.toString()}`);
+        }}
+        totalMatchingCars={countMatchesForWizard}
+      />
 
       {/* ========================================================
           5. THE RECARS STANDARD — 4 PILLARS OF TRUST
@@ -846,5 +1064,13 @@ export default function HomePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-sm font-semibold text-gray-500">Loading Recars...</div>}>
+      <HomePageContent />
+    </Suspense>
   );
 }

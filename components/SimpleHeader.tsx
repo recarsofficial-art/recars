@@ -2,11 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Phone, ChevronDown, Car, Shield, User, LogOut, Heart, Sparkles, LayoutDashboard } from 'lucide-react';
+import { Phone, ChevronDown, Car, Shield, User, LogOut, Heart, Sparkles, LayoutDashboard, Tag } from 'lucide-react';
 import Logo from './Logo';
 import { useAuth } from '@/lib/authContext';
 
-export default function SimpleHeader() {
+interface SimpleHeaderProps {
+  activeTab?: 'buy' | 'sell';
+  onSelectTab?: (tab: 'buy' | 'sell') => void;
+}
+
+export default function SimpleHeader({ activeTab = 'buy', onSelectTab }: SimpleHeaderProps) {
   const [isBuyMenuOpen, setIsBuyMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user, openLogin, logout } = useAuth();
@@ -19,14 +24,19 @@ export default function SimpleHeader() {
           <Logo size="md" showTagline={false} />
         </div>
 
-        {/* Right: Buy Car Dropdown, Call Support & Login/Signup */}
+        {/* Right: Buy Car Dropdown, Sell Car, Call Support & Login/Signup */}
         <div className="flex items-center gap-2.5 sm:gap-6">
           {/* Buy Car Dropdown */}
           <div className="relative">
             <button
-              onClick={() => setIsBuyMenuOpen(!isBuyMenuOpen)}
+              onClick={() => {
+                if (onSelectTab) onSelectTab('buy');
+                setIsBuyMenuOpen(!isBuyMenuOpen);
+              }}
               onBlur={() => setTimeout(() => setIsBuyMenuOpen(false), 200)}
-              className="inline-flex items-center gap-1 sm:gap-1.5 text-xs sm:text-[15px] font-bold text-[#101216] hover:text-[#E5325C] transition-colors py-2 cursor-pointer group"
+              className={`inline-flex items-center gap-1 sm:gap-1.5 text-xs sm:text-[15px] font-bold transition-colors py-2 cursor-pointer group ${
+                activeTab === 'buy' ? 'text-[#E5325C]' : 'text-[#101216] hover:text-[#E5325C]'
+              }`}
             >
               <span>Buy Car</span>
               <ChevronDown
@@ -74,6 +84,27 @@ export default function SimpleHeader() {
               </div>
             )}
           </div>
+
+          {/* Sell Car Nav Button */}
+          {onSelectTab ? (
+            <button
+              onClick={() => onSelectTab('sell')}
+              className={`text-xs sm:text-[15px] font-bold transition-colors py-2 cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'sell'
+                  ? 'text-[#E5325C] border-b-2 border-[#E5325C]'
+                  : 'text-[#101216] hover:text-[#E5325C]'
+              }`}
+            >
+              <span>Sell Car</span>
+            </button>
+          ) : (
+            <Link
+              href="/?tab=sell"
+              className="text-xs sm:text-[15px] font-bold text-[#101216] hover:text-[#E5325C] transition-colors py-2"
+            >
+              <span>Sell Car</span>
+            </Link>
+          )}
 
           {/* Call us link */}
           <a
