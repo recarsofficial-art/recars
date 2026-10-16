@@ -5,6 +5,8 @@ import { AuthProvider } from '@/lib/authContext';
 import AuthModal from './AuthModal';
 import { app } from '@/lib/firebase';
 
+import FloatingContactButtons from './FloatingContactButtons';
+
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Firebase app is initialized
@@ -17,6 +19,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
     <AuthProvider>
       {children}
       <AuthModal />
+      <FloatingContactButtons />
     </AuthProvider>
   );
 }
