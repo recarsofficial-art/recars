@@ -1,57 +1,13 @@
 import Link from 'next/link';
-import { Phone, Mail, MapPin, ShieldCheck, RefreshCw, Award, HeartHandshake } from 'lucide-react';
+import { Phone, Mail, MapPin } from 'lucide-react';
 import Logo from './Logo';
 
 export default function Footer() {
   return (
-    <footer className="bg-[#F8F9FA] text-[#101216] border-t border-gray-200 pt-16 pb-12">
+    <footer className="bg-[#F8F9FA] text-[#101216] border-t border-gray-200 pt-12 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Trust Badges Strip (Clean Light Cards) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pb-12 border-b border-gray-200">
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-xl bg-white border border-gray-200 text-[#E5325C] shadow-2xs">
-              <ShieldCheck className="w-5 h-5 text-[#E5325C]" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-[#101216]">200+ Point Inspection</h4>
-              <p className="text-xs text-gray-500 mt-0.5">Every vehicle certified by automotive engineers</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-xl bg-white border border-gray-200 text-[#E5325C] shadow-2xs">
-              <RefreshCw className="w-5 h-5 text-[#E5325C]" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-[#101216]">Fair Price Negotiation</h4>
-              <p className="text-xs text-gray-500 mt-0.5">Transparent market pricing with instant offer workflow</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-xl bg-white border border-gray-200 text-[#E5325C] shadow-2xs">
-              <Award className="w-5 h-5 text-[#E5325C]" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-[#101216]">Verified Standards</h4>
-              <p className="text-xs text-gray-500 mt-0.5">Thorough mechanical, engine & title verification</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-xl bg-white border border-gray-200 text-[#E5325C] shadow-2xs">
-              <HeartHandshake className="w-5 h-5 text-[#E5325C]" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-[#101216]">RC Transfer Assistance</h4>
-              <p className="text-xs text-gray-500 mt-0.5">End-to-end legal title & ownership documentation support</p>
-            </div>
-          </div>
-        </div>
-
         {/* Main Footer Links */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-10 py-12 border-b border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-10 pb-12 border-b border-gray-200">
           {/* Brand info */}
           <div className="md:col-span-2 space-y-4">
             <div>
