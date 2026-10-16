@@ -69,19 +69,12 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
       {/* Content */}
       <div className="p-4 sm:p-5 flex flex-col flex-1 justify-between">
         <Link href={`/cars/${car.id}`} className="block">
-          {/* Top Elite & Featured Badges if applicable */}
-          {(car.isRecarsSelect || car.featured) && (
+          {/* Featured Badge if applicable */}
+          {car.featured && (
             <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
-              {car.isRecarsSelect && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#1E3A8A] text-white text-[10px] font-bold tracking-wider uppercase font-heading shadow-2xs">
-                  👑 ELITE
-                </span>
-              )}
-              {car.featured && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A] text-[10px] font-bold tracking-wider uppercase font-heading">
-                  FEATURED
-                </span>
-              )}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A] text-[10px] font-bold tracking-wider uppercase font-heading">
+                FEATURED
+              </span>
             </div>
           )}
 
