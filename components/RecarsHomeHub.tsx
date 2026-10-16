@@ -178,19 +178,19 @@ export default function RecarsHomeHub({
         </div>
 
         {/* ========================================================
-            4. THE 2 PRIMARY SERVICE CARDS: BUY A CAR & SELL YOUR CAR
+            4. THE 2 PRIMARY SERVICE CARDS: BUY A CAR & SELL YOUR CAR (COMPACT SIZE)
         ========================================================= */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-6 mb-5">
+        <div className="max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto grid grid-cols-2 gap-3 sm:gap-4.5 mb-5">
           {/* CARD 1: BUY A CAR -> OPENS /buy */}
           <Link
             href="/buy"
-            className="group relative block rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] cursor-pointer"
+            className="group relative block rounded-xl sm:rounded-2xl overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer"
             aria-label="Buy a Car"
           >
             <img
               src="/images/card-buy-car.png"
               alt="Buy a Car — Recars"
-              className="w-full h-auto object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
+              className="w-full h-auto max-h-[160px] sm:max-h-[210px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
               loading="eager"
             />
           </Link>
@@ -198,13 +198,13 @@ export default function RecarsHomeHub({
           {/* CARD 2: SELL YOUR CAR -> OPENS /sell */}
           <Link
             href="/sell"
-            className="group relative block rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] cursor-pointer"
+            className="group relative block rounded-xl sm:rounded-2xl overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer"
             aria-label="Sell Your Car"
           >
             <img
               src="/images/card-sell-car.png"
               alt="Sell Your Car — Recars"
-              className="w-full h-auto object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
+              className="w-full h-auto max-h-[160px] sm:max-h-[210px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
               loading="eager"
             />
           </Link>
