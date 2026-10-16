@@ -1,36 +1,131 @@
-import { Pool } from 'pg';
+import { Pool, QueryResult } from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import { Car, SellRequest, TestDriveBooking, CarInquiry, Negotiation, InspectionConfig } from './types';
 
 function getDatabaseConnectionString(): string {
-  const envUrl = process.env.DATABASE_URL || '';
-  // Direct db.<project>.supabase.co is IPv6-only and fails with ENOTFOUND on IPv4 serverless hosts like Vercel.
-  // Rewrite or default to Supabase AWS pooler which has full IPv4 routing support.
+  let envUrl = (process.env.DATABASE_URL || '').trim();
+
+  // 1. Direct db.<project>.supabase.co is IPv6-only and fails with ENOTFOUND on IPv4 serverless hosts like Vercel.
   if (!envUrl || envUrl.includes('db.kgzzobdvwryijuubyzbh.supabase.co')) {
-    return 'postgresql://postgres.kgzzobdvwryijuubyzbh:Recars%402026@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres';
+    return 'postgresql://postgres.kgzzobdvwryijuubyzbh:Recars%402026@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres';
   }
+
+  // 2. CRITICAL PRODUCTION FIX: Port 5432 on Supabase pooler is Session Mode (limited to pool_size: 15).
+  // Connecting in session mode causes "(EMAXCONNSESSION) max clients reached in session mode".
+  // Automatically rewrite any Supabase pooler connection from port 5432 (Session) to 6543 (Transaction Mode).
+  if (envUrl.includes('pooler.supabase.com:5432')) {
+    envUrl = envUrl.replace('pooler.supabase.com:5432', 'pooler.supabase.com:6543');
+  }
+
   return envUrl;
 }
 
 const connectionString = getDatabaseConnectionString();
 
-// Shared PostgreSQL Connection Pool for Next.js Server
+// Shared PostgreSQL Connection Pool Singleton for Next.js (Serverless & Persistent)
 declare global {
   // eslint-disable-next-line no-var
   var __recarsPool: Pool | undefined;
 }
 
-export const pool =
-  global.__recarsPool ||
-  new Pool({
+function createRecarsPool(): Pool {
+  const p = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
-    max: 10,
-    idleTimeoutMillis: 30000,
+    // Keep pool size lean (5) so concurrent serverless instances never exhaust the backend pool limit
+    max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 5,
+    // Fast idle timeout (10s) to return connections back to the pooler promptly
+    idleTimeoutMillis: 10000,
+    // 5-second acquisition timeout so callers fail fast with safe error instead of hanging
+    connectionTimeoutMillis: 5000,
+    // Allow process/lambda event loop to exit cleanly
+    allowExitOnIdle: true,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
   });
 
-if (process.env.NODE_ENV !== 'production') {
-  global.__recarsPool = pool;
+  p.on('error', (err) => {
+    // Catch unexpected errors on idle clients so they are safely discarded without crashing the process
+    console.error('[DATABASE_POOL_ERROR] Idle client error:', {
+      message: err?.message,
+      code: (err as any)?.code,
+    });
+  });
+
+  return p;
+}
+
+// Preserve pool singleton on globalThis across all environments (both production and development)
+if (!globalThis.__recarsPool) {
+  globalThis.__recarsPool = createRecarsPool();
+}
+
+export const pool: Pool = globalThis.__recarsPool;
+
+export class DatabaseError extends Error {
+  public code?: string;
+  public isConnectionError: boolean;
+  constructor(message: string, code?: string, isConnectionError = false) {
+    super(message);
+    this.name = 'DatabaseError';
+    this.code = code;
+    this.isConnectionError = isConnectionError;
+  }
+}
+
+/**
+ * Resilient query wrapper with single bounded retry for transient connection drops.
+ * Logs diagnostic details server-side while safeguarding sensitive user parameters.
+ */
+export async function safeDbQuery<T = any>(
+  text: string,
+  params?: any[],
+  context = 'query'
+): Promise<{ rows: T[]; rowCount: number | null }> {
+  const maxAttempts = 2;
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await pool.query(text, params);
+      return { rows: result.rows, rowCount: result.rowCount };
+    } catch (err: any) {
+      lastError = err;
+      const isTransient =
+        err?.code === '57P01' || // admin_shutdown
+        err?.code === '08006' || // connection_failure
+        err?.code === '08001' || // unable_to_establish_connection
+        err?.code === 'ECONNRESET' ||
+        err?.code === 'ETIMEDOUT' ||
+        err?.code === 'EAI_AGAIN' ||
+        (err?.message && err.message.includes('EMAXCONNSESSION'));
+
+      console.error(`[DB_QUERY_ERROR] Attempt ${attempt}/${maxAttempts} in ${context}:`, {
+        code: err?.code,
+        message: err?.message,
+        isTransient,
+      });
+
+      if (isTransient && attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 150));
+        continue;
+      }
+      break;
+    }
+  }
+
+  const isConnErr =
+    lastError?.code === '08006' ||
+    lastError?.code === '08001' ||
+    lastError?.code === 'ECONNRESET' ||
+    lastError?.code === 'ETIMEDOUT' ||
+    (lastError?.message && lastError.message.includes('EMAXCONNSESSION'));
+
+  throw new DatabaseError(
+    isConnErr ? 'Database connection unavailable' : 'Database query failed',
+    lastError?.code,
+    isConnErr
+  );
 }
 
 // Supabase client instance (works with Supabase URL & optional anon key)
@@ -297,12 +392,20 @@ export async function dbUpsertCustomer(c: CustomerRecord): Promise<string> {
       updated_at = now()
     RETURNING id;
   `;
-  const res = await pool.query(sql, [c.name, c.phone, c.email || null, c.city || 'Warangal', c.address || null]);
+  const res = await safeDbQuery<{ id: string }>(
+    sql,
+    [c.name, c.phone, c.email || null, c.city || 'Warangal', c.address || null],
+    'dbUpsertCustomer'
+  );
   return res.rows[0].id;
 }
 
 export async function dbGetCustomers(): Promise<CustomerRecord[]> {
-  const { rows } = await pool.query('SELECT * FROM public.customers ORDER BY created_at DESC');
+  const { rows } = await safeDbQuery<any>(
+    'SELECT * FROM public.customers ORDER BY created_at DESC',
+    [],
+    'dbGetCustomers'
+  );
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -317,13 +420,14 @@ export async function dbGetCustomers(): Promise<CustomerRecord[]> {
 export async function dbFindCustomer(query: string): Promise<CustomerRecord | null> {
   const trimmed = query.trim();
   const digitsOnly = trimmed.replace(/\D/g, '');
-  const { rows } = await pool.query(
+  const { rows } = await safeDbQuery<any>(
     `SELECT * FROM public.customers 
      WHERE phone = $1 
         OR email ILIKE $2 
         OR ($3 <> '' AND phone LIKE $4)
      LIMIT 1`,
-    [trimmed, trimmed, digitsOnly, `%${digitsOnly}%`]
+    [trimmed, trimmed, digitsOnly, `%${digitsOnly}%`],
+    'dbFindCustomer'
   );
   if (!rows.length) return null;
   const r = rows[0];
@@ -337,6 +441,7 @@ export async function dbFindCustomer(query: string): Promise<CustomerRecord | nu
     createdAt: r.created_at,
   };
 }
+
 
 
 // ========================================================

@@ -52,6 +52,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthModalOpen(false);
   };
 
+  const safeErrorMessage = (msg?: string, fallback = 'Login is temporarily unavailable. Please try again shortly.'): string => {
+    if (!msg) return fallback;
+    const lower = msg.toLowerCase();
+    if (
+      lower.includes('emaxconn') ||
+      lower.includes('pool_size') ||
+      lower.includes('postgres') ||
+      lower.includes('relation') ||
+      lower.includes('database') ||
+      lower.includes('connection') ||
+      lower.includes('failed to fetch') ||
+      lower.includes('networkerror') ||
+      lower.includes('timeout') ||
+      lower.includes('500') ||
+      lower.includes('503') ||
+      lower.includes('internal server')
+    ) {
+      return 'Login is temporarily unavailable. Please try again shortly.';
+    }
+    return msg;
+  };
+
   const login = async (phoneOrEmail: string, otpOrPass?: string) => {
     try {
       const res = await fetch('/api/auth', {
@@ -66,9 +88,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsAuthModalOpen(false);
         return { success: true };
       }
-      return { success: false, message: data.error || 'Login failed' };
+      return { success: false, message: safeErrorMessage(data.error, 'Login failed. Please check your credentials.') };
     } catch (e: any) {
-      return { success: false, message: e.message || 'Login failed' };
+      return { success: false, message: safeErrorMessage(e?.message) };
     }
   };
 
@@ -86,9 +108,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsAuthModalOpen(false);
         return { success: true };
       }
-      return { success: false, message: data.error || 'Signup failed' };
+      return { success: false, message: safeErrorMessage(data.error, 'Signup failed. Please try again.') };
     } catch (e: any) {
-      return { success: false, message: e.message || 'Signup failed' };
+      return { success: false, message: safeErrorMessage(e?.message, 'Signup is temporarily unavailable. Please try again shortly.') };
     }
   };
 
@@ -118,10 +140,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsAuthModalOpen(false);
         return { success: true };
       }
-      return { success: false, message: data.error || 'Google sign in failed' };
+      return { success: false, message: safeErrorMessage(data.error, 'Google sign in failed. Please try again.') };
     } catch (e: any) {
       console.error('Google Auth Error:', e);
-      return { success: false, message: e.message || 'Google sign in cancelled or failed' };
+      return { success: false, message: safeErrorMessage(e?.message, 'Google sign in cancelled or failed.') };
     }
   };
 

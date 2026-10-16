@@ -30,6 +30,28 @@ export function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
+function sanitizeErrorMessage(msg?: string | null): string {
+  if (!msg) return 'Login is temporarily unavailable. Please try again shortly.';
+  const lower = msg.toLowerCase();
+  if (
+    lower.includes('emaxconn') ||
+    lower.includes('pool_size') ||
+    lower.includes('postgres') ||
+    lower.includes('relation') ||
+    lower.includes('database') ||
+    lower.includes('connection') ||
+    lower.includes('failed to fetch') ||
+    lower.includes('networkerror') ||
+    lower.includes('timeout') ||
+    lower.includes('500') ||
+    lower.includes('503') ||
+    lower.includes('internal server')
+  ) {
+    return 'Login is temporarily unavailable. Please try again shortly.';
+  }
+  return msg;
+}
+
 export default function AuthModal() {
   const { isAuthModalOpen, closeAuthModal, authMode, login, signup, loginWithGoogle } = useAuth();
   const [tab, setTab] = useState<'login' | 'signup'>(authMode);
@@ -57,8 +79,11 @@ export default function AuthModal() {
 
   if (!isAuthModalOpen) return null;
 
+  const isBusy = loginLoading || signupLoading || googleLoading;
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isBusy) return;
     if (!loginIdentifier.trim()) {
       setLoginError('Please enter your mobile number or email address.');
       return;
@@ -68,12 +93,13 @@ export default function AuthModal() {
     const res = await login(loginIdentifier.trim(), loginOtp);
     setLoginLoading(false);
     if (!res.success) {
-      setLoginError(res.message || 'Login failed. Please check your credentials.');
+      setLoginError(sanitizeErrorMessage(res.message));
     }
   };
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isBusy) return;
     if (!name.trim()) {
       setSignupError('Please enter your full name.');
       return;
@@ -92,21 +118,23 @@ export default function AuthModal() {
     });
     setSignupLoading(false);
     if (!res.success) {
-      setSignupError(res.message || 'Signup failed. Please try again.');
+      setSignupError(sanitizeErrorMessage(res.message));
     }
   };
 
   const handleGoogleAuth = async () => {
+    if (isBusy) return;
     setGoogleLoading(true);
     setLoginError(null);
     setSignupError(null);
     const res = await loginWithGoogle();
     setGoogleLoading(false);
     if (!res.success) {
+      const sanitized = sanitizeErrorMessage(res.message);
       if (tab === 'login') {
-        setLoginError(res.message || 'Google sign in failed');
+        setLoginError(sanitized);
       } else {
-        setSignupError(res.message || 'Google sign up failed');
+        setSignupError(sanitized);
       }
     }
   };

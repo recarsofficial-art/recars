@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { dbFindCustomer, dbUpsertCustomer } from '@/lib/db';
+import { dbFindCustomer, dbUpsertCustomer, DatabaseError } from '@/lib/db';
+
+const SAFE_UNAVAILABLE_MESSAGE = 'Login is temporarily unavailable. Please try again shortly.';
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +29,7 @@ export async function POST(request: Request) {
         });
       }
 
-      // Create new customer record in Supabase
+      // Create new customer record in database
       const newId = await dbUpsertCustomer({
         id: '',
         name: googleName,
@@ -45,14 +47,14 @@ export async function POST(request: Request) {
           email: googleEmail,
           city: city || 'Warangal',
         },
-        message: 'Google account linked and created successfully in Supabase',
+        message: 'Google account linked and created successfully',
       });
     }
 
     if (action === 'signup') {
       if (!name || (!phone && !email)) {
         return NextResponse.json(
-          { success: false, error: 'Name and either phone or email are required' },
+          { success: false, error: 'Name and either mobile number or email are required.' },
           { status: 400 }
         );
       }
@@ -74,19 +76,19 @@ export async function POST(request: Request) {
           email: (email || '').trim(),
           city: city || 'Warangal',
         },
-        message: 'Account created successfully in Supabase',
+        message: 'Account created successfully',
       });
     }
 
     if (action === 'login') {
       if (!phoneOrEmail) {
         return NextResponse.json(
-          { success: false, error: 'Phone number or email required' },
+          { success: false, error: 'Please enter your mobile number or email address.' },
           { status: 400 }
         );
       }
 
-      // Check if customer exists in Supabase
+      // Check if customer exists in database
       const existing = await dbFindCustomer(phoneOrEmail);
       if (existing) {
         return NextResponse.json({
@@ -102,7 +104,7 @@ export async function POST(request: Request) {
         });
       }
 
-      // If not existing, auto-provision user so customer has seamless experience
+      // If not existing, auto-provision user seamlessly
       const isEmail = phoneOrEmail.includes('@');
       const provisionalName = isEmail ? phoneOrEmail.split('@')[0] : `Customer ${phoneOrEmail.slice(-4)}`;
       const newId = await dbUpsertCustomer({
@@ -126,9 +128,35 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Invalid authentication request.' }, { status: 400 });
   } catch (error: any) {
-    console.error('Auth API error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const isConnError =
+      error instanceof DatabaseError
+        ? error.isConnectionError
+        : error?.code === '08006' ||
+          error?.code === '08001' ||
+          error?.code === 'ECONNRESET' ||
+          error?.code === 'ETIMEDOUT' ||
+          (error?.message &&
+            (error.message.includes('EMAXCONNSESSION') ||
+              error.message.includes('connection') ||
+              error.message.includes('pool')));
+
+    // Secure server-side diagnostic logging (never leaks to client)
+    console.error('[AUTH_API_ERROR]', {
+      timestamp: new Date().toISOString(),
+      code: error?.code || 'UNKNOWN',
+      message: error?.message,
+      isConnectionError: isConnError,
+    });
+
+    const statusCode = isConnError ? 503 : 500;
+    return NextResponse.json(
+      {
+        success: false,
+        error: SAFE_UNAVAILABLE_MESSAGE,
+      },
+      { status: statusCode }
+    );
   }
 }
