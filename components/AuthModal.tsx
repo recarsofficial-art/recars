@@ -46,7 +46,7 @@ export default function AuthModal() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [city, setCity] = useState('Hyderabad');
+  const [city, setCity] = useState('Warangal');
   const [signupLoading, setSignupLoading] = useState(false);
   const [signupError, setSignupError] = useState<string | null>(null);
 
@@ -88,7 +88,7 @@ export default function AuthModal() {
       name: name.trim(),
       phone: phone.trim(),
       email: email.trim(),
-      city: city || 'Hyderabad',
+      city: city || 'Warangal',
     });
     setSignupLoading(false);
     if (!res.success) {

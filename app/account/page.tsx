@@ -293,7 +293,7 @@ function AccountContent() {
                         Reg No: {req.registrationNumber || 'TS 09 EA 4589'} • Ref: {req.id}
                       </p>
                       <p className="text-xs font-semibold text-[#101216] mt-1">
-                        Price Evaluation: <span className="text-[#237A52] font-bold">Free Physical Doorstep Inspection (Offer given on inspection)</span>
+                        Price Evaluation: <span className="text-[#237A52] font-bold">Physical Doorstep Inspection (Offer given on inspection)</span>
                       </p>
                       <p className="text-[11px] text-[#6B7078]">
                         Home Inspection: {req.preferredInspectionDate} ({req.preferredInspectionTime}) in {req.sellerCity}
@@ -316,7 +316,7 @@ function AccountContent() {
                 </div>
                 <h3 className="text-lg font-bold text-[#101216]">No Car Selling Requests</h3>
                 <p className="text-xs text-[#6B7078] max-w-sm mx-auto">
-                  Ready to upgrade? Sell your vehicle with free doorstep physical inspection and same-day payment.
+                  Ready to upgrade? Sell your vehicle with certified doorstep inspection and same-day payment.
                 </p>
                 <div className="pt-2">
                   <Link

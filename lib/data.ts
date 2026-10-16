@@ -1,15 +1,7 @@
 import { Car, CarBodyType } from './types';
 
 export const CITIES = [
-  'Hyderabad',
   'Warangal',
-  'Bengaluru',
-  'Mumbai',
-  'Delhi NCR',
-  'Chennai',
-  'Pune',
-  'Ahmedabad',
-  'Kolkata',
 ] as const;
 
 export const CAR_TYPES: { type: CarBodyType; label: string; startingPrice: string; image: string }[] = [
@@ -64,8 +56,8 @@ export const INITIAL_CARS: Car[] = [
     transmission: 'Automatic',
     bodyType: 'SUV',
     ownership: '1st Owner',
-    city: 'Hyderabad',
-    locationArea: 'Gachibowli Recars Hub',
+    city: 'Warangal',
+    locationArea: 'Hanamkonda Recars Hub',
     image: '/car-creta-hd.jpg',
     galleryImages: [
       '/car-creta-hd.jpg',
@@ -86,7 +78,7 @@ export const INITIAL_CARS: Car[] = [
       bootSpace: '433 Litres',
       fuelTankCapacity: '50 Litres',
       groundClearance: '190 mm',
-      rto: 'TS-09 (Hyderabad Central)',
+      rto: 'TS-03 (Warangal)',
       regYear: 2022,
       insuranceValidTill: 'Oct 2027 (Comprehensive)',
       color: 'Titan Grey Metallic'
@@ -118,8 +110,8 @@ export const INITIAL_CARS: Car[] = [
     transmission: 'Automatic',
     bodyType: 'Sedan',
     ownership: '1st Owner',
-    city: 'Hyderabad',
-    locationArea: 'Banjara Hills Recars Hub',
+    city: 'Warangal',
+    locationArea: 'Kazipet Recars Hub',
     image: '/car-city-hd.jpg',
     galleryImages: [
       '/car-city-hd.jpg',
@@ -140,7 +132,7 @@ export const INITIAL_CARS: Car[] = [
       bootSpace: '506 Litres',
       fuelTankCapacity: '40 Litres',
       groundClearance: '165 mm',
-      rto: 'TS-07 (Hyderabad West)',
+      rto: 'TS-03 (Warangal)',
       regYear: 2021,
       insuranceValidTill: 'Dec 2026',
       color: 'Platinum White Pearl'
@@ -171,8 +163,8 @@ export const INITIAL_CARS: Car[] = [
     transmission: 'Automatic',
     bodyType: 'SUV',
     ownership: '1st Owner',
-    city: 'Hyderabad',
-    locationArea: 'Madhapur Recars Hub',
+    city: 'Warangal',
+    locationArea: 'Subedari Recars Hub',
     image: '/car-fortuner-hd.jpg',
     galleryImages: [
       '/car-fortuner-hd.jpg',
@@ -193,7 +185,7 @@ export const INITIAL_CARS: Car[] = [
       bootSpace: '296 Litres (Expandable)',
       fuelTankCapacity: '80 Litres',
       groundClearance: '225 mm',
-      rto: 'TS-10 (Secunderabad)',
+      rto: 'TS-03 (Warangal)',
       regYear: 2020,
       insuranceValidTill: 'August 2027',
       color: 'Attitude Black'
@@ -274,8 +266,8 @@ export const INITIAL_CARS: Car[] = [
     transmission: 'Automatic',
     bodyType: 'Electric',
     ownership: '1st Owner',
-    city: 'Bengaluru',
-    locationArea: 'Indiranagar Recars Hub',
+    city: 'Warangal',
+    locationArea: 'Naimnagar Recars Hub',
     image: '/car-nexon-hd.jpg',
     galleryImages: [
       '/car-nexon-hd.jpg',
@@ -294,7 +286,7 @@ export const INITIAL_CARS: Car[] = [
       bootSpace: '350 Litres',
       fuelTankCapacity: '45 kWh Battery Pack',
       groundClearance: '190 mm',
-      rto: 'KA-01 (Bengaluru Central)',
+      rto: 'TS-03 (Warangal)',
       regYear: 2023,
       insuranceValidTill: 'May 2028',
       color: 'Empowered Oxide Dual Tone'
@@ -324,8 +316,8 @@ export const INITIAL_CARS: Car[] = [
     transmission: 'Automatic',
     bodyType: 'Luxury',
     ownership: '1st Owner',
-    city: 'Mumbai',
-    locationArea: 'Bandra West Recars Hub',
+    city: 'Warangal',
+    locationArea: 'Hunter Road Recars Hub',
     image: '/car-bmw-hd.jpg',
     galleryImages: [
       '/car-bmw-hd.jpg',
@@ -345,7 +337,7 @@ export const INITIAL_CARS: Car[] = [
       bootSpace: '480 Litres',
       fuelTankCapacity: '59 Litres',
       groundClearance: '141 mm',
-      rto: 'MH-02 (Mumbai West)',
+      rto: 'TS-03 (Warangal)',
       regYear: 2021,
       insuranceValidTill: 'March 2027',
       color: 'Portimao Blue Metallic'
@@ -375,8 +367,8 @@ export const INITIAL_CARS: Car[] = [
     transmission: 'Automatic',
     bodyType: 'Hatchback',
     ownership: '1st Owner',
-    city: 'Hyderabad',
-    locationArea: 'Hitec City Recars Hub',
+    city: 'Warangal',
+    locationArea: 'Warangal Chowrasta Hub',
     image: '/car-swift-hd.jpg',
     galleryImages: [
       '/car-swift-hd.jpg',
@@ -395,7 +387,7 @@ export const INITIAL_CARS: Car[] = [
       bootSpace: '268 Litres',
       fuelTankCapacity: '37 Litres',
       groundClearance: '163 mm',
-      rto: 'TS-09 (Hyderabad)',
+      rto: 'TS-03 (Warangal)',
       regYear: 2022,
       insuranceValidTill: 'July 2027',
       color: 'Solid Fire Red with Pearl Arctic White'
@@ -424,8 +416,8 @@ export const INITIAL_CARS: Car[] = [
     transmission: 'Automatic',
     bodyType: 'MUV',
     ownership: '1st Owner',
-    city: 'Bengaluru',
-    locationArea: 'Whitefield Recars Hub',
+    city: 'Warangal',
+    locationArea: 'Kakatiya University Hub',
     image: '/car-innova-hd.jpg',
     galleryImages: [
       '/car-innova-hd.jpg',
@@ -444,7 +436,7 @@ export const INITIAL_CARS: Car[] = [
       bootSpace: '300 Litres',
       fuelTankCapacity: '55 Litres',
       groundClearance: '178 mm',
-      rto: 'KA-03 (Bengaluru East)',
+      rto: 'TS-03 (Warangal)',
       regYear: 2021,
       insuranceValidTill: 'Jan 2027',
       color: 'Garnet Red Metallic'

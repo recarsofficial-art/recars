@@ -71,7 +71,7 @@ export default function HeroSearchBox({ currentCity, onOpenCityModal }: HeroSear
               : 'text-[#6B7078] hover:text-[#101216] hover:bg-[#F8F9FA]'
           }`}
         >
-          Sell Your Car (Free Inspection)
+          Sell Your Car
         </button>
       </div>
 

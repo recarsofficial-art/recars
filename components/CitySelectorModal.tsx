@@ -63,29 +63,19 @@ export default function CitySelectorModal({
             />
           </div>
 
-          {/* Quick Featured Hubs Strip */}
+          {/* Quick Hub Indicator */}
           <div className="mt-3 flex items-center gap-2">
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Telangana Hubs:</span>
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Active Hub:</span>
             <button
               type="button"
               onClick={() => {
                 onSelectCity('Warangal');
                 onClose();
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-extrabold cursor-pointer transition-all shadow-2xs animate-pulse"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-extrabold cursor-pointer transition-all shadow-2xs"
             >
               <span>⭐ Warangal</span>
-              <span className="text-[9px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-black">Featured</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onSelectCity('Hyderabad');
-                onClose();
-              }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold cursor-pointer transition-all"
-            >
-              <span>Hyderabad</span>
+              <span className="text-[9px] bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded font-black">Official Hub</span>
             </button>
           </div>
         </div>
@@ -131,7 +121,7 @@ export default function CitySelectorModal({
 
         <div className="p-3 bg-[#FFF0F3] border-t border-[#E5E7EB] text-center">
           <p className="text-xs text-[#6B7078]">
-            Free doorstep delivery and inspection available in all listed hubs.
+            Doorstep delivery and certified evaluation available in all listed hubs.
           </p>
         </div>
       </div>

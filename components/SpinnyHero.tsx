@@ -356,11 +356,6 @@ export default function SpinnyHero({
                     <div className="flex items-center justify-center gap-2 sm:gap-4 pt-2.5 text-[10px] sm:text-xs text-gray-500 font-medium text-center flex-wrap">
                       <span className="flex items-center gap-1">
                         <Check className="w-3 h-3 text-[#10B981]" />
-                        <span>Free Doorstep Inspection</span>
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Check className="w-3 h-3 text-[#10B981]" />
                         <span>Instant Online Payment</span>
                       </span>
                       <span>•</span>
@@ -430,7 +425,7 @@ export default function SpinnyHero({
                   Select your car brand to get started:
                 </p>
 
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-2.5">
+                <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
                   {TOP_BRANDS.map((brand) => {
                     const isSelected = selectedBrand
                       ? selectedBrand.toLowerCase() === brand.toLowerCase()
@@ -440,14 +435,14 @@ export default function SpinnyHero({
                         key={brand}
                         type="button"
                         onClick={() => handleBrandClick(brand)}
-                        className={`h-11 sm:h-14 flex items-center justify-center px-1.5 py-1 sm:px-2 sm:py-1.5 rounded-xl border transition-all duration-150 group cursor-pointer text-center ${
+                        className={`h-12 sm:h-13 flex items-center justify-center px-2 py-1.5 rounded-2xl border transition-all duration-150 group cursor-pointer text-center ${
                           isSelected
-                            ? 'bg-[#FFF0F3] border-2 border-[#E5325C] shadow-xs'
-                            : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 hover:shadow-2xs'
+                            ? 'bg-[#FFF0F3] border-2 border-[#E5325C] shadow-xs ring-1 ring-[#E5325C]/30'
+                            : 'bg-white hover:bg-gray-50/90 border-gray-200 hover:border-gray-300 shadow-2xs'
                         }`}
                         title={`Select ${brand}`}
                       >
-                        <BrandLogo brand={brand} className="h-5 sm:h-7 max-w-[70px] sm:max-w-[90px]" />
+                        <BrandLogo brand={brand} />
                       </button>
                     );
                   })}
@@ -456,7 +451,7 @@ export default function SpinnyHero({
                   <button
                     type="button"
                     onClick={() => setIsMoreBrandsOpen(true)}
-                    className="h-11 sm:h-14 flex items-center justify-center gap-0.5 sm:gap-1 px-1.5 py-1 sm:px-2 sm:py-1.5 rounded-xl bg-[#FFF0F3] hover:bg-[#FFE5EC] border border-[#FFD6DF] hover:border-[#E5325C] transition-all group cursor-pointer text-[#E5325C] font-bold text-[11px] sm:text-[13px]"
+                    className="h-12 sm:h-13 flex items-center justify-center gap-1 px-2 rounded-2xl bg-[#FFF0F3] hover:bg-[#FFE5EC] border border-[#FFD6DF] hover:border-[#E5325C] transition-all group cursor-pointer text-[#E5325C] font-bold text-xs sm:text-sm"
                   >
                     <span>More Brands</span>
                     <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />

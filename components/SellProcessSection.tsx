@@ -17,7 +17,7 @@ const REVIEWS_DATA = [
   {
     id: 1,
     name: 'Rahul Sharma',
-    city: 'Hyderabad',
+    city: 'Hanamkonda, Warangal',
     car: 'Sold Hyundai Creta 2021',
     rating: 5,
     date: '2 days ago',
@@ -28,18 +28,18 @@ const REVIEWS_DATA = [
   {
     id: 2,
     name: 'Pooja Iyer',
-    city: 'Bengaluru',
+    city: 'Kazipet, Warangal',
     car: 'Sold Honda City 2019',
     rating: 5,
     date: '1 week ago',
     comment:
       'The evaluator came right to my apartment basement, checked the car professionally, and offered ₹40,000 more than what local dealers offered. Everything was transparent from start to finish.',
-    tag: 'Free Inspection Verified',
+    tag: 'Certified Inspection Verified',
   },
   {
     id: 3,
     name: 'Vikram Mehta',
-    city: 'Mumbai',
+    city: 'Subedari, Warangal',
     car: 'Sold Maruti Brezza 2020',
     rating: 5,
     date: '2 weeks ago',
@@ -50,7 +50,7 @@ const REVIEWS_DATA = [
   {
     id: 4,
     name: 'Ananya Reddy',
-    city: 'Delhi NCR',
+    city: 'Naimnagar, Warangal',
     car: 'Sold Kia Seltos 2022',
     rating: 5,
     date: '3 weeks ago',

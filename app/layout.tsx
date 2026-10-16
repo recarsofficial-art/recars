@@ -23,15 +23,14 @@ export const metadata: Metadata = {
   description:
     'Discover, buy and sell used cars with Recars. Trust Every Drive. Value Every Rupee.',
   keywords: [
-    'Used Cars',
-    'Pre-owned Cars',
-    'Buy Used Cars India',
-    'Sell Car Online',
-    'Recars',
-    'Used Cars Hyderabad',
     'Used Cars Warangal',
-    'Used Cars Bangalore',
-    'Certified Second Hand Cars',
+    'Used Cars Hanamkonda',
+    'Used Cars Kazipet',
+    'Pre-owned Cars Warangal',
+    'Buy Used Cars Warangal',
+    'Sell Car Warangal',
+    'Recars Warangal Hub',
+    'Certified Second Hand Cars Telangana',
   ],
   alternates: {
     canonical: '/',

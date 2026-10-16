@@ -28,7 +28,7 @@ function getStoredItem<T>(key: string, defaultValue: T): T {
 
 export function useRecarsState() {
   const [isHydrated, setIsHydrated] = useState(false);
-  const [selectedCity, setSelectedCity] = useState<string>('Hyderabad');
+  const [selectedCity, setSelectedCity] = useState<string>('Warangal');
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
   const [cars, setCars] = useState<Car[]>(INITIAL_CARS);
   const [sellRequests, setSellRequests] = useState<SellRequest[]>([]);
@@ -39,7 +39,12 @@ export function useRecarsState() {
   useEffect(() => {
     try {
       const storedCity = localStorage.getItem(STORAGE_KEYS.CITY);
-      if (storedCity) setSelectedCity(storedCity);
+      if (storedCity && storedCity === 'Warangal') {
+        setSelectedCity('Warangal');
+      } else {
+        setSelectedCity('Warangal');
+        localStorage.setItem(STORAGE_KEYS.CITY, 'Warangal');
+      }
 
       const storedWishlist = getStoredItem<string[]>(STORAGE_KEYS.WISHLIST, []);
       setWishlistIds(storedWishlist);

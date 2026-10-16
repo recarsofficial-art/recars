@@ -16,7 +16,7 @@ export default function SignupPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [city, setCity] = useState('Hyderabad');
+  const [city, setCity] = useState('Warangal');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export default function SignupPage() {
       name: name.trim(),
       phone: phone.trim(),
       email: email.trim(),
-      city: city || 'Hyderabad',
+      city: city || 'Warangal',
     });
     setLoading(false);
     if (res.success) {

@@ -318,8 +318,8 @@ export default function AdminDashboardPage() {
   const [newFinanceAvailable, setNewFinanceAvailable] = useState<'Available' | 'Not Available' | 'Subject to Approval'>('Available');
   const [newSuggestedMin, setNewSuggestedMin] = useState(980000);
   const [newSuggestedMax, setNewSuggestedMax] = useState(1080000);
-  const [newCity, setNewCity] = useState('Hyderabad');
-  const [newLocationArea, setNewLocationArea] = useState('Hitec City Automotive Hub');
+  const [newCity, setNewCity] = useState('Warangal');
+  const [newLocationArea, setNewLocationArea] = useState('Hanamkonda Recars Hub');
   const [newImage, setNewImage] = useState('/car-creta-hd.jpg');
   const [newGalleryImages, setNewGalleryImages] = useState<string[]>(['/car-creta-hd.jpg']);
   const [imageInputMode, setImageInputMode] = useState<'upload' | 'url' | 'preset'>('upload');
@@ -1577,7 +1577,7 @@ export default function AdminDashboardPage() {
                           Seller: <span className="font-bold text-gray-900">{req.sellerName}</span> • {req.sellerPhone} • {req.sellerCity}
                         </p>
                         <p className="text-xs text-[#237A52] font-bold mt-1">
-                          Price Evaluation: Free Doorstep Physical Inspection (Quote given on evaluation)
+                          Price Evaluation: Physical Doorstep Inspection (Quote given on evaluation)
                         </p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#FFF0F3] text-[#E5325C] border border-[#FFD6DF] flex-shrink-0">

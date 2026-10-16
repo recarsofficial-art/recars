@@ -85,15 +85,15 @@ const FAQS = [
 const REVIEWS = [
   {
     name: 'Rohan Mukherjee',
-    city: 'Hyderabad',
+    city: 'Hanamkonda, Warangal',
     car: '2022 Hyundai Creta SX (O)',
     rating: 5,
-    comment: 'The 200-point inspection report was brutally transparent. Every minor scratch was photographed in high resolution. Delivered right to my driveway in Hitec City with a fresh polish and full tank!',
+    comment: 'The 200-point inspection report was brutally transparent. Every minor scratch was photographed in high resolution. Delivered right to my driveway in Hanamkonda with a fresh polish and full tank!',
     date: 'Verified Buyer • 2 weeks ago'
   },
   {
     name: 'Priya Sundaram',
-    city: 'Bengaluru',
+    city: 'Kazipet, Warangal',
     car: '2021 Honda City ZX CVT',
     rating: 5,
     comment: 'I used to dread buying used cars because of manipulative middlemen. Recars is completely different: transparent pricing guidance, direct online negotiation, and thorough inspection details gave me total peace of mind.',
@@ -101,7 +101,7 @@ const REVIEWS = [
   },
   {
     name: 'Amitabh Verma',
-    city: 'Mumbai',
+    city: 'Subedari, Warangal',
     car: 'Sold 2020 Kia Seltos GTX+',
     rating: 5,
     comment: 'Sold my Seltos in under 2 hours. The valuation engineer was punctual, very courteous, and the entire payment was transferred to my bank before the car keys were handed over. Highly recommended!',

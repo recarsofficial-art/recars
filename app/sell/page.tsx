@@ -70,7 +70,7 @@ function SellWorkflowContent() {
   // Step 3: Seller & Inspection Details
   const [sellerName, setSellerName] = useState(user?.name || '');
   const [sellerPhone, setSellerPhone] = useState(user?.phone || '');
-  const [sellerCity, setSellerCity] = useState(user?.city || selectedCity || 'Hyderabad');
+  const [sellerCity, setSellerCity] = useState(user?.city || selectedCity || 'Warangal');
   const [sellerAddress, setSellerAddress] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -82,7 +82,6 @@ function SellWorkflowContent() {
   const [generatedRequestId, setGeneratedRequestId] = useState<string>('');
   const [feeAcknowledged, setFeeAcknowledged] = useState(true);
   const [inspectionFee, setInspectionFee] = useState(499);
-  const [isFreeInspection, setIsFreeInspection] = useState(false);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -90,13 +89,7 @@ function SellWorkflowContent() {
       .then((data) => {
         if (data.success && data.inspectionConfig) {
           const cfg = data.inspectionConfig;
-          if (cfg.freeInspectionActive) {
-            setInspectionFee(0);
-            setIsFreeInspection(true);
-          } else {
-            setInspectionFee(cfg.sellerInspectionFee ?? 499);
-            setIsFreeInspection(false);
-          }
+          setInspectionFee(cfg.sellerInspectionFee ?? 499);
         }
       })
       .catch(() => {});
@@ -570,30 +563,11 @@ function SellWorkflowContent() {
                     </span>
                   </div>
 
-                  {/* Quick selection chips for top Telangana hubs */}
+                  {/* Official Warangal Hub chip */}
                   <div className="flex items-center gap-1.5 mb-2">
-                    <button
-                      type="button"
-                      onClick={() => setSellerCity('Warangal')}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                        sellerCity === 'Warangal'
-                          ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-300'
-                          : 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
-                      }`}
-                    >
-                      <span>⭐ Warangal Hub</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSellerCity('Hyderabad')}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        sellerCity === 'Hyderabad'
-                          ? 'bg-[#E5325C] text-white shadow-xs'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Hyderabad
-                    </button>
+                    <div className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 flex items-center gap-1.5 shadow-2xs">
+                      <span>⭐ Warangal Hub (Telangana)</span>
+                    </div>
                   </div>
 
                   <select
@@ -664,13 +638,13 @@ function SellWorkflowContent() {
                     <span>Doorstep Inspection Fee & Transparent Policy</span>
                   </span>
                   <span className="text-xs font-black text-[#101216] px-2.5 py-1 rounded-full bg-white border border-blue-200 shadow-2xs">
-                    {isFreeInspection ? '₹0 (Promotional Free Offer)' : `₹${inspectionFee} (Payable at Doorstep)`}
+                    ₹{inspectionFee} (Payable at Doorstep)
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-blue-900">
                   <div>• <strong>Coverage:</strong> 200+ mechanical, paint meter, OBD diagnostics & road test.</div>
-                  <div>• <strong>Responsibility:</strong> {isFreeInspection ? 'Waived under active promotional campaign.' : 'Payable by vehicle seller upon engineer arrival.'}</div>
-                  <div>• <strong>Payment Due:</strong> {isFreeInspection ? '₹0 (Free)' : 'At doorstep before technical physical evaluation.'}</div>
+                  <div>• <strong>Responsibility:</strong> Payable by vehicle seller upon engineer arrival.</div>
+                  <div>• <strong>Payment Due:</strong> At doorstep before technical physical evaluation.</div>
                   <div>• <strong>Deliverable:</strong> Certified digital inspection report & guaranteed highest offer.</div>
                 </div>
                 <label className="flex items-start gap-2.5 pt-2 border-t border-blue-200 cursor-pointer">
@@ -681,9 +655,7 @@ function SellWorkflowContent() {
                     className="mt-0.5 w-4 h-4 text-[#E5325C] rounded border-gray-300 focus:ring-[#E5325C]"
                   />
                   <span className="text-xs font-bold text-gray-900 leading-tight">
-                    {isFreeInspection
-                      ? 'I acknowledge and agree to schedule this promotional free doorstep inspection.'
-                      : `I acknowledge and agree to the ₹${inspectionFee} doorstep inspection service fee payable upon the engineer's arrival.`}
+                    I acknowledge and agree to the ₹{inspectionFee} doorstep inspection service fee payable upon the engineer&apos;s arrival.
                   </span>
                 </label>
               </div>
@@ -701,7 +673,7 @@ function SellWorkflowContent() {
                   disabled={!feeAcknowledged}
                   className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#E5325C] text-white text-xs font-bold hover:bg-[#D4264E] disabled:bg-gray-400 transition-all shadow-md active:scale-98 cursor-pointer"
                 >
-                  <span>{isFreeInspection ? 'Schedule Free Inspection (Promotional)' : `Schedule Doorstep Inspection (₹${inspectionFee})`}</span>
+                  <span>Schedule Doorstep Inspection (₹{inspectionFee})</span>
                   <Check className="w-4 h-4 stroke-[3]" />
                 </button>
               </div>

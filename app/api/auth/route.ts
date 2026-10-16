@@ -21,7 +21,7 @@ export async function POST(request: Request) {
             name: existing.name || googleName,
             phone: existing.phone || googlePhone,
             email: existing.email || googleEmail,
-            city: existing.city || city || 'Hyderabad',
+            city: existing.city || city || 'Warangal',
           },
           message: 'Signed in with Google successfully',
         });
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         name: googleName,
         phone: googlePhone,
         email: googleEmail,
-        city: city || 'Hyderabad',
+        city: city || 'Warangal',
       });
 
       return NextResponse.json({
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
           name: googleName,
           phone: googlePhone,
           email: googleEmail,
-          city: city || 'Hyderabad',
+          city: city || 'Warangal',
         },
         message: 'Google account linked and created successfully in Supabase',
       });
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
         name: name.trim(),
         phone: (phone || '').trim(),
         email: (email || '').trim(),
-        city: city || 'Hyderabad',
+        city: city || 'Warangal',
       });
 
       return NextResponse.json({
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
           name: name.trim(),
           phone: (phone || '').trim(),
           email: (email || '').trim(),
-          city: city || 'Hyderabad',
+          city: city || 'Warangal',
         },
         message: 'Account created successfully in Supabase',
       });
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
             name: existing.name,
             phone: existing.phone,
             email: existing.email || '',
-            city: existing.city || 'Hyderabad',
+            city: existing.city || 'Warangal',
           },
           message: 'Logged in successfully',
         });
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
         name: provisionalName,
         phone: isEmail ? `+91 ${Date.now().toString().slice(-10)}` : phoneOrEmail,
         email: isEmail ? phoneOrEmail : '',
-        city: 'Hyderabad',
+        city: 'Warangal',
       });
 
       return NextResponse.json({
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
           name: provisionalName,
           phone: isEmail ? '' : phoneOrEmail,
           email: isEmail ? phoneOrEmail : '',
-          city: 'Hyderabad',
+          city: 'Warangal',
         },
         message: 'Account verified & logged in',
       });

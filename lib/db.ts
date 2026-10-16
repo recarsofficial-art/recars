@@ -109,7 +109,7 @@ export async function dbGetCars(filter?: {
       bootSpace: '430 Litres',
       fuelTankCapacity: '45 Litres',
       groundClearance: '180 mm',
-      rto: `${r.city || 'Hyderabad'} RTO`,
+      rto: `${r.city || 'Warangal'} RTO`,
       regYear: r.year,
       insuranceValidTill: 'Comprehensive Valid',
       color: 'Pearl White',
@@ -170,7 +170,7 @@ export async function dbGetCarById(id: string): Promise<Car | null> {
       bootSpace: '430 Litres',
       fuelTankCapacity: '45 Litres',
       groundClearance: '180 mm',
-      rto: `${r.city || 'Hyderabad'} RTO`,
+      rto: `${r.city || 'Warangal'} RTO`,
       regYear: r.year,
       insuranceValidTill: 'Comprehensive Valid',
       color: 'Pearl White',
@@ -297,7 +297,7 @@ export async function dbUpsertCustomer(c: CustomerRecord): Promise<string> {
       updated_at = now()
     RETURNING id;
   `;
-  const res = await pool.query(sql, [c.name, c.phone, c.email || null, c.city || 'Hyderabad', c.address || null]);
+  const res = await pool.query(sql, [c.name, c.phone, c.email || null, c.city || 'Warangal', c.address || null]);
   return res.rows[0].id;
 }
 
@@ -372,7 +372,7 @@ export async function dbGetCustomerCars(): Promise<SellRequest[]> {
 export async function dbInsertCustomerCar(req: SellRequest): Promise<void> {
   const sellerName = req.sellerName || 'Customer';
   const sellerPhone = req.sellerPhone || '+91 99087 96677';
-  const sellerCity = req.sellerCity || 'Hyderabad';
+  const sellerCity = req.sellerCity || 'Warangal';
 
   // Ensure customer exists
   let customerId: string | null = null;
@@ -476,7 +476,7 @@ export async function dbGetInquiries(): Promise<CarInquiry[]> {
     userName: r.user_name,
     userPhone: r.user_phone,
     userEmail: r.user_email || '',
-    city: r.city || 'Hyderabad',
+    city: r.city || 'Warangal',
     inquiryType: r.inquiry_type,
     message: r.message,
     status: r.status,
@@ -551,7 +551,7 @@ export async function dbGetTestDrives(): Promise<TestDriveBooking[]> {
     userName: r.user_name,
     userPhone: r.user_phone,
     userEmail: r.user_email || `${r.user_name.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
-    city: r.city || 'Hyderabad',
+    city: r.city || 'Warangal',
     preferredDate: r.preferred_date,
     preferredTimeSlot: r.preferred_time_slot,
     type: r.type === 'Recars Hub Visit' ? 'Recars Hub Visit' : 'Home Test Drive',
