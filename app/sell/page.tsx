@@ -19,7 +19,8 @@ import {
   AlertCircle,
   FileText,
 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
+import SimpleHeader from '@/components/SimpleHeader';
+import SpinnyHero from '@/components/SpinnyHero';
 import Footer from '@/components/Footer';
 import { useRecarsState } from '@/lib/store';
 import { MAKES, MODELS_BY_MAKE, CITIES } from '@/lib/data';
@@ -178,16 +179,29 @@ function SellWorkflowContent() {
 
   const availableModels = MODELS_BY_MAKE[make] || ['Standard'];
 
+  const handleHeroSelectBrand = (selectedB: string) => {
+    setMake(selectedB);
+    const availableModelsList = MODELS_BY_MAKE[selectedB] || ['Standard'];
+    setModel(availableModelsList[0] || 'Standard');
+    setTimeout(() => {
+      const el = document.getElementById('sell-workflow');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
-      <Navbar
-        selectedCity={selectedCity}
-        onSelectCity={changeCity}
-        wishlistCount={wishlistIds.length}
+    <div className="min-h-screen flex flex-col bg-white">
+      <SimpleHeader activeTab="sell" />
+
+      {/* Exact SellRight Hero (Screenshot 2: R SellRight, Trust Every Drive. Value Every Rupee., Enter your car details, brand logos, ambassador image) */}
+      <SpinnyHero
+        onSelectBrand={handleHeroSelectBrand}
+        selectedBrand={make}
       />
 
       {/* Main Multi-Step Form Card with Stepper */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-6">
+      <div id="sell-workflow" className="bg-[#F8F9FA] py-10 border-t border-gray-200 scroll-mt-16 flex-1 w-full">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 w-full space-y-6">
         {/* Stepper Progress Indicator - 4 Clean Steps Without Fake Valuations */}
         <div className="flex items-center justify-between relative max-w-xl mx-auto px-4">
           <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-0.5 bg-[#E5E7EB] -z-0" />
@@ -743,6 +757,7 @@ function SellWorkflowContent() {
           )}
         </div>
       </div>
+    </div>
 
       <Footer />
     </div>

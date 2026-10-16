@@ -49,8 +49,6 @@ export default function Navbar({
     { label: 'Buy', href: '/buy' },
     { label: 'Sell', href: '/sell' },
     { label: 'Why Recars', href: '/why-recars' },
-    { label: 'Finance', href: '/finance' },
-    { label: 'Insurance', href: '/insurance' },
   ];
 
   const handleSearchSubmit = (e: React.FormEvent) => {

@@ -26,30 +26,49 @@ export default function SimpleHeader({ activeTab = 'buy', onSelectTab }: SimpleH
 
         {/* Right: Buy Car Dropdown, Sell Car, Call Support & Login/Signup */}
         <div className="flex items-center gap-2.5 sm:gap-6">
-          {/* Buy Car Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                if (onSelectTab) onSelectTab('buy');
-                setIsBuyMenuOpen(!isBuyMenuOpen);
-              }}
-              onBlur={() => setTimeout(() => setIsBuyMenuOpen(false), 200)}
-              className={`inline-flex items-center gap-1 sm:gap-1.5 text-xs sm:text-[15px] font-bold transition-colors py-2 cursor-pointer group ${
-                activeTab === 'buy' ? 'text-[#E5325C]' : 'text-[#101216] hover:text-[#E5325C]'
-              }`}
-            >
-              <span>Buy Car</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#6B7078] group-hover:text-[#E5325C] transition-transform duration-200 ${
-                  isBuyMenuOpen ? 'rotate-180 text-[#E5325C]' : ''
+          {/* Buy Car Link & Dropdown */}
+          <div
+            className="relative"
+            onMouseEnter={() => setIsBuyMenuOpen(true)}
+            onMouseLeave={() => setIsBuyMenuOpen(false)}
+          >
+            <div className="flex items-center">
+              <Link
+                href="/buy"
+                onClick={() => {
+                  if (onSelectTab) onSelectTab('buy');
+                  setIsBuyMenuOpen(false);
+                }}
+                className={`inline-flex items-center gap-1 sm:gap-1.5 text-xs sm:text-[15px] font-bold transition-colors py-2 cursor-pointer ${
+                  activeTab === 'buy'
+                    ? 'text-[#E5325C] border-b-2 border-[#E5325C]'
+                    : 'text-[#101216] hover:text-[#E5325C]'
                 }`}
-              />
-            </button>
+              >
+                <span>Buy Car</span>
+              </Link>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsBuyMenuOpen(!isBuyMenuOpen);
+                }}
+                className="p-1 text-[#6B7078] hover:text-[#E5325C] cursor-pointer"
+                aria-label="Toggle Buy Car menu"
+              >
+                <ChevronDown
+                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform duration-200 ${
+                    isBuyMenuOpen ? 'rotate-180 text-[#E5325C]' : ''
+                  }`}
+                />
+              </button>
+            </div>
 
             {isBuyMenuOpen && (
-              <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-[#E5E7EB] py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="absolute left-0 sm:right-0 sm:left-auto mt-1 w-52 bg-white rounded-2xl shadow-xl border border-[#E5E7EB] py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                 <Link
                   href="/buy"
+                  onClick={() => setIsBuyMenuOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-[#101216] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
                 >
                   <Car className="w-4 h-4 text-[#E5325C]" />
@@ -57,18 +76,21 @@ export default function SimpleHeader({ activeTab = 'buy', onSelectTab }: SimpleH
                 </Link>
                 <Link
                   href="/buy?type=SUV"
+                  onClick={() => setIsBuyMenuOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
                 >
                   <span>Explore SUVs</span>
                 </Link>
                 <Link
                   href="/buy?type=Sedan"
+                  onClick={() => setIsBuyMenuOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
                 >
                   <span>Explore Sedans</span>
                 </Link>
                 <Link
                   href="/buy?type=Hatchback"
+                  onClick={() => setIsBuyMenuOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
                 >
                   <span>Explore Hatchbacks</span>
@@ -76,6 +98,7 @@ export default function SimpleHeader({ activeTab = 'buy', onSelectTab }: SimpleH
                 <div className="border-t border-[#E5E7EB] my-1" />
                 <Link
                   href="/why-recars"
+                  onClick={() => setIsBuyMenuOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#6B7078] hover:text-[#E5325C]"
                 >
                   <Shield className="w-3.5 h-3.5 text-[#E5325C]" />
@@ -85,26 +108,17 @@ export default function SimpleHeader({ activeTab = 'buy', onSelectTab }: SimpleH
             )}
           </div>
 
-          {/* Sell Car Nav Button */}
-          {onSelectTab ? (
-            <button
-              onClick={() => onSelectTab('sell')}
-              className={`text-xs sm:text-[15px] font-bold transition-colors py-2 cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'sell'
-                  ? 'text-[#E5325C] border-b-2 border-[#E5325C]'
-                  : 'text-[#101216] hover:text-[#E5325C]'
-              }`}
-            >
-              <span>Sell Car</span>
-            </button>
-          ) : (
-            <Link
-              href="/?tab=sell"
-              className="text-xs sm:text-[15px] font-bold text-[#101216] hover:text-[#E5325C] transition-colors py-2"
-            >
-              <span>Sell Car</span>
-            </Link>
-          )}
+          {/* Sell Car Nav Link */}
+          <Link
+            href="/sell"
+            className={`text-xs sm:text-[15px] font-bold transition-colors py-2 flex items-center gap-1.5 ${
+              activeTab === 'sell'
+                ? 'text-[#E5325C] border-b-2 border-[#E5325C]'
+                : 'text-[#101216] hover:text-[#E5325C]'
+            }`}
+          >
+            <span>Sell Car</span>
+          </Link>
 
           {/* Call us link */}
           <a

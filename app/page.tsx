@@ -197,28 +197,19 @@ function HomePageContent() {
   };
 
   const handleTabChange = (tab: 'buy' | 'sell') => {
-    setActiveTab(tab);
     if (tab === 'sell') {
-      setTimeout(() => {
-        const el = document.getElementById('sell-section');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 50);
+      router.push('/sell');
     } else {
-      setTimeout(() => {
-        const el = document.getElementById('buy-section');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 50);
+      router.push('/buy');
     }
   };
 
   const handleHubSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (hubSearchQuery.trim()) {
-      setActiveTab('buy');
-      setTimeout(() => {
-        const el = document.getElementById('buy-section');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 50);
+      router.push(`/buy?q=${encodeURIComponent(hubSearchQuery.trim())}`);
+    } else {
+      router.push('/buy');
     }
   };
 
