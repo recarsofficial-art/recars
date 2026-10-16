@@ -13,10 +13,13 @@ import {
   Search,
   Grid,
   List,
+  Sparkles,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CarCard from '@/components/CarCard';
+import DreamCarWizardModal, { BUDGET_BRACKETS } from '@/components/DreamCarWizardModal';
+import TwoColumnFilterDrawer from '@/components/TwoColumnFilterDrawer';
 import { useRecarsState } from '@/lib/store';
 import { MAKES, CITIES, CAR_TYPES } from '@/lib/data';
 import { CarBodyType, FuelType, TransmissionType } from '@/lib/types';
@@ -68,12 +71,24 @@ function BuyContent() {
   const [selectedTransmissions, setSelectedTransmissions] = useState<string[]>([]);
   const [selectedOwnerships, setSelectedOwnerships] = useState<string[]>([]);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
+  const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
+
+  const [minPrice, setMinPrice] = useState<number>(() => {
+    const b = searchParams.get('budget');
+    if (b && b.includes('-')) {
+      return parseInt(b.split('-')[0]) || 50000;
+    }
+    return 50000;
+  });
+
   const [maxPrice, setMaxPrice] = useState<number>(() => {
     const b = searchParams.get('budget');
     if (b && b.includes('-')) {
-      return parseInt(b.split('-')[1]) || 5000000;
+      return parseInt(b.split('-')[1]) || 7000000;
     }
-    return 5000000;
+    return 7000000;
   });
 
   const [maxKm, setMaxKm] = useState<number>(80000);
@@ -83,6 +98,7 @@ function BuyContent() {
   const [searchQuery, setSearchQuery] = useState<string>(() => searchParams.get('q') || '');
   const [sortBy, setSortBy] = useState<string>('recommended');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isDreamWizardOpen, setIsDreamWizardOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Multi-select toggle helpers
@@ -101,7 +117,11 @@ function BuyContent() {
     setSelectedTransmissions([]);
     setSelectedOwnerships([]);
     setSelectedAvailability([]);
-    setMaxPrice(5000000);
+    setSelectedSeats([]);
+    setSelectedColors([]);
+    setSelectedFeatures([]);
+    setMinPrice(50000);
+    setMaxPrice(7000000);
     setMaxKm(80000);
     setMinYear(2018);
     setOnlyVerified(false);
@@ -152,13 +172,39 @@ function BuyContent() {
         }
 
         // Price
-        if (car.price > maxPrice) return false;
+        if (car.price < minPrice || car.price > maxPrice) return false;
 
         // KM
         if (car.kilometers > maxKm) return false;
 
         // Year
         if (car.year < minYear) return false;
+
+        // Seats
+        if (selectedSeats.length > 0) {
+          const seats =
+            car.specifications?.seatingCapacity ||
+            (car.bodyType === 'SUV' || car.bodyType === 'MUV' ? 7 : 5);
+          if (!selectedSeats.includes(seats)) return false;
+        }
+
+        // Color
+        if (selectedColors.length > 0) {
+          const carColor = (car.specifications?.color || '').toLowerCase();
+          const matchColor = selectedColors.some((c) =>
+            carColor.includes(c.toLowerCase())
+          );
+          if (!matchColor) return false;
+        }
+
+        // Features
+        if (selectedFeatures.length > 0) {
+          const carFeatures = (car.features || []).map((f: string) => f.toLowerCase());
+          const hasAll = selectedFeatures.every((f) =>
+            carFeatures.some((cf: string) => cf.includes(f.toLowerCase()))
+          );
+          if (!hasAll) return false;
+        }
 
         // Badges
         if (onlyVerified && !car.isVerified) return false;
@@ -182,6 +228,10 @@ function BuyContent() {
     selectedTransmissions,
     selectedOwnerships,
     selectedAvailability,
+    selectedSeats,
+    selectedColors,
+    selectedFeatures,
+    minPrice,
     maxPrice,
     maxKm,
     minYear,
@@ -197,10 +247,29 @@ function BuyContent() {
     selectedTransmissions.length +
     selectedOwnerships.length +
     selectedAvailability.length +
+    selectedSeats.length +
+    selectedColors.length +
+    selectedFeatures.length +
     (onlyVerified ? 1 : 0) +
     (onlyRecarsSelect ? 1 : 0) +
-    (maxPrice < 5000000 ? 1 : 0) +
+    (minPrice > 50000 || maxPrice < 7000000 ? 1 : 0) +
     (searchQuery ? 1 : 0);
+
+  const countMatchesForWizard = (wizardFilters: {
+    minPrice: number;
+    maxPrice: number;
+    bodyTypes: string[];
+    fuels: string[];
+    transmissions: string[];
+  }) => {
+    return cars.filter((car) => {
+      if (car.price < wizardFilters.minPrice || car.price > wizardFilters.maxPrice) return false;
+      if (wizardFilters.bodyTypes.length > 0 && !wizardFilters.bodyTypes.includes(car.bodyType)) return false;
+      if (wizardFilters.fuels.length > 0 && !wizardFilters.fuels.includes(car.fuelType)) return false;
+      if (wizardFilters.transmissions.length > 0 && !wizardFilters.transmissions.includes(car.transmission)) return false;
+      return true;
+    }).length;
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
@@ -266,23 +335,61 @@ function BuyContent() {
                 </label>
               </div>
 
-              {/* Price Range Slider */}
-              <div className="space-y-2">
+              {/* Price Range Filter */}
+              <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <label className="font-bold text-[#101216] uppercase tracking-wider">
-                    Max Budget
+                    Price Range
                   </label>
-                  <span className="font-bold text-[#E5325C]">{formatINR(maxPrice)}</span>
+                  <span className="font-bold text-[#670080] text-[11px]">
+                    {formatINR(minPrice)} - {formatINR(maxPrice)}
+                  </span>
                 </div>
-                <input
-                  type="range"
-                  min="300000"
-                  max="5000000"
-                  step="50000"
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(Number(e.target.value))}
-                  className="w-full accent-[#E5325C]"
-                />
+
+                {/* Quick Budget Brackets */}
+                <div className="space-y-1.5">
+                  {BUDGET_BRACKETS.map((bracket) => {
+                    const isSelected = minPrice === bracket.min && maxPrice === bracket.max;
+                    return (
+                      <button
+                        key={bracket.id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setMinPrice(50000);
+                            setMaxPrice(7000000);
+                          } else {
+                            setMinPrice(bracket.min);
+                            setMaxPrice(bracket.max);
+                          }
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-[#F6EEFF] border-[#670080] text-[#670080] shadow-xs'
+                            : 'bg-white border-[#E5E7EB] text-[#24262A] hover:border-gray-300'
+                        }`}
+                      >
+                        <span>{bracket.label}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-[#670080]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-1 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 font-medium">
+                    <span>Max: {formatINR(maxPrice)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="100000"
+                    max="7000000"
+                    step="50000"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(Number(e.target.value))}
+                    className="w-full accent-[#670080]"
+                  />
+                </div>
               </div>
 
               {/* Make Filter */}
@@ -426,12 +533,39 @@ function BuyContent() {
               CAR LISTINGS GRID / CONTENT
           ========================================== */}
           <div className="lg:col-span-3 space-y-6">
+            {/* Find your dream car in 3 steps Hero Banner */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#4A0E4E] via-[#670080] to-[#E5325C] p-4 sm:p-5 text-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-[11px] font-bold backdrop-blur-xs">
+                    <Sparkles className="w-3 h-3 text-amber-300" />
+                    Interactive Finder
+                  </span>
+                  <span className="text-xs text-white/80 font-medium">Find in 3 Steps</span>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold">
+                  Your dream car, in 3 steps
+                </h3>
+                <p className="text-xs text-white/85 max-w-md">
+                  Pick your budget bracket, body type, and preferred fuel & transmission to get instant curated matches.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDreamWizardOpen(true)}
+                className="shrink-0 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white text-[#670080] hover:bg-[#FAF5FF] text-xs font-bold shadow-xs transition-transform active:scale-95"
+              >
+                <span>What&apos;s your budget?</span>
+                <span className="w-5 h-5 rounded-full bg-[#F6EEFF] text-[#670080] flex items-center justify-center text-[11px] font-black">→</span>
+              </button>
+            </div>
+
             {/* Controls Bar: Results Count, Mobile Filter Trigger, Search, Sort */}
             <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsMobileFilterOpen(true)}
-                  className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#E5E7EB] bg-[#FFF0F3] text-xs font-bold text-[#E5325C]"
+                  className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#E5E7EB] bg-[#F6EEFF] text-xs font-bold text-[#670080]"
                 >
                   <Filter className="w-3.5 h-3.5" />
                   <span>Filters ({activeFilterCount})</span>
@@ -507,6 +641,19 @@ function BuyContent() {
             {activeFilterCount > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-[#6B7078] font-medium">Active filters:</span>
+                {(minPrice > 50000 || maxPrice < 7000000) && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#F6EEFF] border border-[#D5A6E6] text-xs font-semibold text-[#670080]">
+                    {formatINR(minPrice)} - {formatINR(maxPrice)}
+                    <button
+                      onClick={() => {
+                        setMinPrice(50000);
+                        setMaxPrice(7000000);
+                      }}
+                    >
+                      <X className="w-3 h-3 text-[#670080] hover:text-red-500" />
+                    </button>
+                  </span>
+                )}
                 {selectedMakes.map((m) => (
                   <span
                     key={m}
@@ -525,6 +672,39 @@ function BuyContent() {
                   >
                     {t}
                     <button onClick={() => toggleItem(selectedBodyTypes, setSelectedBodyTypes, t)}>
+                      <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                    </button>
+                  </span>
+                ))}
+                {selectedSeats.map((s) => (
+                  <span
+                    key={s}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-xs font-semibold text-[#101216]"
+                  >
+                    {s} Seater
+                    <button onClick={() => setSelectedSeats(selectedSeats.filter((x) => x !== s))}>
+                      <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                    </button>
+                  </span>
+                ))}
+                {selectedColors.map((c) => (
+                  <span
+                    key={c}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-xs font-semibold text-[#101216]"
+                  >
+                    Color: {c}
+                    <button onClick={() => setSelectedColors(selectedColors.filter((x) => x !== c))}>
+                      <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                    </button>
+                  </span>
+                ))}
+                {selectedFeatures.map((f) => (
+                  <span
+                    key={f}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-xs font-semibold text-[#101216]"
+                  >
+                    {f}
+                    <button onClick={() => setSelectedFeatures(selectedFeatures.filter((x) => x !== f))}>
                       <X className="w-3 h-3 text-gray-400 hover:text-red-500" />
                     </button>
                   </span>
@@ -612,100 +792,57 @@ function BuyContent() {
         </div>
       </div>
 
-      {/* Mobile Filter Drawer Modal */}
-      {isMobileFilterOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-end">
-          <div className="bg-white w-full max-w-sm h-full flex flex-col p-6 overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-[#E5E7EB]">
-              <h3 className="font-bold text-lg text-[#101216]">Filter Inventory</h3>
-              <button
-                onClick={() => setIsMobileFilterOpen(false)}
-                className="p-1 rounded-full text-gray-400 hover:text-gray-700"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="py-6 space-y-6 flex-1">
-              <div>
-                <label className="text-xs font-bold text-[#101216] uppercase block mb-2">
-                  Brands
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {MAKES.map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => toggleItem(selectedMakes, setSelectedMakes, m)}
-                      className={`p-2 rounded-lg text-xs font-semibold text-center border ${
-                        selectedMakes.includes(m)
-                          ? 'bg-[#FFF0F3] border-[#E5325C] text-[#E5325C]'
-                          : 'bg-[#F8F9FA] border-[#E5E7EB] text-[#6B7078]'
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              </div>
+      {/* Mobile Filter Drawer (Spinny-style 2-column drawer) */}
+      <TwoColumnFilterDrawer
+        isOpen={isMobileFilterOpen}
+        onClose={() => setIsMobileFilterOpen(false)}
+        minPrice={minPrice}
+        setMinPrice={setMinPrice}
+        maxPrice={maxPrice}
+        setMaxPrice={setMaxPrice}
+        selectedMakes={selectedMakes}
+        setSelectedMakes={setSelectedMakes}
+        minYear={minYear}
+        setMinYear={setMinYear}
+        maxKm={maxKm}
+        setMaxKm={setMaxKm}
+        selectedFuels={selectedFuels}
+        setSelectedFuels={setSelectedFuels}
+        selectedBodyTypes={selectedBodyTypes}
+        setSelectedBodyTypes={setSelectedBodyTypes}
+        selectedTransmissions={selectedTransmissions}
+        setSelectedTransmissions={setSelectedTransmissions}
+        selectedOwnerships={selectedOwnerships}
+        setSelectedOwnerships={setSelectedOwnerships}
+        selectedAvailability={selectedAvailability}
+        setSelectedAvailability={setSelectedAvailability}
+        selectedSeats={selectedSeats}
+        setSelectedSeats={setSelectedSeats}
+        selectedColors={selectedColors}
+        setSelectedColors={setSelectedColors}
+        selectedFeatures={selectedFeatures}
+        setSelectedFeatures={setSelectedFeatures}
+        onlyRecarsSelect={onlyRecarsSelect}
+        setOnlyRecarsSelect={setOnlyRecarsSelect}
+        onlyVerified={onlyVerified}
+        setOnlyVerified={setOnlyVerified}
+        clearAllFilters={clearAllFilters}
+        filteredCount={filteredCars.length}
+      />
 
-              <div>
-                <label className="text-xs font-bold text-[#101216] uppercase block mb-2">
-                  Ownership
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['1st Owner', '2nd Owner', '3rd Owner'].map((own) => (
-                    <button
-                      key={own}
-                      onClick={() => toggleItem(selectedOwnerships, setSelectedOwnerships, own)}
-                      className={`p-2 rounded-lg text-xs font-semibold text-center border truncate ${
-                        selectedOwnerships.includes(own)
-                          ? 'bg-[#FFF0F3] border-[#E5325C] text-[#E5325C]'
-                          : 'bg-[#F8F9FA] border-[#E5E7EB] text-[#6B7078]'
-                      }`}
-                    >
-                      {own}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#101216] uppercase block mb-2">
-                  Availability Status
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['Available', 'Reserved', 'Sold Out'].map((st) => (
-                    <button
-                      key={st}
-                      onClick={() => toggleItem(selectedAvailability, setSelectedAvailability, st)}
-                      className={`p-2 rounded-lg text-xs font-semibold text-center border truncate ${
-                        selectedAvailability.includes(st)
-                          ? 'bg-[#101216] text-white border-[#101216]'
-                          : 'bg-[#F8F9FA] border-[#E5E7EB] text-[#6B7078]'
-                      }`}
-                    >
-                      {st}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="pt-4 border-t border-[#E5E7EB] flex gap-3">
-              <button
-                onClick={clearAllFilters}
-                className="flex-1 py-3 rounded-xl border border-[#E5E7EB] text-xs font-bold text-[#6B7078]"
-              >
-                Clear All
-              </button>
-              <button
-                onClick={() => setIsMobileFilterOpen(false)}
-                className="flex-1 py-3 rounded-xl bg-[#E5325C] text-white text-xs font-bold"
-              >
-                Apply Filters
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Dream Car 3-Step Wizard Modal */}
+      <DreamCarWizardModal
+        isOpen={isDreamWizardOpen}
+        onClose={() => setIsDreamWizardOpen(false)}
+        onApply={(filters) => {
+          setMinPrice(filters.minPrice);
+          setMaxPrice(filters.maxPrice);
+          if (filters.bodyTypes.length > 0) setSelectedBodyTypes(filters.bodyTypes);
+          if (filters.fuels.length > 0) setSelectedFuels(filters.fuels);
+          if (filters.transmissions.length > 0) setSelectedTransmissions(filters.transmissions);
+        }}
+        totalMatchingCars={countMatchesForWizard}
+      />
 
       <Footer />
     </div>
