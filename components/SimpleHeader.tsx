@@ -12,7 +12,6 @@ interface SimpleHeaderProps {
 }
 
 export default function SimpleHeader({ activeTab = 'buy', onSelectTab }: SimpleHeaderProps) {
-  const [isBuyMenuOpen, setIsBuyMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user, openLogin, logout } = useAuth();
 
@@ -21,115 +20,21 @@ export default function SimpleHeader({ activeTab = 'buy', onSelectTab }: SimpleH
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
         {/* Left: Recars Logo */}
         <div className="flex items-center shrink-0">
-          <Logo size="md" showTagline={false} />
+          <Logo size="md" showTagline={true} />
         </div>
 
-        {/* Right: Buy Car Dropdown, Sell Car, Call Support & Login/Signup */}
+        {/* Right: Call Support & Login/Signup */}
         <div className="flex items-center gap-2.5 sm:gap-6">
-          {/* Buy Car Link & Dropdown */}
-          <div
-            className="relative"
-            onMouseEnter={() => setIsBuyMenuOpen(true)}
-            onMouseLeave={() => setIsBuyMenuOpen(false)}
-          >
-            <div className="flex items-center">
-              <Link
-                href="/buy"
-                onClick={() => {
-                  if (onSelectTab) onSelectTab('buy');
-                  setIsBuyMenuOpen(false);
-                }}
-                className={`inline-flex items-center gap-1 sm:gap-1.5 text-xs sm:text-[15px] font-bold transition-colors py-2 cursor-pointer ${
-                  activeTab === 'buy'
-                    ? 'text-[#E5325C] border-b-2 border-[#E5325C]'
-                    : 'text-[#101216] hover:text-[#E5325C]'
-                }`}
-              >
-                <span>Buy Car</span>
-              </Link>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsBuyMenuOpen(!isBuyMenuOpen);
-                }}
-                className="p-1 text-[#6B7078] hover:text-[#E5325C] cursor-pointer"
-                aria-label="Toggle Buy Car menu"
-              >
-                <ChevronDown
-                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform duration-200 ${
-                    isBuyMenuOpen ? 'rotate-180 text-[#E5325C]' : ''
-                  }`}
-                />
-              </button>
-            </div>
-
-            {isBuyMenuOpen && (
-              <div className="absolute left-0 sm:right-0 sm:left-auto mt-1 w-52 bg-white rounded-2xl shadow-xl border border-[#E5E7EB] py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-                <Link
-                  href="/buy"
-                  onClick={() => setIsBuyMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-[#101216] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
-                >
-                  <Car className="w-4 h-4 text-[#E5325C]" />
-                  <span>Browse All Cars</span>
-                </Link>
-                <Link
-                  href="/buy?type=SUV"
-                  onClick={() => setIsBuyMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
-                >
-                  <span>Explore SUVs</span>
-                </Link>
-                <Link
-                  href="/buy?type=Sedan"
-                  onClick={() => setIsBuyMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
-                >
-                  <span>Explore Sedans</span>
-                </Link>
-                <Link
-                  href="/buy?type=Hatchback"
-                  onClick={() => setIsBuyMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
-                >
-                  <span>Explore Hatchbacks</span>
-                </Link>
-                <div className="border-t border-[#E5E7EB] my-1" />
-                <Link
-                  href="/why-recars"
-                  onClick={() => setIsBuyMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#6B7078] hover:text-[#E5325C]"
-                >
-                  <Shield className="w-3.5 h-3.5 text-[#E5325C]" />
-                  <span>Recars Certified Quality</span>
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Sell Car Nav Link */}
-          <Link
-            href="/sell"
-            className={`text-xs sm:text-[15px] font-bold transition-colors py-2 flex items-center gap-1.5 ${
-              activeTab === 'sell'
-                ? 'text-[#E5325C] border-b-2 border-[#E5325C]'
-                : 'text-[#101216] hover:text-[#E5325C]'
-            }`}
-          >
-            <span>Sell Car</span>
-          </Link>
-
           {/* Call us link */}
           <a
             href="tel:+919908796677"
-            className="hidden md:flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm font-semibold text-[#101216] hover:text-[#E5325C] transition-colors group px-2 py-1 sm:p-0 rounded-full bg-gray-50 sm:bg-transparent border border-gray-200/80 sm:border-0"
+            className="hidden md:flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm font-medium text-[#101216] hover:text-[#E5325C] transition-colors group px-2 py-1 sm:p-0 rounded-full bg-gray-50 sm:bg-transparent border border-gray-200/80 sm:border-0"
           >
             <Phone className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#E5325C]" />
-            <span className="hidden sm:inline text-[#6B7078] font-normal text-xs">
+            <span className="hidden sm:inline text-[#6B7078] font-normal text-xs font-body">
               Call us at
             </span>
-            <span className="font-extrabold text-[#101216] group-hover:text-[#E5325C] tracking-tight text-xs sm:text-sm whitespace-nowrap">
+            <span className="font-semibold text-[#101216] group-hover:text-[#E5325C] tracking-tight text-xs sm:text-sm whitespace-nowrap font-nav">
               +91 99087 96677
             </span>
           </a>
@@ -201,7 +106,7 @@ export default function SimpleHeader({ activeTab = 'buy', onSelectTab }: SimpleH
             <div className="flex items-center gap-2">
               <button
                 onClick={openLogin}
-                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-[#E5E7EB] bg-white hover:border-[#E5325C] hover:bg-[#FFF0F3] text-xs font-bold text-[#101216] hover:text-[#E5325C] transition-all cursor-pointer shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-[#E5E7EB] bg-white hover:border-[#E5325C] hover:bg-[#FFF0F3] text-xs font-semibold font-btn tracking-rounded text-[#101216] hover:text-[#E5325C] transition-all cursor-pointer shadow-2xs"
               >
                 <User className="w-3.5 h-3.5 text-[#E5325C]" />
                 <span>Login / Sign Up</span>

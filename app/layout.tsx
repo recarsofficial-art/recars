@@ -1,6 +1,21 @@
 import type { Metadata } from 'next';
+import { Outfit, DM_Sans } from 'next/font/google';
 import './globals.css';
 import ClientProviders from '@/components/ClientProviders';
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-outfit',
+  display: 'swap',
+});
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.recars.in'),
@@ -65,8 +80,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full antialiased scroll-smooth">
-      <body className="min-h-full flex flex-col bg-[#F8F9FA] text-[#101216]">
+    <html lang="en" className={`h-full antialiased scroll-smooth ${outfit.variable} ${dmSans.variable}`}>
+      <body className="min-h-full flex flex-col bg-[#F8F9FA] text-[#101216] font-sans">
         <ClientProviders>
           {children}
         </ClientProviders>

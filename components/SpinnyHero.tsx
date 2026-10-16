@@ -9,6 +9,7 @@ import {
   CarFront,
   ChevronRight,
   ShieldCheck,
+  Check,
   X,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogos';
@@ -16,6 +17,15 @@ import { BrandLogo } from './BrandLogos';
 interface SpinnyHeroProps {
   onSelectBrand?: (brand: string) => void;
   selectedBrand?: string;
+  onSubmitDetails?: (details: {
+    make: string;
+    model: string;
+    year: number;
+    fuel: string;
+    transmission: string;
+    variant: string;
+    regNumber?: string;
+  }) => void;
 }
 
 const TOP_BRANDS = [
@@ -89,7 +99,11 @@ const FUELS = ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid'];
 const TRANSMISSIONS = ['Manual', 'Automatic'];
 const KM_RANGES = ['< 15,000 km', '15,000 - 30,000 km', '30,000 - 50,000 km', '50,000 - 80,000 km', '> 80,000 km'];
 
-export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroProps) {
+export default function SpinnyHero({
+  onSelectBrand,
+  selectedBrand,
+  onSubmitDetails,
+}: SpinnyHeroProps) {
   const router = useRouter();
   const [selectedMake, setSelectedMake] = useState(
     selectedBrand && selectedBrand !== 'All' ? selectedBrand : 'Hyundai'
@@ -98,6 +112,7 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
   const [selectedYear, setSelectedYear] = useState<number>(2022);
   const [selectedFuel, setSelectedFuel] = useState('Petrol');
   const [selectedTransmission, setSelectedTransmission] = useState('Automatic');
+  const [selectedVariant, setSelectedVariant] = useState('SX (O) 1.5 Petrol');
   const [selectedKm, setSelectedKm] = useState('30,000 - 50,000 km');
   const [useRegNumber, setUseRegNumber] = useState(false);
   const [regNumber, setRegNumber] = useState('');
@@ -120,24 +135,34 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
 
   const handleGetPrice = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (useRegNumber) {
-      const cleanReg = regNumber.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-      if (!cleanReg) {
-        setErrorMsg('Please enter your car registration number');
-        return;
-      }
-      setErrorMsg('');
-      router.push(`/sell?reg=${encodeURIComponent(cleanReg)}`);
+    if (useRegNumber && !regNumber.trim()) {
+      setErrorMsg('Please enter your car registration number');
+      return;
+    }
+    setErrorMsg('');
+    if (onSubmitDetails) {
+      onSubmitDetails({
+        make: selectedMake,
+        model: selectedModel,
+        year: selectedYear,
+        fuel: selectedFuel,
+        transmission: selectedTransmission,
+        variant: selectedVariant,
+        regNumber: useRegNumber ? regNumber.trim().toUpperCase() : undefined,
+      });
     } else {
       const params = new URLSearchParams({
         make: selectedMake,
         model: selectedModel,
         year: selectedYear.toString(),
         fuel: selectedFuel,
-        km: selectedKm,
         transmission: selectedTransmission,
+        variant: selectedVariant,
       });
-      router.push(`/sell?${params.toString()}`);
+      if (useRegNumber && regNumber.trim()) {
+        params.set('reg', regNumber.trim().toUpperCase());
+      }
+      router.push(`/sell?${params.toString()}#sell-workflow`);
     }
   };
 
@@ -172,9 +197,9 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-2xl sm:text-4xl lg:text-[46px] font-black tracking-tight leading-[1.2] mb-4 sm:mb-8 text-[#101216]">
+            <h1 className="text-2xl sm:text-4xl lg:text-[44px] font-semibold font-heading tracking-tight leading-[1.25] mb-4 sm:mb-6 text-[#101216]">
               Trust Every Drive.{' '}
-              <span className="italic font-black text-[#E5325C]">
+              <span className="text-[#E5325C]">
                 Value Every Rupee.
               </span>
             </h1>
@@ -184,32 +209,39 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
               
               {/* Card Header & Mode Switcher */}
               <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
-                <label className="text-xs sm:text-sm font-bold text-gray-900 flex items-center gap-2">
-                  <span>Enter your car details</span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#237A52] text-white text-[10px] sm:text-[11px] font-extrabold shadow-2xs whitespace-nowrap">
-                    <ShieldCheck className="w-3 h-3 text-white" />
-                    <span>Doorstep Inspection</span>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs sm:text-sm font-bold text-gray-900">
+                    Enter your car details
+                  </label>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#10B981] text-white text-[10px] sm:text-[11px] font-extrabold shadow-2xs whitespace-nowrap">
+                    <Check className="w-3 h-3 text-white stroke-[3]" />
+                    <span>Quick & accurate valuation</span>
                   </span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setUseRegNumber(!useRegNumber)}
-                  className="text-[11px] sm:text-xs font-bold text-[#E5325C] hover:underline cursor-pointer transition-colors"
-                >
-                  {useRegNumber ? 'Enter Car Details instead' : 'Have Reg. Number?'}
-                </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] sm:text-xs font-bold text-[#E5325C] hidden sm:inline">
+                    Direct Buyer Network
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setUseRegNumber(!useRegNumber)}
+                    className="text-[11px] sm:text-xs font-bold text-[#E5325C] hover:underline cursor-pointer transition-colors"
+                  >
+                    {useRegNumber ? 'Enter Car Details instead' : 'Have Reg. Number?'}
+                  </button>
+                </div>
               </div>
 
               {/* Form */}
               <form onSubmit={handleGetPrice} className="space-y-3">
                 {!useRegNumber ? (
                   <>
-                    {/* Car Details Form Grid: 6 fields (Brand, Model, Year, Fuel, KM, Transmission) */}
+                    {/* Car Details Form Grid: 6 fields matching screenshot (Brand, Model, Year, Fuel, Transmission, Variant) */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                       {/* 1. Make / Brand */}
                       <div>
                         <label className="block text-[10px] sm:text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1">
-                          Brand / Make
+                          Select Brand / Make
                         </label>
                         <select
                           value={selectedMake}
@@ -278,25 +310,7 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
                         </select>
                       </div>
 
-                      {/* 5. KM Driven */}
-                      <div>
-                        <label className="block text-[10px] sm:text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1">
-                          KM Driven
-                        </label>
-                        <select
-                          value={selectedKm}
-                          onChange={(e) => setSelectedKm(e.target.value)}
-                          className="w-full px-2.5 sm:px-3 py-2 sm:py-2.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-bold text-[#101216] focus:outline-none focus:border-[#E5325C] focus:ring-2 focus:ring-[#E5325C]/20 transition-all cursor-pointer"
-                        >
-                          {KM_RANGES.map((k) => (
-                            <option key={k} value={k}>
-                              {k}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* 6. Transmission */}
+                      {/* 5. Transmission */}
                       <div>
                         <label className="block text-[10px] sm:text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1">
                           Transmission
@@ -313,6 +327,20 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
                           ))}
                         </select>
                       </div>
+
+                      {/* 6. Variant */}
+                      <div>
+                        <label className="block text-[10px] sm:text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1">
+                          Variant
+                        </label>
+                        <input
+                          type="text"
+                          value={selectedVariant}
+                          onChange={(e) => setSelectedVariant(e.target.value)}
+                          placeholder="e.g. SX / VXI / ZX"
+                          className="w-full px-2.5 sm:px-3 py-2 sm:py-2.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-bold text-[#101216] focus:outline-none focus:border-[#E5325C] focus:ring-2 focus:ring-[#E5325C]/20 transition-all"
+                        />
+                      </div>
                     </div>
 
                     {/* Big Action Button */}
@@ -320,34 +348,26 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
                       type="submit"
                       className="w-full mt-3 inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 bg-[#E5325C] hover:bg-[#D4264E] active:scale-[0.98] text-white font-black text-xs sm:text-sm tracking-wider uppercase rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap"
                     >
-                      <span>SELL YOUR CAR ONLINE</span>
-                      <ChevronRight className="w-4 h-4" />
+                      <span>SELL YOUR CAR (SELLRIGHT)</span>
+                      <span>→</span>
                     </button>
 
-                    {/* Quick Popular Presets */}
-                    <div className="flex items-center gap-1.5 pt-1 text-[11px] text-gray-500 flex-wrap">
-                      <span className="font-semibold text-gray-400 text-[10px] sm:text-[11px]">Popular:</span>
-                      {[
-                        { make: 'Hyundai', model: 'Creta', year: 2022 },
-                        { make: 'Maruti Suzuki', model: 'Swift', year: 2021 },
-                        { make: 'Tata', model: 'Nexon EV', year: 2023 },
-                        { make: 'Honda', model: 'City', year: 2021 },
-                        { make: 'Mahindra', model: 'Thar', year: 2022 },
-                      ].map((preset) => (
-                        <button
-                          key={`${preset.make}-${preset.model}`}
-                          type="button"
-                          onClick={() => {
-                            setSelectedMake(preset.make);
-                            setSelectedModel(preset.model);
-                            setSelectedYear(preset.year);
-                            if (errorMsg) setErrorMsg('');
-                          }}
-                          className="px-2 py-0.5 rounded-md bg-gray-100 hover:bg-[#FFF0F3] hover:text-[#E5325C] text-gray-700 text-[10px] sm:text-[11px] font-bold transition-colors cursor-pointer"
-                        >
-                          {preset.model} ({preset.year})
-                        </button>
-                      ))}
+                    {/* Perks Row below button */}
+                    <div className="flex items-center justify-center gap-2 sm:gap-4 pt-2.5 text-[10px] sm:text-xs text-gray-500 font-medium text-center flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <Check className="w-3 h-3 text-[#10B981]" />
+                        <span>Free Doorstep Inspection</span>
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Check className="w-3 h-3 text-[#10B981]" />
+                        <span>Instant Online Payment</span>
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Check className="w-3 h-3 text-[#10B981]" />
+                        <span>Hassle-free RC Transfer</span>
+                      </span>
                     </div>
                   </>
                 ) : (
@@ -373,7 +393,7 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
                         type="submit"
                         className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-3.5 bg-[#E5325C] hover:bg-[#D4264E] active:scale-[0.98] text-white font-black text-xs sm:text-sm tracking-wider uppercase rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap"
                       >
-                        <span>BOOK FREE INSPECTION</span>
+                        <span>SELL YOUR CAR (SELLRIGHT) →</span>
                       </button>
                     </div>
 
@@ -404,20 +424,10 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
                 )}
               </form>
 
-              {/* Or Divider */}
-              <div className="relative flex items-center justify-center my-4 sm:my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200" />
-                </div>
-                <div className="relative bg-white px-4">
-                  <span className="text-xs font-semibold text-gray-400">Or</span>
-                </div>
-              </div>
-
               {/* Select Car Brand Grid */}
-              <div>
+              <div className="mt-5 pt-4 border-t border-gray-100">
                 <p className="text-xs sm:text-sm font-bold text-gray-800 mb-2.5 text-left">
-                  Select your car brand to get started
+                  Select your car brand to get started:
                 </p>
 
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-2.5">
@@ -503,6 +513,11 @@ export default function SpinnyHero({ onSelectBrand, selectedBrand }: SpinnyHeroP
           </div>
 
         </div>
+
+        {/* Bottom Verification Note matching screenshot */}
+        <p className="text-[11px] sm:text-xs text-gray-400 text-center mt-6 sm:mt-8">
+          *Offers and final valuations are subject to physical inspection and vehicle documentation verification.
+        </p>
       </div>
 
       {/* ========================================================

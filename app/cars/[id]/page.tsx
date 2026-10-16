@@ -833,34 +833,34 @@ function CarDetailInner({ params }: PageProps) {
               {/* Price Display */}
               <div className="p-4 rounded-2xl bg-[#FFF0F3] border border-[#FFD6DF]">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-2xl sm:text-3xl font-black text-[#101216]">
+                  <span className="text-2xl sm:text-3xl font-semibold font-price text-[#101216]">
                     {formatINR(car.price)}
                   </span>
                   {car.originalPrice && (
-                    <span className="text-xs text-[#6B7078] line-through">
+                    <span className="text-xs text-[#6B7078] line-through font-price">
                       {formatINR(car.originalPrice)}
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-[#6B7078] mt-1">
+                <p className="text-[11px] text-[#6B7078] mt-1 font-body">
                   Transparent Listed Price • Zero Brokerage Commission
                 </p>
               </div>
 
               {/* Suggested Pricing Guidance Card */}
               <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] space-y-2 text-xs">
-                <div className="flex items-center justify-between font-bold text-[#101216]">
+                <div className="flex items-center justify-between font-semibold font-heading text-[#101216]">
                   <span className="flex items-center gap-1.5 text-gray-700">
                     <TrendingUp className="w-3.5 h-3.5 text-[#E5325C]" />
                     <span>Suggested Market Value</span>
                   </span>
-                  <span className="text-gray-900 font-extrabold">{formatINR(suggestedMin)} – {formatINR(suggestedMax)}</span>
+                  <span className="text-gray-900 font-semibold font-price">{formatINR(suggestedMin)} – {formatINR(suggestedMax)}</span>
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-[#6B7078]">
                   <span>Suggested Offer Range:</span>
-                  <span className="font-bold text-[#E5325C]">{formatINR(suggestedOfferMin)} – {formatINR(suggestedOfferMax)}</span>
+                  <span className="font-semibold font-price text-[#E5325C]">{formatINR(suggestedOfferMin)} – {formatINR(suggestedOfferMax)}</span>
                 </div>
-                <p className="text-[10px] text-gray-500 leading-tight pt-1.5 border-t border-gray-200">
+                <p className="text-[10px] text-gray-500 leading-tight pt-1.5 border-t border-gray-200 font-body">
                   Estimates are data-backed suggestions based on make, variant, year, odometer & condition, not guaranteed valuations.
                 </p>
               </div>
@@ -871,7 +871,7 @@ function CarDetailInner({ params }: PageProps) {
                 <button
                   onClick={() => setIsInterestedModalOpen(true)}
                   disabled={isSoldOut}
-                  className={`w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold text-sm shadow-md transition-all active:scale-98 ${
+                  className={`w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-semibold font-btn tracking-rounded text-sm shadow-md transition-all active:scale-98 cursor-pointer ${
                     isSoldOut
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'text-white bg-[#E5325C] hover:bg-[#D4264E]'
@@ -885,7 +885,7 @@ function CarDetailInner({ params }: PageProps) {
                 <button
                   onClick={() => setIsNegotiateModalOpen(true)}
                   disabled={isSoldOut}
-                  className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-2xl font-bold text-sm transition-all border ${
+                  className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-2xl font-semibold font-btn tracking-rounded text-sm transition-all border cursor-pointer ${
                     isSoldOut
                       ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                       : 'text-[#101216] bg-white border-gray-300 hover:border-[#E5325C] hover:text-[#E5325C] hover:bg-[#FFF0F3]/40'
@@ -898,7 +898,7 @@ function CarDetailInner({ params }: PageProps) {
                 {/* 3. Request Callback Button */}
                 <button
                   onClick={() => setIsCallbackModalOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-bold text-xs text-[#101216] bg-white border border-[#E5E7EB] hover:bg-gray-50 transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold font-btn tracking-rounded text-xs text-[#101216] bg-white border border-[#E5E7EB] hover:bg-gray-50 transition-all cursor-pointer"
                 >
                   <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
                   <span>Request Instant Callback</span>
@@ -907,7 +907,7 @@ function CarDetailInner({ params }: PageProps) {
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <a
                     href="tel:+919908796677"
-                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-bold text-xs text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-[#E5325C] transition-all"
+                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold font-btn tracking-rounded text-xs text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-[#E5325C] transition-all"
                   >
                     <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
                     <span>Call 9908796677</span>
@@ -917,7 +917,7 @@ function CarDetailInner({ params }: PageProps) {
                     href={`https://wa.me/919908796677?text=Hello%20Recars%2C%20I%20am%20interested%20in%20the%20${encodeURIComponent(car.year + ' ' + car.make + ' ' + car.model)}%20(${encodeURIComponent(car.id)})%20listed%20at%20${encodeURIComponent(formatINR(car.price))}.`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-bold text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all"
+                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold font-btn tracking-rounded text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all"
                   >
                     <span>Chat on WhatsApp</span>
                   </a>

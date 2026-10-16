@@ -82,8 +82,8 @@ export default function SignupPage() {
               <Shield className="w-3 h-3" />
               <span>Create Account</span>
             </span>
-            <h2 className="text-2xl font-black text-[#101216] mt-2">Join Recars</h2>
-            <p className="text-xs text-gray-600 mt-1">
+            <h2 className="text-2xl font-semibold font-heading text-[#101216] mt-2">Join Recars</h2>
+            <p className="text-xs text-gray-600 mt-1 font-body">
               Connect to Supabase, book doorstep test drives and track sell valuations.
             </p>
           </div>
@@ -94,7 +94,7 @@ export default function SignupPage() {
               type="button"
               onClick={handleGoogleSignUp}
               disabled={googleLoading}
-              className="w-full py-2.5 px-4 rounded-xl border border-[#E5E7EB] hover:border-gray-400 bg-white hover:bg-gray-50 text-gray-800 font-bold text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded-xl border border-[#E5E7EB] hover:border-gray-400 bg-white hover:bg-gray-50 text-gray-800 font-semibold font-btn tracking-rounded text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
             >
               <GoogleIcon className="w-4 h-4" />
               <span>{googleLoading ? 'Connecting with Google...' : 'Sign up with Google'}</span>
@@ -192,17 +192,17 @@ export default function SignupPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+                className="w-full py-3 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white font-semibold font-btn tracking-rounded text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
               >
                 <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
                 <Sparkles className="w-4 h-4" />
               </button>
             </form>
 
-            <div className="text-center pt-2 border-t border-gray-100">
+            <div className="text-center pt-2 border-t border-gray-100 font-body">
               <p className="text-xs text-gray-600">
                 Already have an account?{' '}
-                <Link href="/login" className="text-[#E5325C] font-bold hover:underline">
+                <Link href="/login" className="text-[#E5325C] font-semibold font-heading hover:underline">
                   Sign In
                 </Link>
               </p>

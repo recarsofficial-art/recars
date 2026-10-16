@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import Logo from './Logo';
 import CitySelectorModal from './CitySelectorModal';
+import CarSearchModal from './CarSearchModal';
 import { useAuth } from '@/lib/authContext';
 
 
@@ -70,7 +71,7 @@ export default function Navbar({
             </div>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center space-x-8">
+            <nav className="hidden lg:flex items-center space-x-8 font-nav tracking-rounded">
               {navLinks.map((link) => {
                 const isActive = pathname === link.href || (link.href === '/buy' && pathname.startsWith('/cars'));
                 return (
@@ -237,7 +238,7 @@ export default function Navbar({
               ) : (
                 <button
                   onClick={openLogin}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E5E7EB] bg-white hover:border-[#E5325C] hover:bg-[#FFF0F3] text-xs font-bold text-[#101216] hover:text-[#E5325C] transition-all cursor-pointer shadow-2xs"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E5E7EB] bg-white hover:border-[#E5325C] hover:bg-[#FFF0F3] text-xs font-semibold font-btn tracking-rounded text-[#101216] hover:text-[#E5325C] transition-all cursor-pointer shadow-2xs"
                 >
                   <User className="w-3.5 h-3.5 text-[#E5325C]" />
                   <span>Login / Sign Up</span>
@@ -247,7 +248,7 @@ export default function Navbar({
               {/* Prominent Sell Your Car Button */}
               <Link
                 href="/sell"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white bg-[#E5325C] hover:bg-[#D4264E] transition-all shadow-sm hover:shadow-md active:scale-95"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold font-btn tracking-rounded text-white bg-[#E5325C] hover:bg-[#D4264E] transition-all shadow-sm hover:shadow-md active:scale-95"
               >
                 <span>Sell Your Car</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -343,52 +344,12 @@ export default function Navbar({
         )}
       </header>
 
-      {/* Global Quick Search Overlay */}
-      {isSearchOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-start justify-center pt-24 px-4">
-          <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl border border-[#E5E7EB] overflow-hidden">
-            <form onSubmit={handleSearchSubmit} className="p-4 flex items-center gap-3 border-b border-[#E5E7EB]">
-              <Search className="w-5 h-5 text-[#E5325C]" />
-              <input
-                type="text"
-                placeholder="Search Hyundai Creta, Fortuner, Honda City..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full text-base focus:outline-none text-[#101216]"
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={() => setIsSearchOpen(false)}
-                className="p-1 text-gray-400 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </form>
-            <div className="p-4 bg-[#F8F9FA]">
-              <p className="text-xs font-semibold text-[#6B7078] mb-2 uppercase tracking-wider">
-                Popular Searches
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {['Hyundai Creta', 'Honda City', 'Toyota Fortuner', 'Kia Seltos', 'Automatic SUV', 'Electric Cars'].map(
-                  (term) => (
-                    <button
-                      key={term}
-                      onClick={() => {
-                        setIsSearchOpen(false);
-                        router.push(`/buy?q=${encodeURIComponent(term)}`);
-                      }}
-                      className="px-3 py-1 bg-white border border-[#E5E7EB] rounded-full text-xs font-medium text-[#24262A] hover:border-[#E5325C] hover:text-[#E5325C] transition-colors"
-                    >
-                      {term}
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Global Rich Search Modal */}
+      <CarSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        initialQuery={searchQuery}
+      />
 
       {/* City Modal */}
       <CitySelectorModal

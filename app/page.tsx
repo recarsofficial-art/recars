@@ -304,8 +304,8 @@ function HomePageContent() {
       />
 
       {/* ========================================================
-          2. RECARS HOME HUB (MATCHING SCREENSHOT 1:
-             CITY + AQI + SEARCH + BLUE BANNER + 4 SERVICE CARDS)
+          2. RECARS HOME HUB (MATCHING USER WORKFLOW:
+             CITY SELECTOR + SEARCH + HERO BANNER + 3D CARDS)
       ========================================================= */}
       <RecarsHomeHub
         activeTab={activeTab}

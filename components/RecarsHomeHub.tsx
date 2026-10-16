@@ -13,6 +13,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { CITIES } from '@/lib/data';
+import CarSearchModal from './CarSearchModal';
 
 interface RecarsHomeHubProps {
   activeTab?: 'buy' | 'sell';
@@ -35,6 +36,7 @@ export default function RecarsHomeHub({
 }: RecarsHomeHubProps) {
   const router = useRouter();
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,19 +95,16 @@ export default function RecarsHomeHub({
               </div>
             )}
           </div>
-
-          {/* AQI Pill */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] text-[11px] sm:text-xs font-bold shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-            <span>AQI: 48 • Good</span>
-          </div>
         </div>
 
         {/* ========================================================
             2. ROUNDED SEARCH BAR: "Search cars by model"
         ========================================================= */}
-        <form onSubmit={handleSubmit} className="relative mb-5 sm:mb-6">
-          <div className="relative flex items-center">
+        <div className="relative mb-5 sm:mb-6">
+          <div
+            onClick={() => setIsSearchModalOpen(true)}
+            className="relative flex items-center cursor-pointer group"
+          >
             <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
               <div className="w-6 h-6 rounded-full border-2 border-[#E5325C] flex items-center justify-center">
                 <Search className="w-3 h-3 text-[#E5325C]" />
@@ -113,138 +112,102 @@ export default function RecarsHomeHub({
             </div>
             <input
               type="text"
+              readOnly
               value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search cars by model (e.g. Creta, Thar, City, Swift)..."
-              className="w-full bg-white text-[#101216] placeholder:text-gray-400 pl-13 pr-24 py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-medium border border-gray-300 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#E5325C] focus:border-[#E5325C] transition-all"
+              placeholder="Search for your favourite car (e.g. Creta, Thar, City, Swift)..."
+              className="w-full bg-white text-[#101216] placeholder:text-gray-400 pl-13 pr-24 py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-medium border border-gray-300 group-hover:border-[#E5325C] shadow-xs cursor-pointer transition-all"
             />
             <button
-              type="submit"
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 sm:py-2 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-bold transition-transform active:scale-95 cursor-pointer shadow-xs"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsSearchModalOpen(true);
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 sm:py-2 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-semibold font-btn tracking-rounded transition-transform active:scale-95 cursor-pointer shadow-xs"
             >
               Search
             </button>
           </div>
-        </form>
+        </div>
+
+        {/* Global Full-Featured Car Search Modal */}
+        <CarSearchModal
+          isOpen={isSearchModalOpen}
+          onClose={() => setIsSearchModalOpen(false)}
+          initialQuery={searchQuery}
+        />
 
         {/* ========================================================
-            3. BLUE BANNER: "Explore cars >" with link to /buy
+            3. AMBASSADOR PHOTO SECTION (WIDESCREEN LANDSCAPE BANNER)
         ========================================================= */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#1D4ED8] via-[#2563EB] to-[#3B82F6] p-5 sm:p-7 mb-5 sm:mb-6 shadow-md border border-blue-400/20 text-white">
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="inline-block text-[11px] font-bold text-blue-100 uppercase tracking-wider">
-                Recars Direct Collection
+        <div className="relative overflow-hidden rounded-3xl bg-[#101216] mb-5 sm:mb-6 shadow-xl border border-gray-200 group">
+          {/* Background Landscape Photo */}
+          <div className="absolute inset-0">
+            <img
+              src="/hero-ambassador-landscape.jpg"
+              alt="Sell your car for the right price"
+              className="w-full h-full object-cover object-[center_center] sm:object-[60%_center] scale-100 group-hover:scale-[1.01] transition-transform duration-700"
+            />
+            {/* Natural gradient overlay on the left to ensure high-contrast white text legibility while showcasing the ambassador and car */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent sm:from-black/80 sm:via-black/35 sm:to-transparent" />
+          </div>
+
+          {/* Foreground Content (Matching reference screenshot exactly) */}
+          <div className="relative z-10 p-6 sm:p-10 lg:p-12 min-h-[240px] sm:min-h-[290px] lg:min-h-[340px] flex flex-col justify-center items-start max-w-lg">
+            <div className="space-y-2">
+              <span className="inline-block px-3 py-1 rounded-full bg-[#E5325C] text-white text-[10px] sm:text-xs font-semibold font-nav uppercase tracking-wider shadow-xs">
+                Recars Direct
               </span>
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white leading-tight">
-                Quality Pre-Owned Cars in {selectedCity || 'Warangal'}
+              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-semibold font-heading text-white leading-[1.15] tracking-tight drop-shadow-md">
+                sell your car<br />
+                for the<br />
+                right price
               </h2>
-              <p className="text-xs sm:text-sm text-blue-100/90 max-w-lg">
-                200+ engineering checkpoints, transparent prices, doorstep test drives.
-              </p>
             </div>
 
-            <div className="flex items-center gap-3 self-start sm:self-center shrink-0">
+            <div className="mt-4 sm:mt-6">
               <Link
-                href="/buy"
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-white text-[#1D4ED8] hover:bg-blue-50 text-xs sm:text-sm font-extrabold shadow-sm transition-transform active:scale-95 cursor-pointer"
+                href="/sell"
+                className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 rounded-full bg-black hover:bg-[#E5325C] text-white text-xs sm:text-sm font-semibold font-btn shadow-lg border border-white/20 transition-all duration-200 active:scale-95 cursor-pointer"
               >
-                <span>Explore cars</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>Sell Car</span>
+                <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
         </div>
 
         {/* ========================================================
-            4. THE 2 PRIMARY SERVICE CARDS: BUY USED CAR & SELL CAR
+            4. THE 2 PRIMARY SERVICE CARDS: BUY A CAR & SELL YOUR CAR
         ========================================================= */}
-        <div className="grid grid-cols-2 gap-3.5 sm:gap-6 mb-5">
-          {/* CARD 1: BUY USED CAR -> OPENS /buy */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 mb-5">
+          {/* CARD 1: BUY A CAR -> OPENS /buy */}
           <Link
             href="/buy"
-            className="group text-left p-4 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer min-h-[140px] sm:min-h-[160px] bg-white text-[#101216] border-gray-200 hover:border-[#E5325C] shadow-2xs hover:shadow-md"
+            className="group relative block rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] cursor-pointer"
+            aria-label="Buy a Car"
           >
-            {/* Top row with tag and active indicator */}
-            <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
-              <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#FFF0E6] text-[#E05300] text-[10px] sm:text-xs font-extrabold tracking-tight">
-                UP TO 20% OFF
-              </span>
-            </div>
-
-            <div>
-              <h3 className="text-base sm:text-xl font-black text-[#101216] group-hover:text-[#E5325C] transition-colors tracking-tight">
-                Buy used car
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-500 line-clamp-1 mt-0.5 sm:mt-1">
-                Certified 200+ points • 5-day return
-              </p>
-            </div>
-
-            {/* Car action */}
-            <div className="mt-4 flex items-center justify-between pt-2 border-t border-gray-100">
-              <div className="w-9 h-9 rounded-xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
-                <Car className="w-5 h-5" />
-              </div>
-              <div className="text-xs sm:text-sm font-extrabold text-[#E5325C] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                <span>Browse Cars</span>
-                <span>→</span>
-              </div>
-            </div>
+            <img
+              src="/images/card-buy-car.png"
+              alt="Buy a Car — Recars"
+              className="w-full h-auto object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
+              loading="eager"
+            />
           </Link>
 
-          {/* CARD 2: SELL CAR -> OPENS /sell */}
+          {/* CARD 2: SELL YOUR CAR -> OPENS /sell */}
           <Link
             href="/sell"
-            className="group text-left p-4 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer min-h-[140px] sm:min-h-[160px] bg-white text-[#101216] border-gray-200 hover:border-[#E5325C] shadow-2xs hover:shadow-md"
+            className="group relative block rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] cursor-pointer"
+            aria-label="Sell Your Car"
           >
-            <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
-              <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#FFF0F3] text-[#E5325C] text-[10px] sm:text-xs font-extrabold tracking-tight">
-                Instant Valuation
-              </span>
-            </div>
-
-            <div>
-              <h3 className="text-base sm:text-xl font-black text-[#101216] group-hover:text-[#E5325C] transition-colors tracking-tight">
-                Sell car
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-500 line-clamp-1 mt-0.5 sm:mt-1">
-                15000+ buyer network • Best price guarantee
-              </p>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between pt-2 border-t border-gray-100">
-              <div className="w-9 h-9 rounded-xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
-                <Tag className="w-5 h-5" />
-              </div>
-              <div className="text-xs sm:text-sm font-extrabold text-[#E5325C] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                <span>Get Offer (SellRight)</span>
-                <span>→</span>
-              </div>
-            </div>
+            <img
+              src="/images/card-sell-car.png"
+              alt="Sell Your Car — Recars"
+              className="w-full h-auto object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
+              loading="eager"
+            />
           </Link>
-        </div>
-
-        {/* ========================================================
-            5. PRIMARY MODE SELECTOR PILL: [ Buy Used Car ] [ Sell Car ]
-        ========================================================= */}
-        <div className="flex items-center justify-center pt-1">
-          <div className="inline-flex p-1.5 rounded-full bg-gray-200/90 border border-gray-300 shadow-inner">
-            <Link
-              href="/buy"
-              className="px-5 py-2 rounded-full text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 cursor-pointer bg-white text-[#101216] shadow-sm hover:text-[#E5325C]"
-            >
-              <Car className="w-3.5 h-3.5 text-[#E5325C]" />
-              <span>Buy Used Car</span>
-            </Link>
-            <Link
-              href="/sell"
-              className="px-5 py-2 rounded-full text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 cursor-pointer bg-[#E5325C] text-white shadow-sm hover:bg-[#D4264E]"
-            >
-              <Tag className="w-3.5 h-3.5" />
-              <span>Sell Car (SellRight)</span>
-            </Link>
-          </div>
         </div>
       </div>
     </section>

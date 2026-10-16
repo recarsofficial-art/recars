@@ -136,23 +136,23 @@ export default function AuthModal() {
             </span>
           </div>
 
-          <h3 className="text-xl font-extrabold text-[#101216]">
+          <h3 className="text-xl font-semibold font-heading text-[#101216]">
             {tab === 'login' ? 'Welcome Back to Recars' : 'Join Recars Marketplace'}
           </h3>
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-xs text-gray-600 mt-1 font-body">
             {tab === 'login'
               ? 'Access saved cars, test drive schedules & instant valuations'
               : 'Sign up to track valuations, doorstep test drives & inspect cars'}
           </p>
 
           {/* Tab Switcher */}
-          <div className="flex rounded-xl bg-white/80 p-1 border border-[#E5E7EB] mt-4 shadow-2xs">
+          <div className="flex rounded-xl bg-white/80 p-1 border border-[#E5E7EB] mt-4 shadow-2xs font-nav">
             <button
               onClick={() => {
                 setTab('login');
                 setLoginError(null);
               }}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 py-2 text-xs font-semibold font-btn tracking-rounded rounded-lg transition-all cursor-pointer ${
                 tab === 'login'
                   ? 'bg-[#E5325C] text-white shadow-xs'
                   : 'text-gray-600 hover:text-black'
@@ -165,7 +165,7 @@ export default function AuthModal() {
                 setTab('signup');
                 setSignupError(null);
               }}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 py-2 text-xs font-semibold font-btn tracking-rounded rounded-lg transition-all cursor-pointer ${
                 tab === 'signup'
                   ? 'bg-[#E5325C] text-white shadow-xs'
                   : 'text-gray-600 hover:text-black'

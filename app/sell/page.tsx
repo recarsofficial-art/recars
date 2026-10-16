@@ -183,20 +183,40 @@ function SellWorkflowContent() {
     setMake(selectedB);
     const availableModelsList = MODELS_BY_MAKE[selectedB] || ['Standard'];
     setModel(availableModelsList[0] || 'Standard');
+  };
+
+  const handleHeroSubmit = (details: {
+    make: string;
+    model: string;
+    year: number;
+    fuel: string;
+    transmission: string;
+    variant: string;
+    regNumber?: string;
+  }) => {
+    setMake(details.make);
+    setModel(details.model);
+    setYear(details.year);
+    setFuelType(details.fuel as FuelType);
+    setTransmission(details.transmission as TransmissionType);
+    setVariant(details.variant);
+    if (details.regNumber) setRegNumber(details.regNumber);
+    setStep(2);
     setTimeout(() => {
       const el = document.getElementById('sell-workflow');
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 60);
+    }, 80);
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <SimpleHeader activeTab="sell" />
 
-      {/* Exact SellRight Hero (Screenshot 2: R SellRight, Trust Every Drive. Value Every Rupee., Enter your car details, brand logos, ambassador image) */}
+      {/* Exact SellRight Hero (Screenshot: R SellRight, Trust Every Drive. Value Every Rupee., Enter your car details, brand logos, ambassador image) */}
       <SpinnyHero
         onSelectBrand={handleHeroSelectBrand}
         selectedBrand={make}
+        onSubmitDetails={handleHeroSubmit}
       />
 
       {/* Main Multi-Step Form Card with Stepper */}

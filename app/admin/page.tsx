@@ -706,7 +706,7 @@ export default function AdminDashboardPage() {
   // RESTRICTED ACCESS GATE: Dedicated Admin Portal Sign-In
   if (!isAdminAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#0F1117] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-screen bg-[#0F1117] flex flex-col items-center justify-center p-4 relative overflow-hidden font-body">
         {/* Toast Notification */}
         {toastMessage && (
           <div className="fixed top-5 right-5 z-50 bg-[#101216] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-gray-700 animate-in fade-in slide-in-from-top-2">
@@ -858,7 +858,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#F8F9FA]">
+    <div className="min-h-screen flex bg-[#F8F9FA] font-body">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 bg-[#101216] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-gray-700 animate-in fade-in slide-in-from-top-2">
@@ -1239,6 +1239,9 @@ export default function AdminDashboardPage() {
             >
               <Menu className="w-5 h-5" />
             </button>
+            <div className="lg:hidden flex items-center">
+              <Logo size="sm" variant="emblem" />
+            </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:inline">

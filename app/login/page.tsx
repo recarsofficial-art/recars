@@ -72,8 +72,8 @@ export default function LoginPage() {
               <Shield className="w-3 h-3" />
               <span>Verified Account</span>
             </span>
-            <h2 className="text-2xl font-black text-[#101216] mt-2">Sign In to Recars</h2>
-            <p className="text-xs text-gray-600 mt-1">
+            <h2 className="text-2xl font-semibold font-heading text-[#101216] mt-2">Sign In to Recars</h2>
+            <p className="text-xs text-gray-600 mt-1 font-body">
               Access your test drives, saved vehicles, and car valuation requests.
             </p>
           </div>
@@ -84,7 +84,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={googleLoading}
-              className="w-full py-2.5 px-4 rounded-xl border border-[#E5E7EB] hover:border-gray-400 bg-white hover:bg-gray-50 text-gray-800 font-bold text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+              className="w-full py-2.5 px-4 rounded-xl border border-[#E5E7EB] hover:border-gray-400 bg-white hover:bg-gray-50 text-gray-800 font-semibold font-btn tracking-rounded text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
             >
               <GoogleIcon className="w-4 h-4" />
               <span>{googleLoading ? 'Connecting with Google...' : 'Sign in with Google'}</span>
@@ -146,17 +146,17 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full py-3 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white font-semibold font-btn tracking-rounded text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 <span>{loading ? 'Signing in...' : 'Sign In'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
 
-            <div className="text-center pt-2 border-t border-gray-100">
+            <div className="text-center pt-2 border-t border-gray-100 font-body">
               <p className="text-xs text-gray-600">
                 Don&apos;t have an account?{' '}
-                <Link href="/signup" className="text-[#E5325C] font-bold hover:underline">
+                <Link href="/signup" className="text-[#E5325C] font-semibold font-heading hover:underline">
                   Sign Up for Free
                 </Link>
               </p>
