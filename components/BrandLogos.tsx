@@ -50,7 +50,7 @@ export function BrandLogo({ brand, className }: BrandLogoProps) {
     case 'Renault':
       return (
         <img
-          src="/images/brands/renault.svg"
+          src="/images/brands/renault-full.png"
           alt="Renault"
           className={className || "h-5 sm:h-5.5 w-auto max-w-[95px] sm:max-w-[110px] object-contain"}
           loading="lazy"
@@ -244,9 +244,9 @@ export function BrandEmblem({ brand, className }: BrandLogoProps) {
     case 'Renault':
       return (
         <img
-          src="/images/brands/renault-diamond.svg"
+          src="/images/brands/renault-diamond.png"
           alt="Renault"
-          className={className || "w-7 h-9 object-contain"}
+          className={className || "w-7.5 h-7.5 object-contain"}
           loading="lazy"
         />
       );

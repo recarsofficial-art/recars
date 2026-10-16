@@ -81,8 +81,8 @@ const SEARCH_BRANDS = [
   {
     name: 'Renault',
     filterMake: 'Renault',
-    logo: '/images/brands/renault-diamond.svg',
-    className: 'w-6 h-8 sm:w-7 sm:h-9 object-contain',
+    logo: '/images/brands/renault-diamond.png',
+    className: 'w-7.5 h-7.5 sm:w-8.5 sm:h-8.5 object-contain',
   },
   {
     name: 'Volkswagen',
