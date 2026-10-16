@@ -38,7 +38,7 @@ export default function DreamCarWizardModal({
   totalMatchingCars,
 }: DreamCarWizardModalProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [selectedBudget, setSelectedBudget] = useState<string>('6-10');
+  const [selectedBudget, setSelectedBudget] = useState<string>('');
   const [selectedBodyTypes, setSelectedBodyTypes] = useState<string[]>([]);
   const [selectedFuels, setSelectedFuels] = useState<string[]>([]);
   const [selectedTransmissions, setSelectedTransmissions] = useState<string[]>([]);
@@ -48,8 +48,8 @@ export default function DreamCarWizardModal({
   const currentBracket = BUDGET_BRACKETS.find((b) => b.id === selectedBudget) || BUDGET_BRACKETS[2];
 
   const currentFilters = {
-    minPrice: currentBracket.min,
-    maxPrice: currentBracket.max,
+    minPrice: selectedBudget ? currentBracket.min : 50000,
+    maxPrice: selectedBudget ? currentBracket.max : 7000000,
     bodyTypes: selectedBodyTypes,
     fuels: selectedFuels,
     transmissions: selectedTransmissions,
@@ -76,20 +76,18 @@ export default function DreamCarWizardModal({
         className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-[#E5E7EB] overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header matching Screenshot 1 */}
-        <div className="p-6 pb-3">
-          <div className="flex items-center justify-between mb-4">
+        {/* Top Header matching reference screenshot */}
+        <div className="p-6 pb-2">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center text-sm font-bold shadow-2xs">
-                🔑
-              </div>
-              <span className="font-extrabold text-sm sm:text-base text-purple-900 tracking-tight">
+              <span className="text-xl select-none" role="img" aria-label="Car and key">🚗🔑</span>
+              <span className="font-extrabold text-sm sm:text-base text-[#6A1B9A] tracking-tight">
                 Your dream car, in 3 steps
               </span>
             </div>
             <button
               onClick={onClose}
-              className="text-xs font-bold text-purple-700 hover:text-purple-900 underline cursor-pointer"
+              className="text-xs sm:text-sm font-bold text-[#6A1B9A] hover:text-purple-950 transition-colors cursor-pointer"
             >
               Skip
             </button>
@@ -99,28 +97,28 @@ export default function DreamCarWizardModal({
           <div className="grid grid-cols-3 gap-2">
             <div
               className={`h-1.5 rounded-full transition-colors ${
-                step >= 1 ? 'bg-purple-700' : 'bg-gray-200'
+                step >= 1 ? 'bg-[#6A1B9A]' : 'bg-gray-100'
               }`}
             />
             <div
               className={`h-1.5 rounded-full transition-colors ${
-                step >= 2 ? 'bg-purple-700' : 'bg-gray-200'
+                step >= 2 ? 'bg-[#6A1B9A]' : 'bg-gray-100'
               }`}
             />
             <div
               className={`h-1.5 rounded-full transition-colors ${
-                step >= 3 ? 'bg-purple-700' : 'bg-gray-200'
+                step >= 3 ? 'bg-[#6A1B9A]' : 'bg-gray-100'
               }`}
             />
           </div>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 pt-2 flex-1 overflow-y-auto space-y-6">
+        <div className="p-6 pt-3 flex-1 overflow-y-auto space-y-5">
           {/* STEP 1: What's your budget? */}
           {step === 1 && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <h2 className="text-xl sm:text-2xl font-black text-[#101216]">
+            <div className="space-y-4 animate-in fade-in duration-150 pb-2">
+              <h2 className="text-2xl sm:text-[26px] font-black text-[#101216] tracking-tight">
                 What&apos;s your budget?
               </h2>
 
@@ -133,20 +131,22 @@ export default function DreamCarWizardModal({
                       type="button"
                       onClick={() => {
                         setSelectedBudget(bracket.id);
-                        setTimeout(() => setStep(2), 200);
+                        onApply({
+                          minPrice: bracket.min,
+                          maxPrice: bracket.max,
+                          bodyTypes: selectedBodyTypes,
+                          fuels: selectedFuels,
+                          transmissions: selectedTransmissions,
+                        });
+                        setTimeout(() => setStep(2), 220);
                       }}
-                      className={`w-full py-4 px-5 rounded-2xl border text-center font-bold text-sm sm:text-base transition-all cursor-pointer shadow-2xs flex items-center justify-between ${
+                      className={`w-full py-4 px-5 rounded-2xl border text-center font-bold text-sm sm:text-base transition-all cursor-pointer shadow-2xs flex items-center justify-center ${
                         isSelected
-                          ? 'border-purple-600 bg-purple-50/70 text-purple-950 ring-2 ring-purple-200'
-                          : 'border-gray-200 bg-white text-gray-800 hover:border-purple-400 hover:bg-gray-50'
+                          ? 'border-[#6A1B9A] bg-purple-50/70 text-[#6A1B9A] ring-2 ring-purple-200'
+                          : 'border-gray-200/90 bg-white text-[#101216] hover:border-[#6A1B9A]/60 hover:bg-purple-50/20 active:scale-[0.99]'
                       }`}
                     >
-                      <span className="flex-1 text-center">{bracket.label}</span>
-                      {isSelected && (
-                        <div className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center flex-shrink-0">
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        </div>
-                      )}
+                      <span>{bracket.label}</span>
                     </button>
                   );
                 })}
@@ -259,9 +259,9 @@ export default function DreamCarWizardModal({
           )}
         </div>
 
-        {/* Footer Navigation Buttons */}
-        <div className="p-5 border-t border-[#E5E7EB] bg-gray-50 flex items-center justify-between gap-3">
-          {step > 1 ? (
+        {/* Footer Navigation Buttons (Shown only for Step 2 and 3) */}
+        {step > 1 && (
+          <div className="p-4 sm:p-5 border-t border-[#E5E7EB] bg-gray-50 flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => setStep((s) => (s - 1) as any)}
@@ -270,30 +270,28 @@ export default function DreamCarWizardModal({
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back</span>
             </button>
-          ) : (
-            <div />
-          )}
 
-          {step < 3 ? (
-            <button
-              type="button"
-              onClick={() => setStep((s) => (s + 1) as any)}
-              className="px-6 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5 ml-auto"
-            >
-              <span>Next</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleFinish}
-              className="px-6 py-3 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-extrabold transition-all shadow-md cursor-pointer flex items-center gap-2 ml-auto"
-            >
-              <span>View {matchCount} Matching Cars</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+            {step === 2 ? (
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                className="px-6 py-2.5 rounded-xl bg-[#6A1B9A] hover:bg-purple-900 text-white text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5 ml-auto"
+              >
+                <span>Next</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleFinish}
+                className="px-6 py-3 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-extrabold transition-all shadow-md cursor-pointer flex items-center gap-2 ml-auto"
+              >
+                <span>View {matchCount} Matching Cars</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

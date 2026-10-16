@@ -98,7 +98,11 @@ function BuyContent() {
   const [searchQuery, setSearchQuery] = useState<string>(() => searchParams.get('q') || '');
   const [sortBy, setSortBy] = useState<string>('recommended');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [isDreamWizardOpen, setIsDreamWizardOpen] = useState(false);
+  const [isDreamWizardOpen, setIsDreamWizardOpen] = useState<boolean>(() => {
+    // Automatically popup budget modal when opening Buy a Car!
+    const skip = searchParams.get('skipWizard');
+    return skip !== 'true';
+  });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Multi-select toggle helpers
