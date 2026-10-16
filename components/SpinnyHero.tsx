@@ -114,8 +114,6 @@ export default function SpinnyHero({
   const [selectedTransmission, setSelectedTransmission] = useState('Automatic');
   const [selectedVariant, setSelectedVariant] = useState('SX (O) 1.5 Petrol');
   const [selectedKm, setSelectedKm] = useState('30,000 - 50,000 km');
-  const [useRegNumber, setUseRegNumber] = useState(false);
-  const [regNumber, setRegNumber] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isMoreBrandsOpen, setIsMoreBrandsOpen] = useState(false);
 
@@ -135,10 +133,6 @@ export default function SpinnyHero({
 
   const handleGetPrice = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (useRegNumber && !regNumber.trim()) {
-      setErrorMsg('Please enter your car registration number');
-      return;
-    }
     setErrorMsg('');
     if (onSubmitDetails) {
       onSubmitDetails({
@@ -148,7 +142,6 @@ export default function SpinnyHero({
         fuel: selectedFuel,
         transmission: selectedTransmission,
         variant: selectedVariant,
-        regNumber: useRegNumber ? regNumber.trim().toUpperCase() : undefined,
       });
     } else {
       const params = new URLSearchParams({
@@ -159,9 +152,6 @@ export default function SpinnyHero({
         transmission: selectedTransmission,
         variant: selectedVariant,
       });
-      if (useRegNumber && regNumber.trim()) {
-        params.set('reg', regNumber.trim().toUpperCase());
-      }
       router.push(`/sell?${params.toString()}#sell-workflow`);
     }
   };
@@ -170,7 +160,6 @@ export default function SpinnyHero({
     setSelectedMake(brand);
     const availableModels = MODELS_BY_MAKE_EXTENDED[brand] || ['Standard'];
     setSelectedModel(availableModels[0] || 'Standard');
-    setUseRegNumber(false);
     if (onSelectBrand) {
       onSelectBrand(brand);
     }
@@ -207,7 +196,7 @@ export default function SpinnyHero({
             {/* Main White Card */}
             <div className="w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-lg sm:shadow-xl shadow-gray-200/50 border border-gray-200/90 p-4 sm:p-7 text-[#101216]">
               
-              {/* Card Header & Mode Switcher */}
+              {/* Card Header */}
               <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
                 <div className="flex items-center gap-2">
                   <label className="text-xs sm:text-sm font-bold text-gray-900">
@@ -218,24 +207,11 @@ export default function SpinnyHero({
                     <span>Quick & accurate valuation</span>
                   </span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] sm:text-xs font-bold text-[#E5325C] hidden sm:inline">
-                    Direct Buyer Network
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setUseRegNumber(!useRegNumber)}
-                    className="text-[11px] sm:text-xs font-bold text-[#E5325C] hover:underline cursor-pointer transition-colors"
-                  >
-                    {useRegNumber ? 'Enter Car Details instead' : 'Have Reg. Number?'}
-                  </button>
-                </div>
               </div>
 
               {/* Form */}
               <form onSubmit={handleGetPrice} className="space-y-3">
-                {!useRegNumber ? (
-                  <>
+
                     {/* Car Details Form Grid: 6 fields matching screenshot (Brand, Model, Year, Fuel, Transmission, Variant) */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                       {/* 1. Make / Brand */}
@@ -364,53 +340,7 @@ export default function SpinnyHero({
                         <span>Hassle-free RC Transfer</span>
                       </span>
                     </div>
-                  </>
-                ) : (
-                  <>
-                    {/* Registration Input Form */}
-                    <div className="flex flex-col sm:flex-row items-stretch gap-2 sm:gap-2.5">
-                      <div className="relative flex-1">
-                        <input
-                          id="car-reg-input"
-                          type="text"
-                          value={regNumber}
-                          onChange={(e) => {
-                            setRegNumber(e.target.value.toUpperCase());
-                            if (errorMsg) setErrorMsg('');
-                          }}
-                          placeholder="(E.G. DL34AC4564)"
-                          maxLength={14}
-                          className="w-full px-3.5 py-3 sm:py-3.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-300 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold text-[#101216] placeholder:text-gray-400 placeholder:font-normal uppercase tracking-wider focus:outline-none focus:border-[#E5325C] focus:ring-2 focus:ring-[#E5325C]/20 transition-all"
-                        />
-                      </div>
 
-                      <button
-                        type="submit"
-                        className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-3.5 bg-[#E5325C] hover:bg-[#D4264E] active:scale-[0.98] text-white font-black text-xs sm:text-sm tracking-wider uppercase rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap"
-                      >
-                        <span>SELL YOUR CAR (SELLRIGHT) →</span>
-                      </button>
-                    </div>
-
-                    {/* Quick Try Chips */}
-                    <div className="flex items-center gap-1.5 pt-1 text-[11px] text-gray-500 flex-wrap">
-                      <span className="font-semibold text-gray-400 text-[10px] sm:text-[11px]">Quick Try:</span>
-                      {['DL34AC4564', 'TS09AB1234', 'MH02CD7890'].map((chip) => (
-                        <button
-                          key={chip}
-                          type="button"
-                          onClick={() => {
-                            setRegNumber(chip);
-                            if (errorMsg) setErrorMsg('');
-                          }}
-                          className="px-2 py-0.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] sm:text-[11px] font-bold transition-colors cursor-pointer"
-                        >
-                          {chip}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
 
                 {errorMsg && (
                   <p className="text-xs text-red-600 font-semibold pl-1 text-left">
