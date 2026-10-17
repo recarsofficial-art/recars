@@ -67,16 +67,32 @@ function SellWorkflowContent() {
   const [serviceHistory, setServiceHistory] = useState('Authorized Dealership Records');
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoUploadStatus, setPhotoUploadStatus] = useState<string>('');
+  const [photoUploadError, setPhotoUploadError] = useState<string>('');
 
   const handlePhotoFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setIsUploadingPhoto(true);
+    setPhotoUploadError('');
     const newPhotos: string[] = [];
+    const validExtensions = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      setPhotoUploadStatus(`Optimizing & uploading ${i + 1} of ${files.length}...`);
+
+      if (!validExtensions.includes(file.type.toLowerCase())) {
+        setPhotoUploadError(`File "${file.name}" has an unsupported format. Please upload JPEG, PNG, or WebP.`);
+        continue;
+      }
+
+      if (file.size > 20 * 1024 * 1024) {
+        setPhotoUploadError(`File "${file.name}" exceeds the 20MB limit.`);
+        continue;
+      }
+
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -90,27 +106,20 @@ function SellWorkflowContent() {
         if (data.success && data.url) {
           newPhotos.push(data.url);
         } else {
-          const base64: string = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
-          newPhotos.push(base64);
+          setPhotoUploadError(data.error || `Failed to process ${file.name}`);
         }
-      } catch {
-        const base64: string = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
-        newPhotos.push(base64);
+      } catch (err: any) {
+        setPhotoUploadError(err.message || `Upload failed for ${file.name}`);
       }
     }
 
     if (newPhotos.length > 0) {
       setUploadedPhotos((prev) => [...prev, ...newPhotos]);
     }
+    setPhotoUploadStatus('');
     setIsUploadingPhoto(false);
+    // Reset file input value so user can pick additional images
+    e.target.value = '';
   };
 
   const handleRemovePhoto = (indexToRemove: number) => {
@@ -532,14 +541,27 @@ function SellWorkflowContent() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-[#101216]">
-                        {isUploadingPhoto ? 'Uploading car photos...' : 'Click or tap to upload car photos'}
+                        {isUploadingPhoto ? (photoUploadStatus || 'Compressing & uploading...') : 'Click or tap to upload car photos'}
                       </p>
                       <p className="text-[10px] text-gray-500 mt-0.5">
-                        Take mobile photos or select from gallery (JPG, PNG, WEBP)
+                        Automatic WebP compression applied (JPEG, PNG, WEBP up to 20MB)
                       </p>
                     </div>
                   </div>
                 </div>
+
+                {photoUploadError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center justify-between">
+                    <span>{photoUploadError}</span>
+                    <button
+                      type="button"
+                      onClick={() => setPhotoUploadError('')}
+                      className="text-red-500 hover:text-red-700 text-xs font-bold ml-2"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
 
                 {/* Photo Previews Gallery */}
                 {uploadedPhotos.length > 0 && (

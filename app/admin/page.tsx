@@ -579,10 +579,17 @@ export default function AdminDashboardPage() {
     try {
       const fileList = Array.from(files);
       const uploadedUrls: string[] = [];
+      const savingsList: number[] = [];
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
       for (const file of fileList) {
-        if (!file.type.startsWith('image/')) {
-          setUploadError('Please select valid JPG or image files.');
+        if (!allowedTypes.includes(file.type.toLowerCase())) {
+          setUploadError(`Unsupported format for "${file.name}". Please select JPEG, PNG, or WebP.`);
+          continue;
+        }
+
+        if (file.size > 20 * 1024 * 1024) {
+          setUploadError(`"${file.name}" exceeds 20MB limit.`);
           continue;
         }
 
@@ -597,25 +604,29 @@ export default function AdminDashboardPage() {
         const data = await res.json();
         if (data.success && data.url) {
           uploadedUrls.push(data.url);
+          if (typeof data.savingsPercent === 'number') {
+            savingsList.push(data.savingsPercent);
+          }
         } else {
-          // Client-side base64 fallback
-          const base64: string = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
-          uploadedUrls.push(base64);
+          setUploadError(data.error || `Failed to optimize "${file.name}"`);
         }
       }
 
       if (uploadedUrls.length > 0) {
         setNewImage(uploadedUrls[0]);
         setNewGalleryImages((prev) => Array.from(new Set([...uploadedUrls, ...prev])));
-        showToast(`Uploaded ${uploadedUrls.length} high-resolution JPG image(s)!`);
+        const avgSavings = savingsList.length
+          ? Math.round(savingsList.reduce((a, b) => a + b, 0) / savingsList.length)
+          : null;
+        showToast(
+          `Uploaded & optimized ${uploadedUrls.length} image(s) to WebP!${
+            avgSavings !== null ? ` (Reduced storage by ${avgSavings}%)` : ''
+          }`
+        );
       }
     } catch (err: any) {
       console.error('File upload failed:', err);
-      setUploadError('Failed to process JPG upload. Please try again.');
+      setUploadError(err.message || 'Failed to process image upload. Please try again.');
     } finally {
       setIsUploadingImage(false);
     }
