@@ -59,14 +59,14 @@ function CarDetailInner({ params }: PageProps) {
     addInquiry,
   } = useRecarsState();
 
-  const [liveCars, setLiveCars] = useState<Car[]>([]);
+  const [liveCars, setLiveCars] = useState<Car[] | null>(null);
 
   useEffect(() => {
     const fetchCars = () => {
       fetch('/api/cars')
         .then((r) => r.json())
         .then((d) => {
-          if (d?.cars?.length > 0) setLiveCars(d.cars);
+          if (Array.isArray(d?.cars)) setLiveCars(d.cars);
         })
         .catch(() => {});
     };
@@ -75,7 +75,7 @@ function CarDetailInner({ params }: PageProps) {
     return () => window.removeEventListener('focus', fetchCars);
   }, []);
 
-  const cars = liveCars.length > 0 ? liveCars : storeCars;
+  const cars = liveCars !== null ? liveCars : storeCars;
   const car = cars.find((c) => c.id === unwrappedParams.id) || cars[0];
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 

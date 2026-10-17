@@ -38,14 +38,14 @@ function BuyContent() {
     cars: storeCars,
   } = useRecarsState();
 
-  const [liveCars, setLiveCars] = useState<any[]>([]);
+  const [liveCars, setLiveCars] = useState<any[] | null>(null);
 
   useEffect(() => {
     const fetchFreshCars = () => {
       fetch('/api/cars')
         .then((r) => r.json())
         .then((d) => {
-          if (d?.cars?.length > 0) setLiveCars(d.cars);
+          if (Array.isArray(d?.cars)) setLiveCars(d.cars);
         })
         .catch(() => {});
     };
@@ -54,7 +54,7 @@ function BuyContent() {
     return () => window.removeEventListener('focus', fetchFreshCars);
   }, []);
 
-  const cars = liveCars.length > 0 ? liveCars : storeCars;
+  const cars = liveCars !== null ? liveCars : storeCars;
 
   // Filters State initialized from search params
   const [selectedMakes, setSelectedMakes] = useState<string[]>(() => {

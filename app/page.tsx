@@ -121,14 +121,14 @@ function HomePageContent() {
     changeCity,
   } = useRecarsState();
 
-  const [liveCars, setLiveCars] = useState<any[]>([]);
+  const [liveCars, setLiveCars] = useState<any[] | null>(null);
 
   useEffect(() => {
     const fetchFreshCars = () => {
       fetch('/api/cars')
         .then((r) => r.json())
         .then((d) => {
-          if (d?.cars?.length > 0) setLiveCars(d.cars);
+          if (Array.isArray(d?.cars)) setLiveCars(d.cars);
         })
         .catch(() => {});
     };
@@ -137,7 +137,7 @@ function HomePageContent() {
     return () => window.removeEventListener('focus', fetchFreshCars);
   }, []);
 
-  const cars = liveCars.length > 0 ? liveCars : storeCars;
+  const cars = liveCars !== null ? liveCars : storeCars;
 
   // Active Mode: 'buy' | 'sell' (initialized from ?tab=sell or default 'buy')
   const [activeTab, setActiveTab] = useState<'buy' | 'sell'>(() => {

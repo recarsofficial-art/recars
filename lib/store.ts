@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Car, SellRequest, TestDriveBooking, CarInquiry, PDIBooking } from './types';
-import { INITIAL_CARS } from './data';
 
 const STORAGE_KEYS = {
   WISHLIST: 'recars_wishlist_ids',
@@ -31,7 +30,7 @@ export function useRecarsState() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [selectedCity, setSelectedCity] = useState<string>('Warangal');
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
-  const [cars, setCars] = useState<Car[]>(INITIAL_CARS);
+  const [cars, setCars] = useState<Car[]>([]);
   const [sellRequests, setSellRequests] = useState<SellRequest[]>([]);
   const [testDrives, setTestDrives] = useState<TestDriveBooking[]>([]);
   const [inquiries, setInquiries] = useState<CarInquiry[]>(INITIAL_INQUIRIES);
@@ -53,9 +52,8 @@ export function useRecarsState() {
 
       const custom = getStoredItem<Car[]>(STORAGE_KEYS.CUSTOM_CARS, []);
       const deleted = getStoredItem<string[]>(STORAGE_KEYS.DELETED_CARS, []);
-      const combined = [...INITIAL_CARS, ...custom];
       const map = new Map<string, Car>();
-      combined.forEach((c) => map.set(c.id, c));
+      custom.forEach((c) => map.set(c.id, c));
       setCars(Array.from(map.values()).filter((c) => !deleted.includes(c.id)));
 
       const storedSellRequests = getStoredItem<SellRequest[]>(STORAGE_KEYS.SELL_REQUESTS, []);
@@ -74,7 +72,7 @@ export function useRecarsState() {
       fetch('/api/cars')
         .then((res) => res.json())
         .then((data) => {
-          if (data?.cars?.length > 0) {
+          if (Array.isArray(data?.cars)) {
             setCars(data.cars);
           }
         })
@@ -173,8 +171,7 @@ export function useRecarsState() {
   const addCarListing = (newCar: Car) => {
     setCars((prev) => {
       const updated = [newCar, ...prev];
-      const customCars = updated.filter(c => !INITIAL_CARS.some(init => init.id === c.id));
-      localStorage.setItem(STORAGE_KEYS.CUSTOM_CARS, JSON.stringify(customCars));
+      localStorage.setItem(STORAGE_KEYS.CUSTOM_CARS, JSON.stringify(updated));
       return updated;
     });
     // Persist to Supabase
@@ -188,8 +185,7 @@ export function useRecarsState() {
   const removeCarListing = (carId: string) => {
     setCars((prev) => {
       const updated = prev.filter(c => c.id !== carId);
-      const customCars = updated.filter(c => !INITIAL_CARS.some(init => init.id === c.id));
-      localStorage.setItem(STORAGE_KEYS.CUSTOM_CARS, JSON.stringify(customCars));
+      localStorage.setItem(STORAGE_KEYS.CUSTOM_CARS, JSON.stringify(updated));
       
       const deleted = getStoredItem<string[]>(STORAGE_KEYS.DELETED_CARS, []);
       if (!deleted.includes(carId)) {

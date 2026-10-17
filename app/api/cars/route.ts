@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { dbGetCars, dbInsertCar, dbDeleteCar } from '@/lib/db';
-import { INITIAL_CARS } from '@/lib/data';
 
 export async function GET(request: Request) {
   try {
@@ -12,12 +11,7 @@ export async function GET(request: Request) {
     const maxPrice = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined;
     const q = searchParams.get('q');
 
-    let cars = await dbGetCars({ make, bodyType: type, city, minPrice, maxPrice });
-
-    // Fallback to initial data if database is empty
-    if (!cars || cars.length === 0) {
-      cars = INITIAL_CARS;
-    }
+    let cars = (await dbGetCars({ make, bodyType: type, city, minPrice, maxPrice })) || [];
 
     if (q) {
       const query = q.toLowerCase();
@@ -31,13 +25,13 @@ export async function GET(request: Request) {
       total: cars.length,
       cars,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching cars from Supabase:', error);
     return NextResponse.json({
-      success: true,
-      total: INITIAL_CARS.length,
-      cars: INITIAL_CARS,
-      source: 'fallback',
+      success: false,
+      total: 0,
+      cars: [],
+      error: error?.message || 'Failed to fetch cars from database',
     });
   }
 }
