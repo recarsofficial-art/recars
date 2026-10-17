@@ -134,26 +134,26 @@ export default function PDIPage() {
   const { selectedCity, changeCity, wishlistIds, addPDIBooking } = useRecarsState();
   const { user } = useAuth();
 
-  // Pricing configuration
-  const [standardFee, setStandardFee] = useState<number>(2500);
-  const [reportFee, setReportFee] = useState<number>(2499);
-  const [selectedPackage, setSelectedPackage] = useState<'Standard PDI' | 'Complete PDI Report'>('Complete PDI Report');
+  // Pricing configuration: Old Car (₹1,199) vs New Car (₹2,499)
+  const [oldCarFee, setOldCarFee] = useState<number>(1199);
+  const [newCarFee, setNewCarFee] = useState<number>(2499);
+  const [selectedPackage, setSelectedPackage] = useState<'Old Car' | 'New Car'>('New Car');
 
   useEffect(() => {
     fetch('/api/settings')
       .then((res) => res.json())
       .then((data) => {
-        if (data?.config?.pdiInspectionFee) {
-          setStandardFee(Number(data.config.pdiInspectionFee));
+        if (data?.config?.sellerReportFee) {
+          setOldCarFee(Number(data.config.sellerReportFee));
         }
-        if (data?.config?.pdiReportFee) {
-          setReportFee(Number(data.config.pdiReportFee));
+        if (data?.config?.pdiReportFee || data?.config?.pdiInspectionFee) {
+          setNewCarFee(Number(data.config.pdiReportFee || data.config.pdiInspectionFee));
         }
       })
       .catch(() => {});
   }, []);
 
-  const currentFee = selectedPackage === 'Standard PDI' ? standardFee : reportFee;
+  const currentFee = selectedPackage === 'Old Car' ? oldCarFee : newCarFee;
 
   // Booking Form State
   const [carMake, setCarMake] = useState('Hyundai');
@@ -214,7 +214,7 @@ export default function PDIPage() {
       preferredDate,
       preferredTimeSlot,
       specialInstructions,
-      packageType: selectedPackage === 'Standard PDI' ? 'Standard PDI Check (₹2,500)' : 'Complete PDI Report (₹2,499)',
+      packageType: selectedPackage === 'Old Car' ? 'Old Car Inspection (₹1,199)' : 'New Car PDI (₹2,499)',
       fee: currentFee,
       paymentStatus,
       status: 'Representative Assigned',
@@ -516,50 +516,55 @@ export default function PDIPage() {
                   1. Choose Inspection Package
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Standard Package */}
+                  {/* Old Car Package */}
                   <div
-                    onClick={() => setSelectedPackage('Standard PDI')}
+                    onClick={() => setSelectedPackage('Old Car')}
                     className={`cursor-pointer rounded-2xl p-4 sm:p-5 border-2 transition-all ${
-                      selectedPackage === 'Standard PDI'
+                      selectedPackage === 'Old Car'
                         ? 'border-[#E5325C] bg-[#FFF0F3]/30 shadow-sm'
                         : 'border-gray-200 bg-[#F8F9FA] hover:border-gray-300'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-sm text-[#101216]">New Car PDI</span>
-                      <span className="font-black text-base text-[#E5325C]">₹{standardFee}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-[#101216]">Old Car</span>
+                        <span className="text-[10px] font-bold bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full border border-gray-200">
+                          Pre-Owned
+                        </span>
+                      </div>
+                      <span className="font-black text-base text-[#E5325C]">₹{oldCarFee}</span>
                     </div>
                     <p className="text-xs text-gray-500 leading-relaxed mb-3">
-                      Complete 50-point physical check: Paint micrometer test, panel gaps, odometer audit, fluids, electricals, and VIN match.
+                      Complete 28+ mechanical points check, paint micrometer measurement, OBD diagnostics, road test, and certified condition report.
                     </p>
                     <span className="text-[11px] font-bold text-[#E5325C] flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Representative on-site visit
+                      <Check className="w-3.5 h-3.5" /> Complete report & certified evaluation
                     </span>
                   </div>
 
-                  {/* Complete Report Package */}
+                  {/* New Car Package */}
                   <div
-                    onClick={() => setSelectedPackage('Complete PDI Report')}
+                    onClick={() => setSelectedPackage('New Car')}
                     className={`cursor-pointer rounded-2xl p-4 sm:p-5 border-2 transition-all ${
-                      selectedPackage === 'Complete PDI Report'
+                      selectedPackage === 'New Car'
                         ? 'border-[#E5325C] bg-[#FFF0F3]/30 shadow-sm'
                         : 'border-gray-200 bg-[#F8F9FA] hover:border-gray-300'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <span className="font-bold text-sm text-[#101216]">Complete PDI Report</span>
-                        <span className="ml-2 text-[10px] font-bold bg-[#E5325C] text-white px-2 py-0.5 rounded-full">
-                          Special Offer
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-[#101216]">New Car</span>
+                        <span className="text-[10px] font-bold bg-[#E5325C] text-white px-2 py-0.5 rounded-full">
+                          Showroom PDI
                         </span>
                       </div>
-                      <span className="font-black text-base text-[#E5325C]">₹{reportFee}</span>
+                      <span className="font-black text-base text-[#E5325C]">₹{newCarFee}</span>
                     </div>
                     <p className="text-xs text-gray-500 leading-relaxed mb-3">
-                      Includes 50-point checks PLUS computerized OBD-II Engine ECU Diagnostic Scan, battery conductance test, and official complete certified report.
+                      Complete 50-point physical check at dealership before registration & payment. Paint meter, panel gaps, fluids, OBD-II scan & handover checklist.
                     </p>
                     <span className="text-[11px] font-bold text-[#E5325C] flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Complete digital report & certificate
+                      <Check className="w-3.5 h-3.5" /> Full electronic health & showroom report
                     </span>
                   </div>
                 </div>
@@ -568,7 +573,7 @@ export default function PDIPage() {
               {/* Car Information */}
               <div className="space-y-4">
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500">
-                  2. New Car Details
+                  {selectedPackage === 'Old Car' ? '2. Old Car Details' : '2. New Car Details'}
                 </label>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -656,7 +661,7 @@ export default function PDIPage() {
               {/* Dealership & Appointment Schedule */}
               <div className="space-y-4">
                 <label className="block text-xs font-bold uppercase tracking-wider text-gray-500">
-                  3. Dealership Location & Appointment
+                  {selectedPackage === 'Old Car' ? '3. Inspection Location & Appointment' : '3. Dealership Location & Appointment'}
                 </label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -675,12 +680,14 @@ export default function PDIPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Dealership / Showroom Name *</label>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      {selectedPackage === 'Old Car' ? 'Seller / Dealership / Hub Name *' : 'Dealership / Showroom Name *'}
+                    </label>
                     <input
                       type="text"
                       value={dealershipName}
                       onChange={(e) => setDealershipName(e.target.value)}
-                      placeholder="e.g. Neon Hyundai, Kalyani Motors, Varun Motors"
+                      placeholder={selectedPackage === 'Old Car' ? 'e.g. Individual Seller, Dealership, or Recars Hub' : 'e.g. Neon Hyundai, Kalyani Motors, Varun Motors'}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[#F8F9FA] border border-gray-200 text-xs font-semibold focus:outline-none focus:border-[#E5325C]"
                       required
                     />
@@ -689,13 +696,13 @@ export default function PDIPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Showroom or Stockyard Address / Area *
+                    {selectedPackage === 'Old Car' ? 'Doorstep Address / Inspection Location *' : 'Showroom or Stockyard Address / Area *'}
                   </label>
                   <input
                     type="text"
                     value={dealershipAddress}
                     onChange={(e) => setDealershipAddress(e.target.value)}
-                    placeholder="e.g. Naimnagar Bypass Road, Hanamkonda / Kazipet Showroom"
+                    placeholder={selectedPackage === 'Old Car' ? 'e.g. H.No 12-4, Subedari, Hanamkonda or Seller Location' : 'e.g. Naimnagar Bypass Road, Hanamkonda / Kazipet Showroom'}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#F8F9FA] border border-gray-200 text-xs font-semibold focus:outline-none focus:border-[#E5325C]"
                     required
                   />
