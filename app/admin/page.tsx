@@ -127,10 +127,72 @@ export default function AdminDashboardPage() {
   const [negotiationStatusFilter, setNegotiationStatusFilter] = useState<string>('All');
   const [negotiationSearch, setNegotiationSearch] = useState<string>('');
 
+  // Email Notification States
+  const [emailNotifs, setEmailNotifs] = useState<Record<string, { status: string; errorMessage?: string; sentAt?: string }>>({});
+  const [retryingNotifId, setRetryingNotifId] = useState<string | null>(null);
+
+  const handleRetryEmail = async (enquiryId: string) => {
+    setRetryingNotifId(enquiryId);
+    try {
+      const res = await fetch('/api/admin/notifications/retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enquiryId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Email notification sent successfully to recars.in@gmail.com!');
+      } else {
+        alert(data.message || data.error || 'Failed to send notification email. Please check SMTP settings.');
+      }
+      syncAllFromSupabase();
+    } catch (err: any) {
+      alert('Error triggering retry: ' + err.message);
+    } finally {
+      setRetryingNotifId(null);
+    }
+  };
+
+  const renderEmailBadge = (id: string) => {
+    const notif = emailNotifs[id];
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap pt-1">
+        {notif?.status === 'sent' && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+            <span>Alert Sent to Email</span>
+          </span>
+        )}
+        {notif?.status === 'failed' && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200" title={notif.errorMessage}>
+            <AlertCircle className="w-3 h-3 text-red-600" />
+            <span>Alert Failed</span>
+          </span>
+        )}
+        {(!notif || notif.status === 'pending') && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" title={notif?.errorMessage || 'Delivery queued/pending'}>
+            <Clock className="w-3 h-3 text-amber-600" />
+            <span>Email {notif?.status === 'pending' ? 'Pending' : 'Queue'}</span>
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => handleRetryEmail(id)}
+          disabled={retryingNotifId === id}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-bold border border-gray-300 transition-colors cursor-pointer"
+          title="Send / resend notification to recars.in@gmail.com"
+        >
+          <Send className="w-2.5 h-2.5" />
+          <span>{retryingNotifId === id ? 'Sending...' : notif?.status === 'sent' ? 'Resend' : 'Send'}</span>
+        </button>
+      </div>
+    );
+  };
+
   const syncAllFromSupabase = async () => {
     setIsSyncing(true);
     try {
-      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes] = await Promise.all([
+      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes, notifRes] = await Promise.all([
         fetch('/api/cars').then((r) => r.json()).catch(() => null),
         fetch('/api/sell').then((r) => r.json()).catch(() => null),
         fetch('/api/inquiries').then((r) => r.json()).catch(() => null),
@@ -139,6 +201,7 @@ export default function AdminDashboardPage() {
         fetch('/api/negotiations').then((r) => r.json()).catch(() => null),
         fetch('/api/settings').then((r) => r.json()).catch(() => null),
         fetch('/api/pdi').then((r) => r.json()).catch(() => null),
+        fetch('/api/admin/notifications').then((r) => r.json()).catch(() => null),
       ]);
 
       if (carsRes?.cars) setLiveCars(carsRes.cars);
@@ -149,6 +212,13 @@ export default function AdminDashboardPage() {
       if (negRes?.negotiations) setLiveNegotiations(negRes.negotiations);
       if (setRes?.config) setInspectionConfig(setRes.config);
       if (pdiRes?.bookings) setLivePDIBookings(pdiRes.bookings);
+      if (notifRes?.notifications) {
+        const map: Record<string, any> = {};
+        notifRes.notifications.forEach((n: any) => {
+          map[n.enquiryId] = n;
+        });
+        setEmailNotifs(map);
+      }
       setLastSyncTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (e) {
       console.error('Error syncing admin with Supabase:', e);
@@ -2024,6 +2094,11 @@ export default function AdminDashboardPage() {
                           <strong>Note:</strong> {p.specialInstructions}
                         </div>
                       )}
+
+                      {/* Email Notification Status */}
+                      <div className="pt-1">
+                        {renderEmailBadge(p.id)}
+                      </div>
                     </div>
 
                     {/* Actions */}
@@ -2344,6 +2419,11 @@ export default function AdminDashboardPage() {
                           &ldquo;{inq.message}&rdquo;
                         </div>
                       </div>
+
+                      {/* Email Notification Status */}
+                      <div className="pt-1">
+                        {renderEmailBadge(inq.id)}
+                      </div>
                     </div>
 
                     {/* Action buttons footer */}
@@ -2500,6 +2580,11 @@ export default function AdminDashboardPage() {
                         <span className="font-extrabold text-[#237A52]">Doorstep Physical Inspection</span>
                       </div>
                     </div>
+
+                    {/* Email Notification Status */}
+                    <div className="pt-1">
+                      {renderEmailBadge(req.id)}
+                    </div>
                   </div>
 
                   <div className="pt-3 border-t border-[#E5E7EB] flex items-center justify-between gap-2">
@@ -2630,6 +2715,10 @@ export default function AdminDashboardPage() {
                         <span className="text-gray-500">Scheduled Slot:</span>
                         <span className="font-semibold text-[#E5325C]">{td.preferredDate} ({td.type})</span>
                       </div>
+                    </div>
+
+                    <div className="pt-2">
+                      {renderEmailBadge(td.id)}
                     </div>
                   </div>
 
@@ -2948,6 +3037,9 @@ export default function AdminDashboardPage() {
                                 {neg.offerHistory.length} round(s) recorded
                               </div>
                             )}
+                            <div className="mt-2">
+                              {renderEmailBadge(neg.id)}
+                            </div>
                           </td>
 
                           <td className="p-4 text-right">

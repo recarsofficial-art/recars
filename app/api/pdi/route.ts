@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { dbGetPDIBookings, dbInsertPDIBooking, dbUpdatePDIBookingStatus, dbDeletePDIBooking } from '@/lib/db';
 import { PDIBooking } from '@/lib/types';
+import { sendEnquiryNotification } from '@/lib/email';
 
 export async function GET() {
   try {
@@ -54,6 +55,29 @@ export async function POST(request: Request) {
     };
 
     await dbInsertPDIBooking(newBooking);
+
+    // Trigger email alert to recars.in@gmail.com
+    sendEnquiryNotification({
+      enquiryId: id,
+      enquiryType: 'Pre-Delivery Inspection (PDI)',
+      customerName: newBooking.customerName,
+      customerPhone: newBooking.customerPhone,
+      customerEmail: newBooking.customerEmail,
+      city: newBooking.city,
+      carMake: newBooking.carMake,
+      carModel: newBooking.carModel,
+      carVariant: newBooking.carVariant,
+      dealershipName: newBooking.dealershipName,
+      dealershipAddress: newBooking.dealershipAddress,
+      preferredDate: newBooking.preferredDate,
+      preferredTimeSlot: newBooking.preferredTimeSlot,
+      packageType: newBooking.packageType,
+      fee: newBooking.fee,
+      paymentStatus: newBooking.paymentStatus,
+      message: `PDI Booking for ${newBooking.carMake} ${newBooking.carModel} (${newBooking.carVariant || 'Standard'}). Dealership: ${newBooking.dealershipName}, ${newBooking.dealershipAddress}. Date: ${newBooking.preferredDate} (${newBooking.preferredTimeSlot}). Package: ${newBooking.packageType} (₹${newBooking.fee}, ${newBooking.paymentStatus}). Notes: ${newBooking.specialInstructions || 'None'}`,
+      adminTab: 'pdi',
+      createdAt: newBooking.createdAt,
+    }).catch((err) => console.error('Notice: PDI notification trigger error:', err));
 
     return NextResponse.json({
       success: true,

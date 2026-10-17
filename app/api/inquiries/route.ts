@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { dbGetInquiries, dbInsertInquiry, dbUpdateInquiryStatus, dbDeleteInquiry } from '@/lib/db';
 import { CarInquiry } from '@/lib/types';
+import { sendEnquiryNotification } from '@/lib/email';
 
 export async function GET() {
   try {
@@ -28,6 +29,22 @@ export async function POST(request: Request) {
     };
 
     await dbInsertInquiry(newInquiry);
+
+    // Trigger email alert to recars.in@gmail.com
+    sendEnquiryNotification({
+      enquiryId: id,
+      enquiryType: newInquiry.inquiryType || 'Car Inquiry',
+      customerName: newInquiry.userName,
+      customerPhone: newInquiry.userPhone,
+      customerEmail: newInquiry.userEmail,
+      city: newInquiry.city,
+      message: newInquiry.message,
+      carId: newInquiry.carId,
+      carPrice: newInquiry.carPrice,
+      carModel: newInquiry.carTitle,
+      adminTab: 'inquiries',
+      createdAt: newInquiry.createdAt,
+    }).catch((err) => console.error('Notice: inquiry notification trigger error:', err));
 
     return NextResponse.json({
       success: true,

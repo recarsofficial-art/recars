@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { dbGetNegotiations, dbGetNegotiationById, dbCreateNegotiation, dbUpdateNegotiationStatus } from '@/lib/db';
 import { Negotiation } from '@/lib/types';
 import { cookies } from 'next/headers';
+import { sendEnquiryNotification } from '@/lib/email';
 
 // Verify admin session cookie
 async function checkIsAdmin(): Promise<boolean> {
@@ -110,6 +111,22 @@ export async function POST(request: Request) {
     };
 
     await dbCreateNegotiation(newNegotiation);
+
+    // Trigger email alert to recars.in@gmail.com
+    sendEnquiryNotification({
+      enquiryId: negotiationId,
+      enquiryType: 'Price Negotiation Offer',
+      customerName: newNegotiation.customerName,
+      customerPhone: newNegotiation.customerPhone,
+      customerEmail: newNegotiation.customerEmail,
+      carId: newNegotiation.carId,
+      carModel: newNegotiation.carTitle,
+      listedPrice: newNegotiation.listedPrice,
+      offeredPrice: newNegotiation.customerOffer,
+      message: newNegotiation.notes || `Customer made an offer of ₹${newNegotiation.customerOffer.toLocaleString('en-IN')} against listed price ₹${newNegotiation.listedPrice.toLocaleString('en-IN')}.`,
+      adminTab: 'negotiations',
+      createdAt: newNegotiation.createdAt,
+    }).catch((err) => console.error('Notice: negotiation notification trigger error:', err));
 
     return NextResponse.json({
       success: true,

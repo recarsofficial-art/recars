@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { dbGetTestDrives, dbInsertTestDrive } from '@/lib/db';
 import { TestDriveBooking } from '@/lib/types';
+import { sendEnquiryNotification } from '@/lib/email';
 
 export async function GET() {
   try {
@@ -28,6 +29,25 @@ export async function POST(request: Request) {
     };
 
     await dbInsertTestDrive(fullBooking);
+
+    // Trigger email alert to recars.in@gmail.com
+    sendEnquiryNotification({
+      enquiryId: bookingId,
+      enquiryType: 'Test Drive Request',
+      customerName: fullBooking.userName,
+      customerPhone: fullBooking.userPhone,
+      customerEmail: fullBooking.userEmail,
+      city: fullBooking.city,
+      carId: fullBooking.carId,
+      carPrice: fullBooking.carPrice,
+      carModel: fullBooking.carTitle,
+      preferredDate: fullBooking.preferredDate,
+      preferredTimeSlot: fullBooking.preferredTimeSlot,
+      packageType: fullBooking.type,
+      message: `Customer requested ${fullBooking.type} for ${fullBooking.carTitle} on ${fullBooking.preferredDate} (${fullBooking.preferredTimeSlot}).`,
+      adminTab: 'testdrives',
+      createdAt: fullBooking.createdAt,
+    }).catch((err) => console.error('Notice: test drive notification trigger error:', err));
 
     return NextResponse.json({
       success: true,

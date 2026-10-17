@@ -589,6 +589,16 @@ export async function dbGetInquiries(): Promise<CarInquiry[]> {
   }));
 }
 
+async function resolveValidCarId(carId?: string | null): Promise<string | null> {
+  if (!carId) return null;
+  try {
+    const res = await pool.query('SELECT id FROM public.cars WHERE id = $1 LIMIT 1', [carId]);
+    return res.rows.length > 0 ? carId : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function dbInsertInquiry(inq: CarInquiry): Promise<void> {
   // Ensure customer profile is recorded
   if (inq.userPhone) {
@@ -600,6 +610,8 @@ export async function dbInsertInquiry(inq: CarInquiry): Promise<void> {
       city: inq.city,
     });
   }
+
+  const validCarId = await resolveValidCarId(inq.carId);
 
   const sql = `
     INSERT INTO public.car_inquiries (
@@ -614,7 +626,7 @@ export async function dbInsertInquiry(inq: CarInquiry): Promise<void> {
   `;
   await pool.query(sql, [
     inq.id,
-    inq.carId || null,
+    validCarId,
     inq.carTitle,
     inq.carImage,
     inq.carPrice,
@@ -676,6 +688,8 @@ export async function dbInsertTestDrive(td: TestDriveBooking): Promise<void> {
     });
   }
 
+  const validCarId = await resolveValidCarId(td.carId);
+
   const sql = `
     INSERT INTO public.test_drives (
       id, car_id, car_title, user_name, user_phone, preferred_date,
@@ -689,7 +703,7 @@ export async function dbInsertTestDrive(td: TestDriveBooking): Promise<void> {
   `;
   await pool.query(sql, [
     td.id,
-    td.carId || null,
+    validCarId,
     td.carTitle,
     td.userName,
     td.userPhone,
@@ -1147,5 +1161,148 @@ export async function dbDeletePDIBooking(id: string): Promise<boolean> {
   const res = await pool.query('DELETE FROM public.pdi_bookings WHERE id = $1', [id]);
   return (res.rowCount || 0) > 0;
 }
+
+// ========================================================
+// 10. EMAIL NOTIFICATION DATABASE OPERATIONS
+// ========================================================
+
+export interface EmailNotificationRecord {
+  id: string;
+  enquiryId: string;
+  enquiryType: string;
+  recipient: string;
+  subject: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  status: 'pending' | 'sent' | 'failed';
+  errorMessage?: string;
+  attempts?: number;
+  payload?: any;
+  sentAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+let notificationTableInitPromise: Promise<void> | null = null;
+export async function ensureNotificationTable(): Promise<void> {
+  if (!notificationTableInitPromise) {
+    notificationTableInitPromise = (async () => {
+      try {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS public.email_notifications (
+            id TEXT PRIMARY KEY,
+            enquiry_id TEXT NOT NULL,
+            enquiry_type TEXT NOT NULL,
+            recipient TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            customer_name TEXT,
+            customer_phone TEXT,
+            customer_email TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            error_message TEXT,
+            attempts INT DEFAULT 0,
+            payload JSONB,
+            sent_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT now(),
+            updated_at TIMESTAMPTZ DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS idx_email_enquiry_id ON public.email_notifications(enquiry_id);
+          CREATE INDEX IF NOT EXISTS idx_email_status ON public.email_notifications(status);
+        `);
+      } catch (err) {
+        console.warn('Notice: email_notifications table auto-create notice:', err);
+      }
+    })();
+  }
+  return notificationTableInitPromise;
+}
+
+export async function dbUpsertEmailNotification(record: EmailNotificationRecord): Promise<void> {
+  await ensureNotificationTable();
+  const sql = `
+    INSERT INTO public.email_notifications (
+      id, enquiry_id, enquiry_type, recipient, subject, customer_name,
+      customer_phone, customer_email, status, error_message, attempts,
+      payload, sent_at, updated_at
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      status = EXCLUDED.status,
+      error_message = EXCLUDED.error_message,
+      attempts = public.email_notifications.attempts + 1,
+      sent_at = EXCLUDED.sent_at,
+      updated_at = now();
+  `;
+  await pool.query(sql, [
+    record.id,
+    record.enquiryId,
+    record.enquiryType,
+    record.recipient,
+    record.subject,
+    record.customerName || null,
+    record.customerPhone || null,
+    record.customerEmail || null,
+    record.status,
+    record.errorMessage || null,
+    record.attempts || 1,
+    JSON.stringify(record.payload || {}),
+    record.sentAt ? new Date(record.sentAt) : null,
+  ]);
+}
+
+export async function dbGetEmailNotificationByEnquiryId(enquiryId: string): Promise<EmailNotificationRecord | null> {
+  await ensureNotificationTable();
+  const { rows } = await pool.query(
+    'SELECT * FROM public.email_notifications WHERE enquiry_id = $1 ORDER BY created_at DESC LIMIT 1',
+    [enquiryId]
+  );
+  if (!rows.length) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    enquiryId: r.enquiry_id,
+    enquiryType: r.enquiry_type,
+    recipient: r.recipient,
+    subject: r.subject,
+    customerName: r.customer_name,
+    customerPhone: r.customer_phone,
+    customerEmail: r.customer_email,
+    status: r.status,
+    errorMessage: r.error_message,
+    attempts: r.attempts,
+    payload: r.payload,
+    sentAt: r.sent_at ? new Date(r.sent_at).toISOString() : null,
+    createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+  };
+}
+
+export async function dbGetEmailNotifications(limit = 100): Promise<EmailNotificationRecord[]> {
+  await ensureNotificationTable();
+  const { rows } = await pool.query(
+    'SELECT * FROM public.email_notifications ORDER BY created_at DESC LIMIT $1',
+    [limit]
+  );
+  return rows.map((r: any) => ({
+    id: r.id,
+    enquiryId: r.enquiry_id,
+    enquiryType: r.enquiry_type,
+    recipient: r.recipient,
+    subject: r.subject,
+    customerName: r.customer_name,
+    customerPhone: r.customer_phone,
+    customerEmail: r.customer_email,
+    status: r.status,
+    errorMessage: r.error_message,
+    attempts: r.attempts,
+    payload: r.payload,
+    sentAt: r.sent_at ? new Date(r.sent_at).toISOString() : null,
+    createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+  }));
+}
+
 
 

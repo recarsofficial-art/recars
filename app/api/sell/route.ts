@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { dbGetCustomerCars, dbInsertCustomerCar, dbUpdateCustomerCarStatus } from '@/lib/db';
 import { SellRequest } from '@/lib/types';
+import { sendEnquiryNotification } from '@/lib/email';
 
 export async function GET() {
   try {
@@ -28,6 +29,26 @@ export async function POST(request: Request) {
     };
 
     await dbInsertCustomerCar(fullRequest);
+
+    // Trigger email alert to recars.in@gmail.com
+    sendEnquiryNotification({
+      enquiryId: requestId,
+      enquiryType: 'Sell Car Request',
+      customerName: fullRequest.sellerName,
+      customerPhone: fullRequest.sellerPhone,
+      city: fullRequest.sellerCity,
+      carMake: fullRequest.make,
+      carModel: fullRequest.model,
+      carVariant: fullRequest.variant,
+      carYear: fullRequest.year,
+      preferredDate: fullRequest.preferredInspectionDate,
+      preferredTimeSlot: fullRequest.preferredInspectionTime,
+      offeredPrice: fullRequest.estimatedPriceMin,
+      listedPrice: fullRequest.estimatedPriceMax,
+      message: `Customer wants to sell ${fullRequest.year} ${fullRequest.make} ${fullRequest.model} (${fullRequest.variant || 'Standard'}). Reg: ${fullRequest.registrationNumber || 'Pending'}. Mileage: ${fullRequest.kilometers?.toLocaleString('en-IN') || 0} km. Estimated Range: ₹${fullRequest.estimatedPriceMin?.toLocaleString('en-IN') || 0} - ₹${fullRequest.estimatedPriceMax?.toLocaleString('en-IN') || 0}. Inspection: ${fullRequest.preferredInspectionDate} (${fullRequest.preferredInspectionTime}).`,
+      adminTab: 'leads',
+      createdAt: fullRequest.createdAt,
+    }).catch((err) => console.error('Notice: sell request notification trigger error:', err));
 
     return NextResponse.json({
       success: true,
