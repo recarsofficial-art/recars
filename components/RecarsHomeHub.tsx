@@ -267,7 +267,7 @@ export default function RecarsHomeHub({
         {/* ========================================================
             4. THE 2 PRIMARY SERVICE CARDS: BUY A CAR & SELL YOUR CAR (COMPACT SIZE)
         ========================================================= */}
-        <div className="max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto grid grid-cols-2 gap-3 sm:gap-4.5 mb-5">
+        <div className="max-w-[310px] sm:max-w-2xl lg:max-w-3xl mx-auto grid grid-cols-2 gap-2.5 sm:gap-4.5 mb-4 sm:mb-5">
           {/* CARD 1: BUY A CAR -> OPENS /buy */}
           <Link
             href="/buy"
@@ -277,7 +277,7 @@ export default function RecarsHomeHub({
             <img
               src="/images/card-buy-car.png"
               alt="Buy a Car — Recars"
-              className="w-full h-auto max-h-[160px] sm:max-h-[210px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
+              className="w-full h-auto max-h-[105px] sm:max-h-[210px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
               loading="eager"
             />
           </Link>
@@ -291,7 +291,7 @@ export default function RecarsHomeHub({
             <img
               src="/images/card-sell-car.png"
               alt="Sell Your Car — Recars"
-              className="w-full h-auto max-h-[160px] sm:max-h-[210px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
+              className="w-full h-auto max-h-[105px] sm:max-h-[210px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
               loading="eager"
             />
           </Link>
