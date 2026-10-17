@@ -936,7 +936,7 @@ function CarDetailInner({ params }: PageProps) {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#237A52] flex-shrink-0" />
-                  <span>RC Ownership Transfer Assistance</span>
+                  <span>RC Ownership Transfer Assistance (RTO charges to be paid by client)</span>
                 </div>
               </div>
             </div>

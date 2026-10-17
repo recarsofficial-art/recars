@@ -460,7 +460,7 @@ export const TRUST_BENEFITS = [
   { id: 3, title: 'Transparent Pricing', desc: 'Data-driven fair pricing with interactive price negotiations', icon: 'currency-inr' },
   { id: 4, title: 'Recars Certified Quality', desc: 'Strict mechanical, electrical, and structural evaluation standards', icon: 'shield-check' },
   { id: 5, title: 'Easy Financing', desc: 'Competitive loan partnerships with top banks subject to approval', icon: 'credit-card' },
-  { id: 6, title: 'RC Transfer Assistance', desc: 'Doorstep RTO legal documentation and title transfer support', icon: 'file-text' },
+  { id: 6, title: 'RC Transfer Assistance', desc: 'Doorstep RTO documentation and title transfer support (RTO charges to be paid by client)', icon: 'file-text' },
   { id: 7, title: 'Dedicated Support', desc: 'Personal relationship manager from vehicle enquiry to handover', icon: 'headset' },
 ];
 

@@ -60,7 +60,7 @@ export default function WhyRecarsPage() {
     },
     {
       feature: 'RC Ownership Transfer',
-      recars: 'Doorstep RTO legal transfer assistance and documentation',
+      recars: 'Doorstep RTO legal transfer assistance (RTO transfer charges paid by client)',
       unorganized: 'Customer left to deal with RTO agents & delays',
     },
   ];
@@ -156,7 +156,7 @@ export default function WhyRecarsPage() {
               </div>
               <h3 className="font-bold text-base text-[#101216]">Doorstep RC Transfer Assistance</h3>
               <p className="text-xs text-[#6B7078] leading-relaxed">
-                Our in-house RTO legal desk handles all biometric signatures, transfer paperwork, and delivery of your new smart card RC directly to your home address.
+                Our in-house RTO legal desk assists with transfer documentation, NOC generation, and appointment coordination. Note: Recars provides full transfer assistance, while statutory RTO transfer charges and government fees are to be paid by the client.
               </p>
             </div>
           </div>

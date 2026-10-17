@@ -73,7 +73,7 @@ const FAQS = [
   {
     question: 'How does Recars handle the RC (Registration Certificate) transfer?',
     answer:
-      'Our dedicated RTO legal team manages the entire process from police clearance and NOC generation to final ownership endorsement. You get real-time SMS progress tracking and doorstep delivery of your updated RC smartcard.'
+      'Our dedicated RTO legal desk provides complete RC transfer assistance—managing paperwork, police clearance, and documentation coordination. Please note that Recars provides the assistance and process guidance, while official RTO transfer fees and statutory government charges are to be paid by the client.'
   },
   {
     question: 'Can I finance my purchase or exchange my existing car?',
@@ -617,11 +617,11 @@ function HomePageContent() {
                 RC Transfer Assistance
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                Our in-house legal and RTO operations team assists with legal clearances, transfer documentation, and delivers your updated RC smartcard.
+                Our in-house team assists with legal clearances, transfer documentation, and RTO coordination. Official RTO transfer charges and government fees are to be paid by the client.
               </p>
               <div className="mt-4 pt-4 border-t border-gray-200/60 flex items-center gap-1.5 text-xs font-semibold text-[#E5325C]">
                 <Clock className="w-3.5 h-3.5" />
-                <span>Doorstep RTO Documentation</span>
+                <span>RTO Documentation Assistance</span>
               </div>
             </div>
           </div>
@@ -795,10 +795,10 @@ function HomePageContent() {
                   3
                 </div>
                 <h3 className="text-lg font-bold text-[#101216] mb-2">
-                  Instant Payment & RC Transfer Support
+                  Instant Payment & RC Transfer Assistance
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  Accept our final best offer and receive 100% payment credited directly to your bank account before vehicle handover. We manage all transfer paperwork.
+                  Accept our final best offer and receive 100% payment credited directly to your bank account before vehicle handover. We assist with all transfer paperwork (RTO transfer charges to be paid by client).
                 </p>
                 <div className="mt-5">
                   <Link href="/sell" className="text-xs font-bold text-[#E5325C] hover:underline inline-flex items-center gap-1">

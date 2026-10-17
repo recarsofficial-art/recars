@@ -728,7 +728,7 @@ function SellWorkflowContent() {
 
               <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 max-w-md mx-auto text-left text-xs text-gray-600 leading-relaxed">
                 <p className="font-semibold text-gray-800 mb-1">What happens next?</p>
-                Our certified Recars inspection engineer will contact you on <span className="font-bold text-gray-900">{sellerPhone}</span> before arriving. After a thorough 28+ point physical inspection, you will receive our highest guaranteed price with instant payment and doorstep RC transfer assistance.
+                Our certified Recars inspection engineer will contact you on <span className="font-bold text-gray-900">{sellerPhone}</span> before arriving. After a thorough 28+ point physical inspection, you will receive our highest guaranteed price with instant payment and doorstep RC transfer assistance (RTO transfer charges to be paid by client).
               </div>
 
               <div className="space-y-3 pt-2">

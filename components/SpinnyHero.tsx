@@ -337,7 +337,7 @@ export default function SpinnyHero({
                       <span>•</span>
                       <span className="flex items-center gap-1">
                         <Check className="w-3 h-3 text-[#10B981]" />
-                        <span>Hassle-free RC Transfer</span>
+                        <span>RC Transfer Assistance</span>
                       </span>
                     </div>
 
@@ -416,7 +416,7 @@ export default function SpinnyHero({
                   <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#FFF0F3] border border-[#FFD6DF] flex items-center justify-center text-[#E5325C] shrink-0">
                     <FileCheck2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   </div>
-                  <span className="text-[10px] sm:text-xs font-bold leading-tight">RC Transfer Support</span>
+                  <span className="text-[10px] sm:text-xs font-bold leading-tight">RC Transfer Assistance</span>
                 </div>
 
               </div>
