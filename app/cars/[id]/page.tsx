@@ -76,7 +76,7 @@ function CarDetailInner({ params }: PageProps) {
   }, []);
 
   const cars = liveCars !== null ? liveCars : storeCars;
-  const car = cars.find((c) => c.id === unwrappedParams.id) || cars[0];
+  const car = cars.find((c) => c.id === unwrappedParams.id) || (cars.length > 0 ? cars[0] : null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   // Interested Modal State
@@ -90,7 +90,7 @@ function CarDetailInner({ params }: PageProps) {
 
   // Negotiation Modal State
   const [isNegotiateModalOpen, setIsNegotiateModalOpen] = useState(false);
-  const [offerAmount, setOfferAmount] = useState<number>(Math.round(car.price * 0.95));
+  const [offerAmount, setOfferAmount] = useState<number>(0);
   const [offerCustomerName, setOfferCustomerName] = useState('');
   const [offerCustomerPhone, setOfferCustomerPhone] = useState('');
   const [offerCustomerEmail, setOfferCustomerEmail] = useState('');
@@ -108,11 +108,18 @@ function CarDetailInner({ params }: PageProps) {
   const [activeInspectionTab, setActiveInspectionTab] = useState<'engine' | 'exterior' | 'interior' | 'tyres'>('engine');
 
   // EMI Calculator states
-  const [downPayment, setDownPayment] = useState<number>(Math.round(car.price * 0.2));
+  const [downPayment, setDownPayment] = useState<number>(0);
   const [loanTenureYears, setLoanTenureYears] = useState<number>(5);
   const [interestRate, setInterestRate] = useState<number>(9.5);
 
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (car?.price) {
+      setOfferAmount((prev) => (prev > 0 ? prev : Math.round(car.price * 0.95)));
+      setDownPayment((prev) => (prev > 0 ? prev : Math.round(car.price * 0.2)));
+    }
+  }, [car?.id, car?.price]);
 
   useEffect(() => {
     if (user) {
@@ -132,6 +139,43 @@ function CarDetailInner({ params }: PageProps) {
       }
     }
   }, [user]);
+
+  if (liveCars === null) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-between">
+        <Navbar selectedCity={selectedCity} onSelectCity={changeCity} wishlistCount={wishlistIds.length} />
+        <div className="flex-1 flex flex-col items-center justify-center py-32">
+          <div className="w-12 h-12 border-4 border-[#E5325C]/20 border-t-[#E5325C] rounded-full animate-spin mb-4" />
+          <p className="font-bold text-sm text-[#101216]">Loading vehicle details...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!car) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-between">
+        <Navbar selectedCity={selectedCity} onSelectCity={changeCity} wishlistCount={wishlistIds.length} />
+        <div className="max-w-xl mx-auto text-center px-4 py-24">
+          <div className="w-16 h-16 bg-red-50 text-[#E5325C] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+          <h1 className="text-2xl font-black text-[#101216] mb-2">Vehicle Not Found</h1>
+          <p className="text-sm text-[#6B7078] mb-6">
+            This vehicle may have been sold or removed from our inventory. Explore our verified collection of quality cars.
+          </p>
+          <Link
+            href="/buy"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#E5325C] text-white font-bold text-sm shadow-md hover:bg-[#D42B52] transition-colors"
+          >
+            Explore Available Cars
+          </Link>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   const calculatedMonthlyEmi = calculateEMI(
     Math.max(100000, car.price - downPayment),
