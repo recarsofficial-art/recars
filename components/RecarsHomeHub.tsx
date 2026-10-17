@@ -153,101 +153,103 @@ export default function RecarsHomeHub({
         {/* ========================================================
             3. HERO SLIDER BANNER (SLIDE 1: SELL CAR, SLIDE 2: PDI INSPECTION BANNER)
         ========================================================= */}
-        <div
-          onMouseEnter={() => setIsAutoPlayPaused(true)}
-          onMouseLeave={() => setIsAutoPlayPaused(false)}
-          className="relative overflow-hidden rounded-3xl bg-[#101216] mb-5 sm:mb-6 shadow-xl border border-gray-200 group"
-        >
-          {/* Slides Container */}
-          <div className="relative w-full aspect-[16/9] max-h-[340px] sm:max-h-[380px] lg:max-h-[420px]">
-            {/* SLIDE 1: Ambassador / Sell Car */}
-            <div
-              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                currentSlide === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
-              }`}
-            >
-              <div className="absolute inset-0">
-                <img
-                  src="/hero-ambassador-landscape.jpg"
-                  alt="Sell your car for the right price"
-                  className="w-full h-full object-cover object-[center_center] sm:object-[60%_center]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent sm:from-black/80 sm:via-black/35 sm:to-transparent" />
+        <div className="mb-5 sm:mb-6">
+          <div
+            onMouseEnter={() => setIsAutoPlayPaused(true)}
+            onMouseLeave={() => setIsAutoPlayPaused(false)}
+            className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-lg border border-gray-200 group"
+          >
+            {/* Slides Container with exact 16:9 banner aspect ratio */}
+            <div className="relative w-full aspect-[16/9]">
+              {/* SLIDE 1: Ambassador / Sell Car */}
+              <div
+                className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
+                  currentSlide === 0 ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
+                }`}
+              >
+                <div className="absolute inset-0 bg-[#101216]">
+                  <img
+                    src="/hero-ambassador-landscape.jpg"
+                    alt="Sell your car for the right price"
+                    className="w-full h-full object-cover object-[center_center] sm:object-[60%_center]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent sm:from-black/80 sm:via-black/35 sm:to-transparent" />
+                </div>
+
+                <div className="relative z-10 p-6 sm:p-10 lg:p-14 h-full flex flex-col justify-center items-start max-w-lg">
+                  <div className="space-y-2">
+                    <span className="inline-block px-3 py-1 rounded-full bg-[#E5325C] text-white text-[10px] sm:text-xs font-semibold font-nav uppercase tracking-wider shadow-xs">
+                      Recars Direct
+                    </span>
+                    <h2 className="text-2xl sm:text-4xl lg:text-5xl font-semibold font-heading text-white leading-[1.15] tracking-tight drop-shadow-md">
+                      sell your car<br />
+                      for the<br />
+                      right price
+                    </h2>
+                  </div>
+
+                  <div className="mt-4 sm:mt-6">
+                    <Link
+                      href="/sell"
+                      className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 rounded-full bg-black hover:bg-[#E5325C] text-white text-xs sm:text-sm font-semibold font-btn shadow-lg border border-white/20 transition-all duration-200 active:scale-95 cursor-pointer"
+                    >
+                      <span>Sell Car</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
               </div>
 
-              <div className="relative z-10 p-6 sm:p-10 lg:p-12 h-full flex flex-col justify-center items-start max-w-lg">
-                <div className="space-y-2">
-                  <span className="inline-block px-3 py-1 rounded-full bg-[#E5325C] text-white text-[10px] sm:text-xs font-semibold font-nav uppercase tracking-wider shadow-xs">
-                    Recars Direct
-                  </span>
-                  <h2 className="text-2xl sm:text-4xl lg:text-5xl font-semibold font-heading text-white leading-[1.15] tracking-tight drop-shadow-md">
-                    sell your car<br />
-                    for the<br />
-                    right price
-                  </h2>
-                </div>
-
-                <div className="mt-4 sm:mt-6">
-                  <Link
-                    href="/sell"
-                    className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 rounded-full bg-black hover:bg-[#E5325C] text-white text-xs sm:text-sm font-semibold font-btn shadow-lg border border-white/20 transition-all duration-200 active:scale-95 cursor-pointer"
-                  >
-                    <span>Sell Car</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
+              {/* SLIDE 2: Pre-Delivery Inspection (PDI) Banner */}
+              <div
+                className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
+                  currentSlide === 1 ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
+                }`}
+              >
+                <Link href="/pdi" className="block relative w-full h-full cursor-pointer bg-white">
+                  <img
+                    src="/images/recars-pdi-banner.jpg"
+                    alt="Recars PDI — Pre-Delivery Inspection (Old Car ₹1,199 / New Car ₹2,499)"
+                    className="w-full h-full object-contain object-center block"
+                    loading="eager"
+                  />
+                </Link>
               </div>
             </div>
 
-            {/* SLIDE 2: Pre-Delivery Inspection (PDI) Banner */}
-            <div
-              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                currentSlide === 1 ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
-              }`}
+            {/* Navigation Arrows */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentSlide((prev) => (prev === 0 ? 1 : 0));
+              }}
+              className="absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-xs flex items-center justify-center opacity-80 sm:opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md"
+              aria-label="Previous Slide"
             >
-              <Link href="/pdi" className="block relative w-full h-full cursor-pointer">
-                <img
-                  src="/images/recars-pdi-banner.jpg"
-                  alt="Recars PDI — Pre-Delivery Inspection (Old Car ₹1,199 / New Car ₹2,499)"
-                  className="w-full h-full object-contain sm:object-cover object-center bg-white"
-                  loading="eager"
-                />
-              </Link>
-            </div>
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentSlide((prev) => (prev === 0 ? 1 : 0));
+              }}
+              className="absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-xs flex items-center justify-center opacity-80 sm:opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md"
+              aria-label="Next Slide"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
 
-          {/* Navigation Arrows */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentSlide((prev) => (prev === 0 ? 1 : 0));
-            }}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-xs flex items-center justify-center opacity-80 sm:opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md"
-            aria-label="Previous Slide"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentSlide((prev) => (prev === 0 ? 1 : 0));
-            }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-xs flex items-center justify-center opacity-80 sm:opacity-0 group-hover:opacity-100 transition-all cursor-pointer shadow-md"
-            aria-label="Next Slide"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-
-          {/* Indicators / Dots */}
-          <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-black/40 backdrop-blur-xs py-1.5 px-3 rounded-full border border-white/10">
+          {/* Indicators / Dots (Cleanly positioned below banner so zero content is obscured) */}
+          <div className="flex items-center justify-center gap-2 mt-2.5">
             <button
               type="button"
               onClick={() => setCurrentSlide(0)}
               className={`h-2 rounded-full transition-all cursor-pointer ${
-                currentSlide === 0 ? 'w-6 bg-[#E5325C]' : 'w-2 bg-white/60 hover:bg-white'
+                currentSlide === 0 ? 'w-7 bg-[#E5325C]' : 'w-2 bg-gray-300 hover:bg-gray-400'
               }`}
               aria-label="Slide 1: Sell Car"
             />
@@ -255,7 +257,7 @@ export default function RecarsHomeHub({
               type="button"
               onClick={() => setCurrentSlide(1)}
               className={`h-2 rounded-full transition-all cursor-pointer ${
-                currentSlide === 1 ? 'w-6 bg-[#E5325C]' : 'w-2 bg-white/60 hover:bg-white'
+                currentSlide === 1 ? 'w-7 bg-[#E5325C]' : 'w-2 bg-gray-300 hover:bg-gray-400'
               }`}
               aria-label="Slide 2: Pre-Delivery Inspection (PDI)"
             />
