@@ -1449,5 +1449,65 @@ export async function dbGetEmailNotifications(limit = 100): Promise<EmailNotific
   }));
 }
 
+// ========================================================
+// 8. UPLOADED IMAGES DATABASE STORAGE (Serverless & Persistent Fallback)
+// ========================================================
 
+let uploadedImagesTableInitPromise: Promise<void> | null = null;
 
+export async function ensureUploadedImagesTable(): Promise<void> {
+  if (!uploadedImagesTableInitPromise) {
+    uploadedImagesTableInitPromise = (async () => {
+      try {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS public.uploaded_images (
+            filename TEXT PRIMARY KEY,
+            mime_type TEXT NOT NULL DEFAULT 'image/webp',
+            data BYTEA NOT NULL,
+            size INTEGER NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS idx_uploaded_images_created_at ON public.uploaded_images(created_at DESC);
+        `);
+      } catch (err: any) {
+        console.warn('[DB_INIT] Warning initializing uploaded_images table:', err?.message);
+      }
+    })();
+  }
+  return uploadedImagesTableInitPromise;
+}
+
+export async function dbSaveUploadedImage(
+  filename: string,
+  mimeType: string,
+  data: Buffer
+): Promise<string> {
+  await ensureUploadedImagesTable();
+  const sql = `
+    INSERT INTO public.uploaded_images (filename, mime_type, data, size, created_at)
+    VALUES ($1, $2, $3, $4, now())
+    ON CONFLICT (filename) DO UPDATE SET
+      data = EXCLUDED.data,
+      size = EXCLUDED.size,
+      mime_type = EXCLUDED.mime_type;
+  `;
+  await safeDbQuery(sql, [filename, mimeType, data, data.length], 'dbSaveUploadedImage');
+  return `/api/images/${filename}`;
+}
+
+export async function dbGetUploadedImage(
+  filename: string
+): Promise<{ data: Buffer; mimeType: string } | null> {
+  await ensureUploadedImagesTable();
+  const sql = `SELECT data, mime_type FROM public.uploaded_images WHERE filename = $1 LIMIT 1;`;
+  const { rows } = await safeDbQuery<{ data: Buffer; mime_type: string }>(
+    sql,
+    [filename],
+    'dbGetUploadedImage'
+  );
+  if (!rows || rows.length === 0) return null;
+  return {
+    data: rows[0].data,
+    mimeType: rows[0].mime_type,
+  };
+}

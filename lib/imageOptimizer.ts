@@ -26,7 +26,7 @@ export interface OptimizationResult {
   width: number;
   height: number;
   format: 'webp';
-  storageProvider: 'supabase' | 'local';
+  storageProvider: 'supabase' | 'database' | 'local';
 }
 
 const DEFAULT_OPTIONS: Required<ImageOptimizationOptions> = {
@@ -193,25 +193,11 @@ export async function optimizeCarImageBuffer(
     thumbSize = thumbBuffer.length;
   }
 
-  // 5. Always persist to local /public/uploads as safe fallback
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-
-  const localMainPath = path.join(uploadsDir, webpFilename);
-  fs.writeFileSync(localMainPath, optimizedBuffer);
-
-  if (thumbBuffer) {
-    const localThumbPath = path.join(uploadsDir, thumbFilename);
-    fs.writeFileSync(localThumbPath, thumbBuffer);
-  }
-
-  // 6. Attempt Supabase Storage Upload if configured
+  // 5. Attempt Supabase Storage Upload if configured
   const { client, publicUrlBase } = getStorageClient();
-  let storageProvider: 'supabase' | 'local' = 'local';
-  let finalUrl = `/uploads/${webpFilename}`;
-  let finalThumbUrl = thumbBuffer ? `/uploads/${thumbFilename}` : undefined;
+  let storageProvider: 'supabase' | 'database' | 'local' = 'local';
+  let finalUrl = '';
+  let finalThumbUrl: string | undefined = undefined;
 
   if (client) {
     try {
@@ -242,10 +228,61 @@ export async function optimizeCarImageBuffer(
           }
         }
       } else {
-        console.warn('[ImageOptimizer] Supabase upload failed, using local storage:', uploadError?.message);
+        console.warn('[ImageOptimizer] Supabase upload failed, falling back:', uploadError?.message);
       }
     } catch (err: any) {
-      console.warn('[ImageOptimizer] Supabase upload exception, fell back to local:', err?.message);
+      console.warn('[ImageOptimizer] Supabase upload exception, falling back:', err?.message);
+    }
+  }
+
+  // 6. Safe local filesystem storage (works in dev, safely ignored in read-only serverless like Vercel)
+  try {
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const localMainPath = path.join(uploadsDir, webpFilename);
+    fs.writeFileSync(localMainPath, optimizedBuffer);
+
+    if (thumbBuffer) {
+      const localThumbPath = path.join(uploadsDir, thumbFilename);
+      fs.writeFileSync(localThumbPath, thumbBuffer);
+    }
+
+    if (!finalUrl) {
+      finalUrl = `/uploads/${webpFilename}`;
+      finalThumbUrl = thumbBuffer ? `/uploads/${thumbFilename}` : undefined;
+      storageProvider = 'local';
+    }
+  } catch (fsErr: any) {
+    // Expected on read-only serverless environments like Vercel / AWS Lambda (/var/task)
+    console.info('[ImageOptimizer] Read-only serverless environment detected; skipping local disk write:', fsErr?.message);
+  }
+
+  // 7. Resilient Database Image Storage Fallback (guarantees image persistence on Vercel without local disk)
+  if (!finalUrl || storageProvider === 'local') {
+    try {
+      const { dbSaveUploadedImage } = await import('@/lib/db');
+      const dbUrl = await dbSaveUploadedImage(webpFilename, 'image/webp', optimizedBuffer);
+      let dbThumbUrl: string | undefined = undefined;
+      if (thumbBuffer) {
+        dbThumbUrl = await dbSaveUploadedImage(thumbFilename, 'image/webp', thumbBuffer);
+      }
+
+      // If Supabase wasn't used or we are in a serverless environment, use database route URL
+      if (!finalUrl || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+        finalUrl = dbUrl;
+        finalThumbUrl = dbThumbUrl;
+        storageProvider = 'database';
+      }
+    } catch (dbErr: any) {
+      console.warn('[ImageOptimizer] Database storage fallback warning:', dbErr?.message);
+      if (!finalUrl) {
+        finalUrl = `/api/images/${webpFilename}`;
+        finalThumbUrl = thumbBuffer ? `/api/images/${thumbFilename}` : undefined;
+        storageProvider = 'database';
+      }
     }
   }
 

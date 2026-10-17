@@ -135,6 +135,16 @@ CREATE TABLE IF NOT EXISTS public.wishlists (
 );
 CREATE INDEX IF NOT EXISTS idx_wishlists_user ON public.wishlists(user_identifier);
 
+-- 7. UPLOADED IMAGES TABLE (Direct Byte Storage Fallback for Serverless Runtimes)
+CREATE TABLE IF NOT EXISTS public.uploaded_images (
+    filename TEXT PRIMARY KEY,
+    mime_type TEXT NOT NULL DEFAULT 'image/webp',
+    data BYTEA NOT NULL,
+    size INTEGER NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_uploaded_images_created_at ON public.uploaded_images(created_at DESC);
+
 -- Row Level Security (RLS)
 ALTER TABLE public.cars ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
@@ -142,6 +152,7 @@ ALTER TABLE public.customer_cars ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.car_inquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.test_drives ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wishlists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.uploaded_images ENABLE ROW LEVEL SECURITY;
 
 -- Role Grants
 GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, service_role;
@@ -168,3 +179,7 @@ CREATE POLICY "Allow all access to test_drives" ON public.test_drives FOR ALL US
 
 DROP POLICY IF EXISTS "Allow all access to wishlists" ON public.wishlists;
 CREATE POLICY "Allow all access to wishlists" ON public.wishlists FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all access to uploaded_images" ON public.uploaded_images;
+CREATE POLICY "Allow all access to uploaded_images" ON public.uploaded_images FOR ALL USING (true) WITH CHECK (true);
+
