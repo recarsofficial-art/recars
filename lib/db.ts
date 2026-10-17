@@ -469,6 +469,7 @@ export async function dbGetCustomerCars(): Promise<SellRequest[]> {
     preferredInspectionTime: r.preferred_inspection_time || '10:00 AM - 12:00 PM',
     estimatedPriceMin: Number(r.estimated_price_min) || 0,
     estimatedPriceMax: Number(r.estimated_price_max) || 0,
+    publishedCarId: r.published_car_id || undefined,
     status: r.status,
     createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
   }));
@@ -564,6 +565,141 @@ export async function dbUpdateCustomerCarStatus(id: string, status: string): Pro
     [status, id]
   );
   return (res.rowCount || 0) > 0;
+}
+
+function inferCarDetails(make: string, model: string) {
+  const m = `${make} ${model}`.toLowerCase();
+  let bodyType: 'SUV' | 'Sedan' | 'Hatchback' = 'Hatchback';
+  let defaultImage = '/car-creta-hd.jpg';
+
+  if (
+    m.includes('creta') || m.includes('venue') || m.includes('seltos') ||
+    m.includes('brezza') || m.includes('nexon') || m.includes('thar') ||
+    m.includes('scorpio') || m.includes('xuv') || m.includes('safari') ||
+    m.includes('harrier') || m.includes('fortuner') || m.includes('innova') ||
+    m.includes('punch') || m.includes('sonet') || m.includes('kuv')
+  ) {
+    bodyType = 'SUV';
+    defaultImage = m.includes('brezza') ? '/car-brezza.jpg' : m.includes('seltos') ? '/car-seltos.jpg' : '/car-creta-real.jpg';
+  } else if (
+    m.includes('city') || m.includes('verna') || m.includes('ciaz') ||
+    m.includes('dzire') || m.includes('amaze') || m.includes('aura') ||
+    m.includes('octavia') || m.includes('slavia') || m.includes('virtus')
+  ) {
+    bodyType = 'Sedan';
+    defaultImage = '/car-city.jpg';
+  } else {
+    bodyType = 'Hatchback';
+    defaultImage = m.includes('i20') ? '/car-i20.jpg' : '/car-baleno.jpg';
+  }
+
+  return { bodyType, defaultImage };
+}
+
+export async function dbApproveAndPublishCustomerCar(params: {
+  requestId: string;
+  listingPrice?: number;
+  image?: string;
+  galleryImages?: string[];
+  city?: string;
+  locationArea?: string;
+  inspectionScore?: number;
+  isVerified?: boolean;
+  isSelect?: boolean;
+  description?: string;
+}): Promise<{ car: Car; requestId: string }> {
+  const { rows } = await pool.query('SELECT * FROM public.customer_cars WHERE id = $1 LIMIT 1', [params.requestId]);
+  if (!rows.length) {
+    throw new Error(`Sell request ${params.requestId} not found.`);
+  }
+  const req = rows[0];
+
+  const carId = req.published_car_id || `recars-sell-${Date.now()}`;
+  const inferred = inferCarDetails(req.make || '', req.model || '');
+  const price = Number(params.listingPrice) || Number(req.suggested_listing_price) || Number(req.estimated_price_max) || 750000;
+  const city = params.city || req.seller_city || 'Warangal';
+  const mainImage = params.image || inferred.defaultImage;
+  const gallery = params.galleryImages && params.galleryImages.length > 0 ? params.galleryImages : [mainImage];
+
+  const newCar: Car = {
+    id: carId,
+    make: req.make,
+    model: req.model,
+    variant: req.variant || 'Standard',
+    year: Number(req.year) || 2022,
+    price: price,
+    emiPerMonth: Math.round(price * 0.021),
+    kilometers: Number(req.kilometers) || 30000,
+    fuelType: req.fuel_type || 'Petrol',
+    transmission: req.transmission || 'Manual',
+    bodyType: inferred.bodyType,
+    ownership: req.ownership || '1st Owner',
+    city: city,
+    locationArea: params.locationArea || `${city} Recars Hub`,
+    image: mainImage,
+    galleryImages: gallery,
+    isVerified: params.isVerified ?? true,
+    isRecarsSelect: params.isSelect ?? true,
+    featured: params.isSelect ?? true,
+    inspectionScore: params.inspectionScore || 96,
+    specifications: {
+      engine: '1498 cc, 4 Cylinders Inline',
+      maxPower: '115 bhp @ 6000 rpm',
+      torque: '144 Nm @ 4500 rpm',
+      mileage: '17.5 kmpl',
+      seatingCapacity: 5,
+      bootSpace: '430 Litres',
+      fuelTankCapacity: '45 Litres',
+      groundClearance: '180 mm',
+      rto: `${city} RTO`,
+      regYear: Number(req.year) || 2022,
+      insuranceValidTill: 'Comprehensive Valid',
+      color: 'Pearl White',
+    },
+    features: [
+      '28+ Point Engineer Inspected',
+      'Certified Non-Accidental Guarantee',
+      'Clean RTO Documents & Verified Ownership',
+      'Dual Airbags & Anti-Lock Braking System (ABS)',
+      'Touchscreen Infotainment & Power Steering',
+    ],
+    description: params.description || `Inspected & certified ${req.year} ${req.make} ${req.model} (${req.variant || 'Standard'}). Certified by Recars engineering team with 28+ quality checkpoints. Available for hub viewing & test drives in ${city}.`,
+    createdAt: new Date().toISOString(),
+    availabilityStatus: 'Available',
+    manufacturingYear: Number(req.year) || 2022,
+    registrationYear: Number(req.year) || 2022,
+    insuranceStatus: 'Valid',
+    insuranceExpiry: 'Nov 2026',
+    insuranceType: 'Comprehensive',
+    financeAvailable: 'Available',
+    suggestedPriceMin: Math.round(price * 0.95),
+    suggestedPriceMax: Math.round(price * 1.05),
+  };
+
+  // Insert or update in public.cars
+  await dbInsertCar(newCar);
+
+  // Update customer_cars record
+  await pool.query(
+    'UPDATE public.customer_cars SET status = $1, published_car_id = $2, updated_at = now() WHERE id = $3',
+    ['Approved & Published', carId, params.requestId]
+  );
+
+  return { car: newCar, requestId: params.requestId };
+}
+
+export async function dbDelistCustomerCar(requestId: string): Promise<boolean> {
+  const { rows } = await pool.query('SELECT published_car_id FROM public.customer_cars WHERE id = $1 LIMIT 1', [requestId]);
+  if (!rows.length) return false;
+  const carId = rows[0].published_car_id;
+  if (carId) {
+    await dbDeleteCar(carId);
+  }
+  await pool.query(
+    'UPDATE public.customer_cars SET status = $1, updated_at = now() WHERE id = $2',
+    ['Inspection Completed', requestId]
+  );
+  return true;
 }
 
 // ========================================================

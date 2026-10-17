@@ -127,6 +127,16 @@ export default function AdminDashboardPage() {
   const [negotiationStatusFilter, setNegotiationStatusFilter] = useState<string>('All');
   const [negotiationSearch, setNegotiationSearch] = useState<string>('');
 
+  // Customer Car Sell Approval Modal State
+  const [approvingSellReq, setApprovingSellReq] = useState<SellRequest | null>(null);
+  const [approveListingPrice, setApproveListingPrice] = useState<number>(750000);
+  const [approveImage, setApproveImage] = useState<string>('/car-creta-real.jpg');
+  const [approveInspectionScore, setApproveInspectionScore] = useState<number>(96);
+  const [approveCity, setApproveCity] = useState<string>('Warangal');
+  const [approveDescription, setApproveDescription] = useState<string>('');
+  const [approveIsSelect, setApproveIsSelect] = useState<boolean>(true);
+  const [isSubmittingApproval, setIsSubmittingApproval] = useState<boolean>(false);
+
   // Email Notification States
   const [emailNotifs, setEmailNotifs] = useState<Record<string, { status: string; errorMessage?: string; sentAt?: string }>>({});
   const [retryingNotifId, setRetryingNotifId] = useState<string | null>(null);
@@ -792,6 +802,82 @@ export default function AdminDashboardPage() {
       }
     } catch {
       showToast(`Error updating status`);
+    }
+  };
+
+  const openApproveModal = (req: SellRequest) => {
+    setApprovingSellReq(req);
+    const inferredPrice = req.suggestedListingPrice || req.estimatedPriceMax || 750000;
+    setApproveListingPrice(inferredPrice);
+
+    const m = `${req.make} ${req.model}`.toLowerCase();
+    let defaultImg = '/car-creta-hd.jpg';
+    if (m.includes('brezza')) defaultImg = '/car-brezza.jpg';
+    else if (m.includes('seltos')) defaultImg = '/car-seltos.jpg';
+    else if (m.includes('creta') || m.includes('venue')) defaultImg = '/car-creta-real.jpg';
+    else if (m.includes('city') || m.includes('verna')) defaultImg = '/car-city.jpg';
+    else if (m.includes('i20')) defaultImg = '/car-i20.jpg';
+    else if (m.includes('baleno') || m.includes('swift')) defaultImg = '/car-baleno.jpg';
+
+    setApproveImage(defaultImg);
+    setApproveInspectionScore(96);
+    setApproveCity(req.sellerCity || 'Warangal');
+    setApproveDescription(
+      `Single owner ${req.year} ${req.make} ${req.model} (${req.variant || 'Standard'}). Certified and inspected by Recars engineering team with 28+ quality checkpoints. Available for test drive in ${req.sellerCity || 'Warangal'}.`
+    );
+    setApproveIsSelect(true);
+  };
+
+  const handleConfirmApprove = async () => {
+    if (!approvingSellReq) return;
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch('/api/sell/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: approvingSellReq.id,
+          listingPrice: approveListingPrice,
+          image: approveImage,
+          city: approveCity,
+          inspectionScore: approveInspectionScore,
+          isSelect: approveIsSelect,
+          isVerified: true,
+          description: approveDescription,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Approved & published ${approvingSellReq.year} ${approvingSellReq.make} ${approvingSellReq.model} to website!`);
+        setApprovingSellReq(null);
+        await syncAllFromSupabase();
+      } else {
+        alert(data.error || 'Failed to approve vehicle');
+      }
+    } catch (err: any) {
+      alert('Error approving car: ' + err.message);
+    } finally {
+      setIsSubmittingApproval(false);
+    }
+  };
+
+  const handleDelistCar = async (requestId: string) => {
+    if (!confirm('Are you sure you want to remove this car from the public website?')) return;
+    try {
+      const res = await fetch('/api/sell/delist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Car removed from public website.');
+        await syncAllFromSupabase();
+      } else {
+        alert(data.error || 'Failed to delist vehicle');
+      }
+    } catch (err: any) {
+      alert('Error delisting car: ' + err.message);
     }
   };
 
@@ -2555,6 +2641,7 @@ export default function AdminDashboardPage() {
                         <option value="Inspection Completed">Inspection Completed</option>
                         <option value="Offer Accepted">Offer Accepted</option>
                         <option value="Car Purchased">Car Purchased</option>
+                        <option value="Approved & Published">Approved & Published</option>
                       </select>
                     </div>
 
@@ -2585,6 +2672,49 @@ export default function AdminDashboardPage() {
                     <div className="pt-1">
                       {renderEmailBadge(req.id)}
                     </div>
+
+                    {/* Approve & Publish to Website Controls */}
+                    {req.status === 'Approved & Published' || req.publishedCarId ? (
+                      <div className="flex items-center justify-between gap-2 pt-2 pb-1 border-t border-gray-100 flex-wrap">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Live on Public Website</span>
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {req.publishedCarId && (
+                            <a
+                              href={`/cars/${req.publishedCarId}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 transition-colors"
+                            >
+                              <ExternalLink className="w-3 h-3 text-gray-600" />
+                              <span>View</span>
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDelistCar(req.id)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 border border-red-200 transition-colors cursor-pointer"
+                            title="Remove from public website"
+                          >
+                            <EyeOff className="w-3 h-3" />
+                            <span>Delist</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pt-2 pb-1 border-t border-gray-100">
+                        <button
+                          type="button"
+                          onClick={() => openApproveModal(req)}
+                          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#237A52] to-[#1e6b47] hover:from-[#1b5e3f] hover:to-[#175237] text-white text-xs font-bold shadow-sm hover:shadow transition-all cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                          <span>Approve & Publish to Website</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-3 border-t border-[#E5E7EB] flex items-center justify-between gap-2">
@@ -3948,6 +4078,174 @@ export default function AdminDashboardPage() {
                   className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 font-bold text-xs text-white shadow-md cursor-pointer transition-colors"
                 >
                   Send Counteroffer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          APPROVE & PUBLISH TO WEBSITE MODAL (CUSTOMER CAR SELL)
+      ========================================================= */}
+      {approvingSellReq && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-[#E5E7EB] p-6 space-y-4 animate-in fade-in duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-[#101216]">Approve & Publish Vehicle</h3>
+                  <p className="text-[11px] text-gray-500">List customer car live on Recars website marketplace</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setApprovingSellReq(null)}
+                className="p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Car Snapshot */}
+            <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] space-y-1.5 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Vehicle:</span>
+                <span className="font-extrabold text-gray-900 text-sm">
+                  {approvingSellReq.year} {approvingSellReq.make} {approvingSellReq.model}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Variant & Specs:</span>
+                <span className="font-semibold text-gray-800">
+                  {approvingSellReq.variant || 'Standard'} • {approvingSellReq.fuelType} • {approvingSellReq.transmission}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Odometer & Owner:</span>
+                <span className="font-semibold text-gray-800">
+                  {approvingSellReq.kilometers?.toLocaleString('en-IN')} km • {approvingSellReq.ownership}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Seller:</span>
+                <span className="font-medium text-gray-700">
+                  {approvingSellReq.sellerName} ({approvingSellReq.sellerPhone})
+                </span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-gray-200">
+                <span className="text-gray-500">Seller Expected Range:</span>
+                <span className="font-bold text-[#237A52]">
+                  {formatINR(approvingSellReq.estimatedPriceMin)} - {formatINR(approvingSellReq.estimatedPriceMax)}
+                </span>
+              </div>
+            </div>
+
+            {/* Approval Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleConfirmApprove();
+              }}
+              className="space-y-3.5 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-[#101216] mb-1">
+                  Website Listing Price (₹) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  step={5000}
+                  value={approveListingPrice}
+                  onChange={(e) => setApproveListingPrice(Number(e.target.value))}
+                  className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-black text-sm text-[#E5325C] focus:outline-none focus:border-[#E5325C]"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">This will be the public selling price shown on the website.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">
+                    Inspection Score (out of 100)
+                  </label>
+                  <input
+                    type="number"
+                    min={70}
+                    max={100}
+                    value={approveInspectionScore}
+                    onChange={(e) => setApproveInspectionScore(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-bold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">
+                    City / Hub Location
+                  </label>
+                  <input
+                    type="text"
+                    value={approveCity}
+                    onChange={(e) => setApproveCity(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-medium text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#101216] mb-1">
+                  Primary Vehicle Photo URL
+                </label>
+                <input
+                  type="text"
+                  value={approveImage}
+                  onChange={(e) => setApproveImage(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-mono text-[11px] text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#101216] mb-1">
+                  Listing Description & Highlights
+                </label>
+                <textarea
+                  rows={2}
+                  value={approveDescription}
+                  onChange={(e) => setApproveDescription(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-medium text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="approveSelectCheck"
+                  checked={approveIsSelect}
+                  onChange={(e) => setApproveIsSelect(e.target.checked)}
+                  className="rounded text-[#E5325C] focus:ring-[#E5325C]"
+                />
+                <label htmlFor="approveSelectCheck" className="font-semibold text-gray-700 cursor-pointer">
+                  Mark as &ldquo;Recars Select&rdquo; Featured Vehicle
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3 pt-3 border-t border-[#E5E7EB]">
+                <button
+                  type="button"
+                  onClick={() => setApprovingSellReq(null)}
+                  disabled={isSubmittingApproval}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 font-bold text-xs text-gray-700 hover:bg-gray-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingApproval}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#237A52] to-[#1e6b47] hover:from-[#1b5e3f] hover:to-[#175237] font-bold text-xs text-white shadow-md cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                  <span>{isSubmittingApproval ? 'Publishing...' : 'Approve & Publish Live'}</span>
                 </button>
               </div>
             </form>
