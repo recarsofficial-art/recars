@@ -756,7 +756,7 @@ function HomePageContent() {
                   Doorstep Inspection Booking
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  Tell us about your car and book a physical evaluation at your home or office with transparent inspection service fee (₹999 / Complete Report ₹1,199).
+                  Tell us about your car and book a physical evaluation at your home or office with transparent inspection service fee (₹999).
                 </p>
                 <div className="mt-5">
                   <Link href="/sell" className="text-xs font-bold text-[#E5325C] hover:underline inline-flex items-center gap-1">

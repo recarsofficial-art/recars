@@ -267,17 +267,17 @@ export default function RecarsHomeHub({
         {/* ========================================================
             4. THE 2 PRIMARY SERVICE CARDS: BUY A CAR & SELL YOUR CAR (COMPACT SIZE)
         ========================================================= */}
-        <div className="max-w-md sm:max-w-lg lg:max-w-2xl mx-auto grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+        <div className="max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto grid grid-cols-2 gap-3 sm:gap-4.5 mb-5">
           {/* CARD 1: BUY A CAR -> OPENS /buy */}
           <Link
             href="/buy"
-            className="group relative block rounded-xl sm:rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer"
+            className="group relative block rounded-xl sm:rounded-2xl overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer"
             aria-label="Buy a Car"
           >
             <img
               src="/images/card-buy-car.png"
               alt="Buy a Car — Recars"
-              className="w-full h-auto max-h-[125px] sm:max-h-[155px] lg:max-h-[175px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
+              className="w-full h-auto max-h-[160px] sm:max-h-[210px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
               loading="eager"
             />
           </Link>
@@ -285,13 +285,13 @@ export default function RecarsHomeHub({
           {/* CARD 2: SELL YOUR CAR -> OPENS /sell */}
           <Link
             href="/sell"
-            className="group relative block rounded-xl sm:rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer"
+            className="group relative block rounded-xl sm:rounded-2xl overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer"
             aria-label="Sell Your Car"
           >
             <img
               src="/images/card-sell-car.png"
               alt="Sell Your Car — Recars"
-              className="w-full h-auto max-h-[125px] sm:max-h-[155px] lg:max-h-[175px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
+              className="w-full h-auto max-h-[160px] sm:max-h-[210px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
               loading="eager"
             />
           </Link>
@@ -300,26 +300,26 @@ export default function RecarsHomeHub({
         {/* ========================================================
             5. NEW CAR PRE-DELIVERY INSPECTION (PDI) QUICK CALLOUT
         ========================================================= */}
-        <div className="max-w-md sm:max-w-lg lg:max-w-2xl mx-auto">
+        <div className="max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto">
           <Link
             href="/pdi"
-            className="flex items-center justify-between gap-3 p-2.5 sm:p-3.5 rounded-2xl bg-white border border-[#E5325C]/30 hover:border-[#E5325C] shadow-xs hover:shadow-md transition-all group cursor-pointer"
+            className="flex items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl bg-white border border-[#E5325C]/30 hover:border-[#E5325C] shadow-xs hover:shadow-md transition-all group cursor-pointer"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="w-10 h-10 rounded-xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-black text-xs sm:text-sm text-[#101216] group-hover:text-[#E5325C] transition-colors">
-                    Pre-Delivery & Car Inspection (PDI)
+                    New Car Pre-Delivery Inspection (PDI)
                   </span>
                   <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-[#E5325C] text-white">
-                    Showroom & Doorstep
+                    Showroom Check
                   </span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-[#6B7078] line-clamp-1">
-                  Book certified representative inspection: Old Car (₹1,199) • New Car (₹2,499)
+                  Book a certified representative to inspect your new car at the dealership before delivery
                 </p>
               </div>
             </div>
