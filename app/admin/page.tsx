@@ -43,6 +43,7 @@ import {
   Banknote,
   Send,
   SlidersHorizontal,
+  Camera,
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
@@ -811,13 +812,15 @@ export default function AdminDashboardPage() {
     setApproveListingPrice(inferredPrice);
 
     const m = `${req.make} ${req.model}`.toLowerCase();
-    let defaultImg = '/car-creta-hd.jpg';
-    if (m.includes('brezza')) defaultImg = '/car-brezza.jpg';
-    else if (m.includes('seltos')) defaultImg = '/car-seltos.jpg';
-    else if (m.includes('creta') || m.includes('venue')) defaultImg = '/car-creta-real.jpg';
-    else if (m.includes('city') || m.includes('verna')) defaultImg = '/car-city.jpg';
-    else if (m.includes('i20')) defaultImg = '/car-i20.jpg';
-    else if (m.includes('baleno') || m.includes('swift')) defaultImg = '/car-baleno.jpg';
+    let defaultImg = req.photos && req.photos.length > 0 ? req.photos[0] : '/car-creta-hd.jpg';
+    if (!req.photos || req.photos.length === 0) {
+      if (m.includes('brezza')) defaultImg = '/car-brezza.jpg';
+      else if (m.includes('seltos')) defaultImg = '/car-seltos.jpg';
+      else if (m.includes('creta') || m.includes('venue')) defaultImg = '/car-creta-real.jpg';
+      else if (m.includes('city') || m.includes('verna')) defaultImg = '/car-city.jpg';
+      else if (m.includes('i20')) defaultImg = '/car-i20.jpg';
+      else if (m.includes('baleno') || m.includes('swift')) defaultImg = '/car-baleno.jpg';
+    }
 
     setApproveImage(defaultImg);
     setApproveInspectionScore(96);
@@ -839,6 +842,7 @@ export default function AdminDashboardPage() {
           requestId: approvingSellReq.id,
           listingPrice: approveListingPrice,
           image: approveImage,
+          galleryImages: approvingSellReq.photos && approvingSellReq.photos.length > 0 ? approvingSellReq.photos : [approveImage],
           city: approveCity,
           inspectionScore: approveInspectionScore,
           isSelect: approveIsSelect,
@@ -2668,6 +2672,36 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
 
+                    {/* Customer Uploaded Photos Gallery */}
+                    {req.photos && req.photos.length > 0 && (
+                      <div className="p-2.5 rounded-2xl bg-gray-50 border border-gray-200 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold text-gray-800 flex items-center gap-1">
+                            <Camera className="w-3.5 h-3.5 text-[#E5325C]" />
+                            <span>Customer Photos ({req.photos.length})</span>
+                          </span>
+                          <span className="text-[10px] text-gray-500 font-medium">Click to inspect</span>
+                        </div>
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5">
+                          {req.photos.map((photoUrl, pIdx) => (
+                            <a
+                              key={pIdx}
+                              href={photoUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="relative flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-gray-300 hover:border-[#E5325C] transition-colors shadow-2xs group"
+                              title={`View Customer Photo #${pIdx + 1}`}
+                            >
+                              <img src={photoUrl} alt={`Customer car photo ${pIdx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                              <span className="absolute bottom-0 right-0 bg-black/60 text-white text-[8px] font-mono px-1 rounded-tl">
+                                #{pIdx + 1}
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Email Notification Status */}
                     <div className="pt-1">
                       {renderEmailBadge(req.id)}
@@ -4203,6 +4237,32 @@ export default function AdminDashboardPage() {
                   onChange={(e) => setApproveImage(e.target.value)}
                   className="w-full px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-mono text-[11px] text-gray-800 focus:outline-none focus:border-[#E5325C]"
                 />
+                {approvingSellReq.photos && approvingSellReq.photos.length > 0 && (
+                  <div className="pt-2">
+                    <span className="text-[10px] font-bold text-gray-600 block mb-1">
+                      Or click to set primary photo from customer uploads ({approvingSellReq.photos.length}):
+                    </span>
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                      {approvingSellReq.photos.map((p, pIdx) => (
+                        <button
+                          key={pIdx}
+                          type="button"
+                          onClick={() => setApproveImage(p)}
+                          className={`relative flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                            approveImage === p ? 'border-[#E5325C] ring-2 ring-[#E5325C]/20 scale-105' : 'border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          <img src={p} alt={`Customer photo ${pIdx + 1}`} className="w-full h-full object-cover" />
+                          {approveImage === p && (
+                            <span className="absolute top-1 right-1 bg-[#E5325C] text-white rounded-full p-0.5">
+                              <Check className="w-2.5 h-2.5 stroke-[3]" />
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

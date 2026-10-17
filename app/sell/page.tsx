@@ -18,6 +18,9 @@ import {
   Clock,
   AlertCircle,
   FileText,
+  Camera,
+  X,
+  Image as ImageIcon,
 } from 'lucide-react';
 import SimpleHeader from '@/components/SimpleHeader';
 import SpinnyHero from '@/components/SpinnyHero';
@@ -62,8 +65,57 @@ function SellWorkflowContent() {
   const [ownership, setOwnership] = useState<OwnershipType>('1st Owner');
   const [accidentHistory, setAccidentHistory] = useState<'None' | 'Minor Dent/Scratch' | 'Major Repaired'>('None');
   const [serviceHistory, setServiceHistory] = useState('Authorized Dealership Records');
-  const [insuranceStatus, setInsuranceStatus] = useState('Comprehensive Valid');
-  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>(['front_view.jpg', 'odometer.jpg']);
+  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  const handlePhotoFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploadingPhoto(true);
+    const newPhotos: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (data.success && data.url) {
+          newPhotos.push(data.url);
+        } else {
+          const base64: string = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+          newPhotos.push(base64);
+        }
+      } catch {
+        const base64: string = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        newPhotos.push(base64);
+      }
+    }
+
+    if (newPhotos.length > 0) {
+      setUploadedPhotos((prev) => [...prev, ...newPhotos]);
+    }
+    setIsUploadingPhoto(false);
+  };
+
+  const handleRemovePhoto = (indexToRemove: number) => {
+    setUploadedPhotos((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
 
   const { user } = useAuth();
 
@@ -162,6 +214,7 @@ function SellWorkflowContent() {
       suggestedListingPrice: priceRange.mid,
       inspectionFee: inspectionFee,
       inspectionFeeStatus: 'Pay at Doorstep',
+      photos: uploadedPhotos,
       status: 'Inspection Scheduled',
       createdAt: new Date().toISOString(),
     };
@@ -441,6 +494,81 @@ function SellWorkflowContent() {
                     <option value="Partial Records">Partial / Incomplete Records</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Car Photos Upload Section */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="block text-xs font-bold text-[#101216]">
+                      Vehicle Photos (Upload Front, Back, Sides & Interior)
+                    </label>
+                    <p className="text-[11px] text-[#6B7078] mt-0.5">
+                      Adding clear photos helps our evaluation team give you the highest instant valuation.
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold text-[#E5325C] bg-[#FFF0F3] px-2.5 py-1 rounded-full border border-[#FFD6DF]">
+                    {uploadedPhotos.length} Photo{uploadedPhotos.length === 1 ? '' : 's'} Added
+                  </span>
+                </div>
+
+                {/* Upload Trigger Area */}
+                <div className="relative border-2 border-dashed border-[#E5E7EB] hover:border-[#E5325C] rounded-2xl p-5 text-center transition-colors bg-[#F8F9FA] group">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handlePhotoFilesSelected}
+                    disabled={isUploadingPhoto}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <div className="w-10 h-10 rounded-2xl bg-white shadow-xs border border-gray-200 flex items-center justify-center text-[#E5325C] group-hover:scale-105 transition-transform">
+                      {isUploadingPhoto ? (
+                        <div className="w-5 h-5 border-2 border-[#E5325C]/20 border-t-[#E5325C] rounded-full animate-spin" />
+                      ) : (
+                        <Camera className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#101216]">
+                        {isUploadingPhoto ? 'Uploading car photos...' : 'Click or tap to upload car photos'}
+                      </p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">
+                        Take mobile photos or select from gallery (JPG, PNG, WEBP)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Photo Previews Gallery */}
+                {uploadedPhotos.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5 pt-1">
+                    {uploadedPhotos.map((photoUrl, idx) => (
+                      <div
+                        key={idx}
+                        className="relative group rounded-xl overflow-hidden border border-gray-200 aspect-square bg-gray-100 shadow-2xs"
+                      >
+                        <img
+                          src={photoUrl}
+                          alt={`Car photo ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(idx)}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-red-600 text-white flex items-center justify-center text-xs transition-colors z-20 cursor-pointer shadow-sm"
+                          title="Remove photo"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] font-mono px-1 rounded">
+                          #{idx + 1}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Suggested Listing Price Guidance */}

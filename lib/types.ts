@@ -98,6 +98,7 @@ export interface SellRequest {
   inspectionFeeStatus?: 'Pending' | 'Pay at Doorstep' | 'Paid' | 'Waived' | string;
   suggestedListingPrice?: number;
   publishedCarId?: string;
+  photos?: string[];
   status: 'Pending' | 'Inspection Scheduled' | 'Inspection Completed' | 'Offer Accepted' | 'Car Purchased' | 'Approved & Published' | 'Rejected' | string;
   createdAt: string;
 }

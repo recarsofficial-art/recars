@@ -470,6 +470,7 @@ export async function dbGetCustomerCars(): Promise<SellRequest[]> {
     estimatedPriceMin: Number(r.estimated_price_min) || 0,
     estimatedPriceMax: Number(r.estimated_price_max) || 0,
     publishedCarId: r.published_car_id || undefined,
+    photos: Array.isArray(r.photos) ? r.photos : (typeof r.photos === 'string' ? JSON.parse(r.photos || '[]') : []),
     status: r.status,
     createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
   }));
@@ -500,12 +501,13 @@ export async function dbInsertCustomerCar(req: SellRequest): Promise<void> {
       id, customer_id, registration_number, make, model, variant, year,
       fuel_type, transmission, kilometers, ownership, accident_history,
       seller_name, seller_phone, seller_city, preferred_inspection_date,
-      preferred_inspection_time, estimated_price_min, estimated_price_max, status
+      preferred_inspection_time, estimated_price_min, estimated_price_max, status, photos
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
     )
     ON CONFLICT (id) DO UPDATE SET
       status = EXCLUDED.status,
+      photos = EXCLUDED.photos,
       updated_at = now();
   `;
   await pool.query(sql, [
@@ -529,6 +531,7 @@ export async function dbInsertCustomerCar(req: SellRequest): Promise<void> {
     req.estimatedPriceMin || 0,
     req.estimatedPriceMax || 0,
     req.status || 'Inspection Scheduled',
+    JSON.stringify(req.photos || []),
   ]);
 
   // Cross-index into car_inquiries so it immediately shows up in BOTH Car Inquiries and Sell Requests workspaces
@@ -616,10 +619,16 @@ export async function dbApproveAndPublishCustomerCar(params: {
 
   const carId = req.published_car_id || `recars-sell-${Date.now()}`;
   const inferred = inferCarDetails(req.make || '', req.model || '');
+  const customerPhotos: string[] = Array.isArray(req.photos)
+    ? req.photos
+    : (typeof req.photos === 'string' ? JSON.parse(req.photos || '[]') : []);
+
   const price = Number(params.listingPrice) || Number(req.suggested_listing_price) || Number(req.estimated_price_max) || 750000;
   const city = params.city || req.seller_city || 'Warangal';
-  const mainImage = params.image || inferred.defaultImage;
-  const gallery = params.galleryImages && params.galleryImages.length > 0 ? params.galleryImages : [mainImage];
+  const mainImage = params.image || (customerPhotos.length > 0 ? customerPhotos[0] : inferred.defaultImage);
+  const gallery = params.galleryImages && params.galleryImages.length > 0
+    ? params.galleryImages
+    : (customerPhotos.length > 0 ? customerPhotos : [mainImage]);
 
   const newCar: Car = {
     id: carId,
