@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Ensure Googlebot, Googlebot-Image and Bingbot have access to all brand icons
+Allow: /favicon.ico
+Allow: /favicon-*.png
+Allow: /icon.png
+Allow: /apple-touch-icon.png
+Allow: /site.webmanifest
+
+Sitemap: https://www.recars.in/sitemap.xml
