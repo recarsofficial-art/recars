@@ -95,7 +95,7 @@ export interface SellRequest {
   estimatedPriceMin: number;
   estimatedPriceMax: number;
   inspectionFee?: number;
-  inspectionFeeStatus?: 'Pending' | 'Pay at Doorstep' | 'Paid' | 'Waived';
+  inspectionFeeStatus?: 'Pending' | 'Pay at Doorstep' | 'Paid' | 'Waived' | string;
   suggestedListingPrice?: number;
   status: 'Pending' | 'Inspection Scheduled' | 'Inspection Completed' | 'Offer Accepted' | 'Car Purchased' | 'Rejected' | string;
   createdAt: string;
@@ -148,9 +148,38 @@ export interface CarInquiry {
   userPhone: string;
   userEmail: string;
   city: string;
-  inquiryType: 'Interested in Vehicle' | 'Price Quote / Best Offer' | 'Inspection Report Request' | 'Home Delivery Inquiry' | 'Loan & Financing' | 'General Query' | 'Sell / Doorstep Inspection Request';
+  inquiryType: 'Interested in Vehicle' | 'Price Quote / Best Offer' | 'Inspection Report Request' | 'Home Delivery Inquiry' | 'Loan & Financing' | 'General Query' | 'Sell / Doorstep Inspection Request' | 'Pre-Delivery Inspection (PDI)';
   message: string;
-  status: 'New' | 'In Progress' | 'Contacted' | 'Closed';
+  status: 'New' | 'In Progress' | 'Contacted' | 'Closed' | 'Representative Dispatched' | 'Inspection Completed' | string;
+  createdAt: string;
+}
+
+export interface PDIBooking {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string;
+  city: string;
+  dealershipName: string;
+  dealershipAddress: string;
+  carMake: string;
+  carModel: string;
+  carVariant?: string;
+  fuelType?: FuelType | string;
+  transmission?: TransmissionType | string;
+  vinOrChassis?: string;
+  preferredDate: string;
+  preferredTimeSlot: string;
+  specialInstructions?: string;
+  packageType: 'Standard PDI' | 'Comprehensive PDI + Diagnostic Scan' | 'Complete PDI Report' | string;
+  fee: number;
+  paymentStatus: 'Pay on Inspection' | 'Paid Online';
+  status: 'Booked' | 'Representative Assigned' | 'Representative Dispatched' | 'Inspection Completed' | 'Report Delivered' | 'Cancelled' | string;
+  assignedRepresentative?: {
+    name: string;
+    phone: string;
+    badgeId: string;
+  };
   createdAt: string;
 }
 
@@ -184,7 +213,10 @@ export interface Negotiation {
 
 export interface InspectionConfig {
   sellerInspectionFee: number;
+  sellerReportFee?: number;
   buyerInspectionFee: number;
+  pdiInspectionFee?: number;
+  pdiReportFee?: number;
   freeInspectionActive: boolean;
 }
 

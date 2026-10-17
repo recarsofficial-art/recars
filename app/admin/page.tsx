@@ -48,7 +48,7 @@ import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
 import { useRecarsState } from '@/lib/store';
 import { formatINR, formatKM } from '@/lib/formatters';
-import { Car as CarType, CarInquiry, SellRequest, TestDriveBooking, Negotiation, InspectionConfig, VehicleAvailability } from '@/lib/types';
+import { Car as CarType, CarInquiry, SellRequest, TestDriveBooking, Negotiation, InspectionConfig, VehicleAvailability, PDIBooking } from '@/lib/types';
 import { MAKES, CITIES } from '@/lib/data';
 
 const AVAILABLE_IMAGES = [
@@ -70,13 +70,14 @@ export default function AdminDashboardPage() {
     sellRequests: storeSellRequests,
     testDrives: storeTestDrives,
     inquiries: storeInquiries,
+    pdiBookings: storePDIBookings,
     addCarListing,
     removeCarListing,
     removeInquiry,
     updateInquiryStatus,
   } = useRecarsState();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'negotiations' | 'inquiries' | 'leads' | 'testdrives' | 'customers' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'pdi' | 'negotiations' | 'inquiries' | 'leads' | 'testdrives' | 'customers' | 'settings'>('overview');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -100,13 +101,21 @@ export default function AdminDashboardPage() {
   const [liveCustomers, setLiveCustomers] = useState<any[]>([]);
   const [liveTestDrives, setLiveTestDrives] = useState<TestDriveBooking[]>([]);
   const [liveNegotiations, setLiveNegotiations] = useState<Negotiation[]>([]);
+  const [livePDIBookings, setLivePDIBookings] = useState<PDIBooking[]>([]);
   const [inspectionConfig, setInspectionConfig] = useState<InspectionConfig>({
-    sellerInspectionFee: 499,
+    sellerInspectionFee: 999,
+    sellerReportFee: 1199,
     buyerInspectionFee: 999,
+    pdiInspectionFee: 2500,
+    pdiReportFee: 2499,
     freeInspectionActive: false,
   });
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
+
+  // PDI Filters state
+  const [pdiStatusFilter, setPdiStatusFilter] = useState<string>('All');
+  const [pdiSearch, setPdiSearch] = useState<string>('');
 
   // Counter Offer Modal state
   const [isCounterModalOpen, setIsCounterModalOpen] = useState(false);
@@ -121,7 +130,7 @@ export default function AdminDashboardPage() {
   const syncAllFromSupabase = async () => {
     setIsSyncing(true);
     try {
-      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes] = await Promise.all([
+      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes] = await Promise.all([
         fetch('/api/cars').then((r) => r.json()).catch(() => null),
         fetch('/api/sell').then((r) => r.json()).catch(() => null),
         fetch('/api/inquiries').then((r) => r.json()).catch(() => null),
@@ -129,6 +138,7 @@ export default function AdminDashboardPage() {
         fetch('/api/test-drive').then((r) => r.json()).catch(() => null),
         fetch('/api/negotiations').then((r) => r.json()).catch(() => null),
         fetch('/api/settings').then((r) => r.json()).catch(() => null),
+        fetch('/api/pdi').then((r) => r.json()).catch(() => null),
       ]);
 
       if (carsRes?.cars) setLiveCars(carsRes.cars);
@@ -138,6 +148,7 @@ export default function AdminDashboardPage() {
       if (tdRes?.testDrives) setLiveTestDrives(tdRes.testDrives);
       if (negRes?.negotiations) setLiveNegotiations(negRes.negotiations);
       if (setRes?.config) setInspectionConfig(setRes.config);
+      if (pdiRes?.bookings) setLivePDIBookings(pdiRes.bookings);
       setLastSyncTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (e) {
       console.error('Error syncing admin with Supabase:', e);
@@ -335,6 +346,31 @@ export default function AdminDashboardPage() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const pdiList = livePDIBookings.length > 0 ? livePDIBookings : storePDIBookings;
+
+  const handleUpdatePDIStatus = async (
+    bookingId: string,
+    newStatus: string,
+    repDetails?: { name: string; phone: string; badgeId: string }
+  ) => {
+    try {
+      const res = await fetch('/api/pdi', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: bookingId, status: newStatus, assignedRepresentative: repDetails }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`PDI booking ${bookingId} updated to "${newStatus}"!`);
+        await syncAllFromSupabase();
+      } else {
+        showToast(data.error || 'Failed to update PDI status.');
+      }
+    } catch {
+      showToast('Error updating PDI booking.');
+    }
   };
 
   const handleUpdateCarAvailability = async (carId: string, availabilityStatus: string) => {
@@ -974,6 +1010,41 @@ export default function AdminDashboardPage() {
                 </span>
               </button>
 
+              {/* Dedicated Section: Pre-Delivery Inspection (PDI) */}
+              <button
+                onClick={() => {
+                  setActiveTab('pdi');
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left cursor-pointer ${
+                  activeTab === 'pdi'
+                    ? 'bg-[#FFF0F3] text-[#E5325C] shadow-xs ring-1 ring-[#FFD6DF]'
+                    : 'text-gray-700 hover:text-black hover:bg-gray-100/70'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                    activeTab === 'pdi' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="block">PDI Bookings</span>
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-[#E5325C] text-white">New</span>
+                    </div>
+                    <span className="text-[10px] font-normal text-gray-400 block">Showroom inspections</span>
+                  </div>
+                </div>
+                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                  pdiList.some((p) => p.status === 'Booked')
+                    ? 'bg-[#E5325C] text-white animate-pulse'
+                    : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {pdiList.length}
+                </span>
+              </button>
+
               {/* Dedicated Section: Negotiations */}
               <button
                 onClick={() => {
@@ -1250,6 +1321,7 @@ export default function AdminDashboardPage() {
                 <h2 className="text-base font-extrabold text-[#101216]">
                   {activeTab === 'overview' && 'Dashboard Overview (All Dedicated Sections)'}
                   {activeTab === 'cars' && 'Vehicle Inventory Workspace'}
+                  {activeTab === 'pdi' && 'Pre-Delivery Inspection (PDI) Workspace'}
                   {activeTab === 'negotiations' && 'Customer Price Negotiations Workspace'}
                   {activeTab === 'inquiries' && 'Customer Car Inquiries Workspace'}
                   {activeTab === 'leads' && 'Customer Sell Requests Workspace'}
@@ -1373,6 +1445,24 @@ export default function AdminDashboardPage() {
             </div>
             <div className="text-3xl font-black text-[#101216]">{customers.length}</div>
             <p className="text-[11px] text-[#237A52] font-semibold mt-1">Supabase synchronized →</p>
+          </div>
+
+          <div
+            onClick={() => setActiveTab('pdi')}
+            className={`bg-white rounded-2xl border p-5 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
+              activeTab === 'pdi' ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]' : 'border-[#E5E7EB]'
+            }`}
+          >
+            <div className="flex items-center justify-between text-gray-500 mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider">PDI Bookings</span>
+              <div className="w-8 h-8 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-3xl font-black text-[#101216]">{pdiList.length}</div>
+            <p className="text-[11px] text-[#E5325C] font-semibold mt-1">
+              {pdiList.filter((p) => p.status === 'Booked' || p.status === 'Representative Assigned').length} showroom visits pending →
+            </p>
           </div>
 
           <div
@@ -1747,6 +1837,227 @@ export default function AdminDashboardPage() {
                 )}
               </div>
             </section>
+          </div>
+        )}
+
+        {/* ========================================================
+            TAB: PRE-DELIVERY INSPECTION (PDI) WORKSPACE
+        ========================================================= */}
+        {activeTab === 'pdi' && (
+          <div className="space-y-4">
+            {/* Header & Filter Bar */}
+            <div className="bg-white rounded-3xl border border-[#E5E7EB] p-5 shadow-2xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E5E7EB]">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full bg-[#FFF0F3] text-[#E5325C] text-[10px] font-extrabold uppercase tracking-wider border border-[#FFD6DF]">
+                      Showroom Inspection Service
+                    </span>
+                    <span className="text-xs font-bold text-gray-400">• Representative Dispatch</span>
+                  </div>
+                  <h3 className="font-extrabold text-xl text-[#101216] mt-0.5">
+                    Pre-Delivery Inspection (PDI) Bookings ({pdiList.length})
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Link
+                    href="/pdi"
+                    target="_blank"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFF0F3] text-[#E5325C] text-xs font-bold border border-[#FFD6DF] hover:bg-[#FFE0E6] transition-colors"
+                  >
+                    <span>Customer PDI Page</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className="text-xs font-bold text-[#E5325C] hover:underline self-start sm:self-center"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="relative w-full sm:w-80">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search customer, phone, car, showroom, VIN..."
+                    value={pdiSearch}
+                    onChange={(e) => setPdiSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+                  {['All', 'Booked', 'Representative Assigned', 'Representative Dispatched', 'Inspection Completed', 'Cancelled'].map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => setPdiStatusFilter(st)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        pdiStatusFilter === st
+                          ? 'bg-[#E5325C] text-white shadow-2xs'
+                          : 'bg-[#F8F9FA] text-gray-600 hover:text-black border border-[#E5E7EB]'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* PDI Bookings Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pdiList
+                .filter((p) => {
+                  const matchStatus = pdiStatusFilter === 'All' || p.status === pdiStatusFilter;
+                  const query = pdiSearch.toLowerCase().trim();
+                  const matchSearch =
+                    !query ||
+                    p.customerName.toLowerCase().includes(query) ||
+                    p.customerPhone.includes(query) ||
+                    p.carMake.toLowerCase().includes(query) ||
+                    p.carModel.toLowerCase().includes(query) ||
+                    p.dealershipName.toLowerCase().includes(query) ||
+                    p.city.toLowerCase().includes(query) ||
+                    p.id.toLowerCase().includes(query);
+                  return matchStatus && matchSearch;
+                })
+                .map((p) => (
+                  <div
+                    key={p.id}
+                    className="bg-white rounded-3xl border border-[#E5E7EB] p-5 shadow-2xs hover:border-[#E5325C]/40 hover:shadow-xs transition-all space-y-4 flex flex-col justify-between"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
+                        <span className="font-mono text-[11px] font-black text-[#101216]">
+                          {p.id}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          p.status === 'Inspection Completed'
+                            ? 'bg-[#F0F9F4] text-[#237A52] border border-[#D1EAD9]'
+                            : p.status === 'Representative Dispatched'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : p.status === 'Representative Assigned'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-[#FFF0F3] text-[#E5325C] border border-[#FFD6DF]'
+                        }`}>
+                          {p.status}
+                        </span>
+                      </div>
+
+                      {/* Customer Info */}
+                      <div>
+                        <h4 className="font-black text-sm text-[#101216]">{p.customerName}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <a
+                            href={`tel:${p.customerPhone}`}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#E5325C] hover:underline"
+                          >
+                            <Phone className="w-3 h-3" />
+                            <span>{p.customerPhone}</span>
+                          </a>
+                          <span className="text-gray-300">•</span>
+                          <a
+                            href={`https://wa.me/${p.customerPhone.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(p.customerName)}%2C%20regarding%20your%20Recars%20Pre-Delivery%20Inspection%20booking%20(${p.id}).`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] font-bold text-emerald-600 hover:underline"
+                          >
+                            WhatsApp
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* New Car Info */}
+                      <div className="p-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400 font-medium">New Car</span>
+                          <span className="font-black text-[#101216]">
+                            {p.carMake} {p.carModel}
+                          </span>
+                        </div>
+                        {p.carVariant && (
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-gray-400">Variant</span>
+                            <span className="font-semibold text-gray-700">{p.carVariant}</span>
+                          </div>
+                        )}
+                        {p.vinOrChassis && (
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-gray-400">Chassis / VIN</span>
+                            <span className="font-mono font-bold text-gray-700">{p.vinOrChassis}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-gray-400">Showroom</span>
+                          <span className="font-semibold text-gray-800 text-right truncate max-w-[160px]">
+                            {p.dealershipName}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-gray-400">Schedule</span>
+                          <span className="font-bold text-[#101216]">{p.preferredDate}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-gray-400">Slot</span>
+                          <span className="text-gray-600">{p.preferredTimeSlot}</span>
+                        </div>
+                      </div>
+
+                      {/* Representative Info */}
+                      <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 text-[11px]">
+                        <span className="text-gray-400 block text-[10px] font-bold uppercase tracking-wider">
+                          Inspection Representative
+                        </span>
+                        <div className="font-bold text-[#101216] mt-0.5">
+                          {p.assignedRepresentative?.name || 'K. Rajesh Kumar (Senior Automobile Engineer)'}
+                        </div>
+                        <div className="text-gray-500 text-[10px]">
+                          Badge: {p.assignedRepresentative?.badgeId || 'REC-ENG-042'} • Phone: {p.assignedRepresentative?.phone || '+91 99087 96677'}
+                        </div>
+                      </div>
+
+                      {p.specialInstructions && (
+                        <div className="text-[11px] text-gray-500 bg-amber-50/50 p-2 rounded-xl border border-amber-100">
+                          <strong>Note:</strong> {p.specialInstructions}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-2 border-t border-[#E5E7EB] space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-400">Fee: <strong className="text-[#101216]">₹{p.fee}</strong></span>
+                        <span className="text-[10px] font-semibold text-gray-500">{p.paymentStatus}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <button
+                          onClick={() => handleUpdatePDIStatus(p.id, 'Representative Dispatched')}
+                          className="py-1.5 px-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-[11px] transition-colors"
+                        >
+                          Dispatch Rep
+                        </button>
+                        <button
+                          onClick={() => handleUpdatePDIStatus(p.id, 'Inspection Completed')}
+                          className="py-1.5 px-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-[11px] transition-colors"
+                        >
+                          Pass / Report Done
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              {pdiList.length === 0 && (
+                <div className="col-span-3 text-center py-12 bg-white rounded-3xl border border-[#E5E7EB] space-y-2">
+                  <ShieldCheck className="w-8 h-8 text-gray-300 mx-auto" />
+                  <p className="text-sm font-bold text-gray-600">No Pre-Delivery Inspection bookings yet.</p>
+                  <p className="text-xs text-gray-400">When customers book at /pdi, they will appear here in real time.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -2755,6 +3066,72 @@ export default function AdminDashboardPage() {
                   />
                   <p className="text-[10px] text-gray-400 mt-1">
                     Charged when buyer requests third-party diagnostic verification.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">
+                    Pre-Owned Complete Report Fee (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={100}
+                    value={inspectionConfig.sellerReportFee ?? 1199}
+                    onChange={(e) =>
+                      setInspectionConfig((prev) => ({
+                        ...prev,
+                        sellerReportFee: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Charged when seller requests complete technical certified report.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">
+                    New Car PDI Standard Fee (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={100}
+                    value={inspectionConfig.pdiInspectionFee ?? 2500}
+                    onChange={(e) =>
+                      setInspectionConfig((prev) => ({
+                        ...prev,
+                        pdiInspectionFee: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Standard fee for certified representative showroom PDI check.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#101216] mb-1">
+                    New Car PDI Complete Report Fee (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={100}
+                    value={inspectionConfig.pdiReportFee ?? 2499}
+                    onChange={(e) =>
+                      setInspectionConfig((prev) => ({
+                        ...prev,
+                        pdiReportFee: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Fee for complete PDI technical report + computerized OBD scan.
                   </p>
                 </div>
               </div>

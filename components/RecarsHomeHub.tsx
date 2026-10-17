@@ -11,6 +11,7 @@ import {
   Car,
   Tag,
   CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react';
 import { CITIES } from '@/lib/data';
 import CarSearchModal from './CarSearchModal';
@@ -207,6 +208,40 @@ export default function RecarsHomeHub({
               className="w-full h-auto max-h-[160px] sm:max-h-[210px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
               loading="eager"
             />
+          </Link>
+        </div>
+
+        {/* ========================================================
+            5. NEW CAR PRE-DELIVERY INSPECTION (PDI) QUICK CALLOUT
+        ========================================================= */}
+        <div className="max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto">
+          <Link
+            href="/pdi"
+            className="flex items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl bg-white border border-[#E5325C]/30 hover:border-[#E5325C] shadow-xs hover:shadow-md transition-all group cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-xs sm:text-sm text-[#101216] group-hover:text-[#E5325C] transition-colors">
+                    New Car Pre-Delivery Inspection (PDI)
+                  </span>
+                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-[#E5325C] text-white">
+                    Showroom Check
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-[#6B7078] line-clamp-1">
+                  Book a certified representative to inspect your new car at the dealership before delivery
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 text-xs font-bold text-[#E5325C] shrink-0">
+              <span className="hidden sm:inline">Book Service</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
           </Link>
         </div>
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Car, SellRequest, TestDriveBooking, CarInquiry } from './types';
+import { Car, SellRequest, TestDriveBooking, CarInquiry, PDIBooking } from './types';
 import { INITIAL_CARS } from './data';
 
 const STORAGE_KEYS = {
@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   CUSTOM_CARS: 'recars_custom_cars',
   DELETED_CARS: 'recars_deleted_car_ids',
   INQUIRIES: 'recars_car_inquiries',
+  PDI_BOOKINGS: 'recars_pdi_bookings',
 };
 
 const INITIAL_INQUIRIES: CarInquiry[] = [];
@@ -34,6 +35,7 @@ export function useRecarsState() {
   const [sellRequests, setSellRequests] = useState<SellRequest[]>([]);
   const [testDrives, setTestDrives] = useState<TestDriveBooking[]>([]);
   const [inquiries, setInquiries] = useState<CarInquiry[]>(INITIAL_INQUIRIES);
+  const [pdiBookings, setPdiBookings] = useState<PDIBooking[]>([]);
 
   // Load from localStorage on client mount to prevent SSR hydration mismatch
   useEffect(() => {
@@ -65,6 +67,9 @@ export function useRecarsState() {
       const storedInquiries = getStoredItem<CarInquiry[]>(STORAGE_KEYS.INQUIRIES, INITIAL_INQUIRIES);
       setInquiries(storedInquiries);
 
+      const storedPDIs = getStoredItem<PDIBooking[]>(STORAGE_KEYS.PDI_BOOKINGS, []);
+      setPdiBookings(storedPDIs);
+
       // Asynchronously fetch latest data from Supabase
       fetch('/api/cars')
         .then((res) => res.json())
@@ -95,6 +100,15 @@ export function useRecarsState() {
         })
         .catch(() => {});
 
+      fetch('/api/pdi')
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data?.bookings)) {
+            setPdiBookings(data.bookings);
+            localStorage.setItem(STORAGE_KEYS.PDI_BOOKINGS, JSON.stringify(data.bookings));
+          }
+        })
+        .catch(() => {});
 
       fetch('/api/test-drive')
         .then((res) => res.json())
@@ -230,6 +244,20 @@ export function useRecarsState() {
     }).catch((err) => console.error('Error updating inquiry status in Supabase:', err));
   };
 
+  const addPDIBooking = (booking: PDIBooking) => {
+    setPdiBookings((prev) => {
+      const updated = [booking, ...prev];
+      localStorage.setItem(STORAGE_KEYS.PDI_BOOKINGS, JSON.stringify(updated));
+      return updated;
+    });
+    // Persist to Supabase
+    fetch('/api/pdi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(booking),
+    }).catch((err) => console.error('Error saving PDI booking to Supabase:', err));
+  };
+
   return {
     isHydrated,
     selectedCity,
@@ -241,6 +269,7 @@ export function useRecarsState() {
     sellRequests,
     testDrives,
     inquiries,
+    pdiBookings,
     addSellRequest,
     addTestDrive,
     addCarListing,
@@ -248,5 +277,7 @@ export function useRecarsState() {
     addInquiry,
     removeInquiry,
     updateInquiryStatus,
+    addPDIBooking,
   };
 }
+

@@ -1,6 +1,6 @@
 import { Pool, QueryResult } from 'pg';
 import { createClient } from '@supabase/supabase-js';
-import { Car, SellRequest, TestDriveBooking, CarInquiry, Negotiation, InspectionConfig } from './types';
+import { Car, SellRequest, TestDriveBooking, CarInquiry, Negotiation, InspectionConfig, PDIBooking } from './types';
 
 function getDatabaseConnectionString(): string {
   let envUrl = (process.env.DATABASE_URL || '').trim();
@@ -925,8 +925,11 @@ export async function dbUpdateNegotiationStatus(
 
 export async function dbGetInspectionConfig(): Promise<InspectionConfig> {
   const defaultConf: InspectionConfig = {
-    sellerInspectionFee: 499,
+    sellerInspectionFee: 999,
+    sellerReportFee: 1199,
     buyerInspectionFee: 999,
+    pdiInspectionFee: 2499,
+    pdiReportFee: 2499,
     freeInspectionActive: false,
   };
   try {
@@ -950,4 +953,199 @@ export async function dbUpdateInspectionConfig(config: Partial<InspectionConfig>
   );
   return updated;
 }
+
+// ========================================================
+// 8. PRE-DELIVERY INSPECTION (PDI) DATABASE OPERATIONS
+// ========================================================
+
+let pdiTableInitPromise: Promise<void> | null = null;
+async function ensurePdiTable(): Promise<void> {
+  if (!pdiTableInitPromise) {
+    pdiTableInitPromise = (async () => {
+      try {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS public.pdi_bookings (
+            id TEXT PRIMARY KEY,
+            customer_name TEXT NOT NULL,
+            customer_phone TEXT NOT NULL,
+            customer_email TEXT,
+            city TEXT DEFAULT 'Warangal',
+            dealership_name TEXT NOT NULL,
+            dealership_address TEXT NOT NULL,
+            car_make TEXT NOT NULL,
+            car_model TEXT NOT NULL,
+            car_variant TEXT,
+            fuel_type TEXT,
+            transmission TEXT,
+            vin_or_chassis TEXT,
+            preferred_date TEXT NOT NULL,
+            preferred_time_slot TEXT NOT NULL,
+            special_instructions TEXT,
+            package_type TEXT DEFAULT 'Standard PDI',
+            fee BIGINT DEFAULT 2499,
+            payment_status TEXT DEFAULT 'Pay on Inspection',
+            status TEXT DEFAULT 'Booked',
+            assigned_representative JSONB,
+            created_at TIMESTAMPTZ DEFAULT now(),
+            updated_at TIMESTAMPTZ DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS idx_pdi_phone ON public.pdi_bookings(customer_phone);
+          CREATE INDEX IF NOT EXISTS idx_pdi_status ON public.pdi_bookings(status);
+          CREATE INDEX IF NOT EXISTS idx_pdi_date ON public.pdi_bookings(preferred_date);
+        `);
+      } catch (err) {
+        console.warn('Notice: pdi_bookings table auto-create skipped or handled:', err);
+      }
+    })();
+  }
+  return pdiTableInitPromise;
+}
+
+export async function dbGetPDIBookings(): Promise<PDIBooking[]> {
+  try {
+    await ensurePdiTable();
+    const { rows } = await pool.query('SELECT * FROM public.pdi_bookings ORDER BY created_at DESC');
+    return rows.map((r: any) => ({
+      id: r.id,
+      customerName: r.customer_name,
+      customerPhone: r.customer_phone,
+      customerEmail: r.customer_email || '',
+      city: r.city || 'Warangal',
+      dealershipName: r.dealership_name,
+      dealershipAddress: r.dealership_address,
+      carMake: r.car_make,
+      carModel: r.car_model,
+      carVariant: r.car_variant || '',
+      fuelType: r.fuel_type || 'Petrol',
+      transmission: r.transmission || 'Automatic',
+      vinOrChassis: r.vin_or_chassis || '',
+      preferredDate: r.preferred_date,
+      preferredTimeSlot: r.preferred_time_slot,
+      specialInstructions: r.special_instructions || '',
+      packageType: r.package_type || 'Standard PDI',
+      fee: Number(r.fee) || 2499,
+      paymentStatus: r.payment_status || 'Pay on Inspection',
+      status: r.status || 'Booked',
+      assignedRepresentative: r.assigned_representative ? (typeof r.assigned_representative === 'string' ? JSON.parse(r.assigned_representative) : r.assigned_representative) : undefined,
+      createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    }));
+  } catch (error) {
+    console.error('Error fetching PDI bookings:', error);
+    return [];
+  }
+}
+
+export async function dbInsertPDIBooking(booking: PDIBooking): Promise<void> {
+  await ensurePdiTable();
+
+  // 1. Record customer directory profile
+  if (booking.customerPhone) {
+    try {
+      await dbUpsertCustomer({
+        id: '',
+        name: booking.customerName,
+        phone: booking.customerPhone,
+        email: booking.customerEmail || '',
+        city: booking.city || 'Warangal',
+        address: `${booking.dealershipName}, ${booking.dealershipAddress}`,
+      });
+    } catch (e) {
+      console.warn('Customer upsert non-critical warning:', e);
+    }
+  }
+
+  // 2. Insert into pdi_bookings table
+  const sql = `
+    INSERT INTO public.pdi_bookings (
+      id, customer_name, customer_phone, customer_email, city,
+      dealership_name, dealership_address, car_make, car_model, car_variant,
+      fuel_type, transmission, vin_or_chassis, preferred_date, preferred_time_slot,
+      special_instructions, package_type, fee, payment_status, status,
+      assigned_representative
+    ) VALUES (
+      $1, $2, $3, $4, $5,
+      $6, $7, $8, $9, $10,
+      $11, $12, $13, $14, $15,
+      $16, $17, $18, $19, $20,
+      $21
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      status = EXCLUDED.status,
+      assigned_representative = EXCLUDED.assigned_representative,
+      updated_at = now();
+  `;
+
+  await pool.query(sql, [
+    booking.id,
+    booking.customerName,
+    booking.customerPhone,
+    booking.customerEmail || null,
+    booking.city || 'Warangal',
+    booking.dealershipName,
+    booking.dealershipAddress,
+    booking.carMake,
+    booking.carModel,
+    booking.carVariant || null,
+    booking.fuelType || 'Petrol',
+    booking.transmission || 'Automatic',
+    booking.vinOrChassis || null,
+    booking.preferredDate,
+    booking.preferredTimeSlot,
+    booking.specialInstructions || null,
+    booking.packageType || 'Standard PDI',
+    booking.fee || 2499,
+    booking.paymentStatus || 'Pay on Inspection',
+    booking.status || 'Booked',
+    booking.assignedRepresentative ? JSON.stringify(booking.assignedRepresentative) : null,
+  ]);
+
+  // 3. Mirror into car_inquiries so it seamlessly surfaces in omnichannel alerts
+  try {
+    const inqMsg = `[PDI Booking] New Car: ${booking.carMake} ${booking.carModel} (${booking.carVariant || 'Standard'}). Dealership: ${booking.dealershipName}, ${booking.dealershipAddress}. Date: ${booking.preferredDate} (${booking.preferredTimeSlot}). Fee: ₹${booking.fee} (${booking.paymentStatus}). Notes: ${booking.specialInstructions || 'None'}`;
+    await dbInsertInquiry({
+      id: `inq-pdi-${booking.id}`,
+      carId: '',
+      carTitle: `${booking.carMake} ${booking.carModel} (New Car PDI)`,
+      carPrice: booking.fee,
+      userName: booking.customerName,
+      userPhone: booking.customerPhone,
+      userEmail: booking.customerEmail || '',
+      city: booking.city,
+      inquiryType: 'Pre-Delivery Inspection (PDI)',
+      message: inqMsg,
+      status: 'New',
+      createdAt: booking.createdAt,
+    });
+  } catch (err) {
+    console.warn('Non-critical: mirroring PDI booking into inquiries:', err);
+  }
+}
+
+export async function dbUpdatePDIBookingStatus(
+  id: string,
+  status: string,
+  assignedRepresentative?: { name: string; phone: string; badgeId: string }
+): Promise<boolean> {
+  await ensurePdiTable();
+  let sql = 'UPDATE public.pdi_bookings SET status = $1, updated_at = now()';
+  const params: any[] = [status];
+
+  if (assignedRepresentative) {
+    sql += ', assigned_representative = $2 WHERE id = $3';
+    params.push(JSON.stringify(assignedRepresentative), id);
+  } else {
+    sql += ' WHERE id = $2';
+    params.push(id);
+  }
+
+  const res = await pool.query(sql, params);
+  return (res.rowCount || 0) > 0;
+}
+
+export async function dbDeletePDIBooking(id: string): Promise<boolean> {
+  await ensurePdiTable();
+  const res = await pool.query('DELETE FROM public.pdi_bookings WHERE id = $1', [id]);
+  return (res.rowCount || 0) > 0;
+}
+
 

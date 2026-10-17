@@ -106,7 +106,17 @@ export default function Navbar({
                 </button>
 
                 {isMoreDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-[#E5E7EB] py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-[#E5E7EB] py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <Link
+                      href="/pdi"
+                      className="flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Shield className="w-4 h-4 text-[#E5325C]" />
+                        <span>New Car PDI (Showroom Check)</span>
+                      </div>
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-[#E5325C] text-white">New</span>
+                    </Link>
                     <Link
                       href="/why-recars#inspection"
                       className="flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
@@ -119,7 +129,7 @@ export default function Navbar({
                       className="flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
                     >
                       <Shield className="w-4 h-4 text-[#E5325C]" />
-                      <span>Doorstep Inspection (₹499)</span>
+                      <span>Doorstep Inspection (₹999)</span>
                     </Link>
                     <Link
                       href="/why-recars#process"
@@ -303,6 +313,14 @@ export default function Navbar({
                 {link.label}
               </Link>
             ))}
+            <Link
+              href="/pdi"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center justify-between px-3 py-2 text-sm font-semibold text-[#24262A] hover:text-[#E5325C]"
+            >
+              <span>New Car Pre-Delivery Inspection (PDI)</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FFF0F3] text-[#E5325C]">Showroom Check</span>
+            </Link>
             <Link
               href="/sell"
               onClick={() => setIsMobileMenuOpen(false)}

@@ -11,6 +11,8 @@ import {
   CheckCircle,
   X,
   ShieldCheck,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 
 const REVIEWS_DATA = [
@@ -399,6 +401,40 @@ export default function SellProcessSection() {
             ))}
           </div>
 
+        </div>
+
+        {/* ========================================================
+            5. PRE-DELIVERY INSPECTION (PDI) SERVICE HIGHLIGHT BANNER
+        ========================================================= */}
+        <div className="mt-14 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-[#101216] via-[#1E1B2E] to-[#2A0545] text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E5325C]/20 border border-[#E5325C]/40 text-[#FF6B8B] text-[11px] font-black uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>New Car Pre-Delivery Inspection (PDI)</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight">
+              Taking Delivery of a New Car from a Showroom?
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+              Book our certified PDI service. An experienced Recars automotive representative will come directly to your dealership showroom or stockyard to inspect your brand-new car before registration and payment.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 w-full sm:w-auto">
+            <Link
+              href="/pdi"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs sm:text-sm font-bold transition-all shadow-lg shadow-[#E5325C]/25 text-center flex items-center justify-center gap-2"
+            >
+              <span>Book PDI Representative</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              href="/pdi#checklist"
+              className="w-full sm:w-auto px-5 py-3.5 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs sm:text-sm font-semibold transition-colors text-center"
+            >
+              View 50-Point Checklist
+            </Link>
+          </div>
         </div>
 
       </div>

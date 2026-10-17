@@ -81,7 +81,9 @@ function SellWorkflowContent() {
   // Step 4: Submitted Result
   const [generatedRequestId, setGeneratedRequestId] = useState<string>('');
   const [feeAcknowledged, setFeeAcknowledged] = useState(true);
-  const [inspectionFee, setInspectionFee] = useState(499);
+  const [inspectionFee, setInspectionFee] = useState(999);
+  const [reportFee, setReportFee] = useState(1199);
+  const [wantCompleteReport, setWantCompleteReport] = useState(false);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -89,11 +91,14 @@ function SellWorkflowContent() {
       .then((data) => {
         if (data.success && data.inspectionConfig) {
           const cfg = data.inspectionConfig;
-          setInspectionFee(cfg.sellerInspectionFee ?? 499);
+          setInspectionFee(cfg.sellerInspectionFee ?? 999);
+          setReportFee(cfg.sellerReportFee ?? 1199);
         }
       })
       .catch(() => {});
   }, []);
+
+  const effectiveFee = wantCompleteReport ? reportFee : inspectionFee;
 
   const calculateSuggestedPrice = () => {
     let base = 850000;
@@ -160,8 +165,8 @@ function SellWorkflowContent() {
       estimatedPriceMin: priceRange.min,
       estimatedPriceMax: priceRange.max,
       suggestedListingPrice: priceRange.mid,
-      inspectionFee: inspectionFee,
-      inspectionFeeStatus: 'Pay at Doorstep',
+      inspectionFee: effectiveFee,
+      inspectionFeeStatus: wantCompleteReport ? 'Pay at Doorstep (Complete Report ₹1,199)' : 'Pay at Doorstep (Standard ₹999)',
       status: 'Inspection Scheduled',
       createdAt: new Date().toISOString(),
     };
@@ -630,6 +635,51 @@ function SellWorkflowContent() {
                 </div>
               </div>
 
+              {/* Inspection Package Selection: Standard (₹999) vs Complete Report (₹1,199) */}
+              <div className="space-y-3">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500">
+                  Select Pre-Owned Car Inspection Package
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div
+                    onClick={() => setWantCompleteReport(false)}
+                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all ${
+                      !wantCompleteReport
+                        ? 'border-[#E5325C] bg-[#FFF0F3]/30 shadow-xs'
+                        : 'border-gray-200 bg-[#F8F9FA] hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-xs sm:text-sm text-[#101216]">Pre-Owned Inspection</span>
+                      <span className="font-black text-sm sm:text-base text-[#E5325C]">₹{inspectionFee}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-600 leading-relaxed">
+                      28+ mechanical points check, paint micrometer measurement, test drive, and instant fair market buying offer.
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => setWantCompleteReport(true)}
+                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all ${
+                      wantCompleteReport
+                        ? 'border-[#E5325C] bg-[#FFF0F3]/30 shadow-xs'
+                        : 'border-gray-200 bg-[#F8F9FA] hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs sm:text-sm text-[#101216]">With Complete Report</span>
+                        <span className="text-[9px] font-bold bg-[#E5325C] text-white px-1.5 py-0.5 rounded-full">Recommended</span>
+                      </div>
+                      <span className="font-black text-sm sm:text-base text-[#E5325C]">₹{reportFee}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-600 leading-relaxed">
+                      Includes 28+ point checks PLUS comprehensive digital PDF inspection report, OBD diagnostic scan & official valuation certificate.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Transparent Inspection Charges & Responsibility */}
               <div className="p-4.5 rounded-2xl bg-blue-50/80 border border-blue-200 space-y-3">
                 <div className="flex items-center justify-between">
@@ -638,14 +688,14 @@ function SellWorkflowContent() {
                     <span>Doorstep Inspection Fee & Transparent Policy</span>
                   </span>
                   <span className="text-xs font-black text-[#101216] px-2.5 py-1 rounded-full bg-white border border-blue-200 shadow-2xs">
-                    ₹{inspectionFee} (Payable at Doorstep)
+                    ₹{effectiveFee} (Payable at Doorstep)
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-blue-900">
                   <div>• <strong>Coverage:</strong> 28+ mechanical, paint meter, OBD diagnostics & road test.</div>
                   <div>• <strong>Responsibility:</strong> Payable by vehicle seller upon engineer arrival.</div>
                   <div>• <strong>Payment Due:</strong> At doorstep before technical physical evaluation.</div>
-                  <div>• <strong>Deliverable:</strong> Certified digital inspection report & guaranteed highest offer.</div>
+                  <div>• <strong>Deliverable:</strong> {wantCompleteReport ? 'Complete technical PDF report & valuation certificate.' : 'Certified evaluation & guaranteed highest purchase offer.'}</div>
                 </div>
                 <label className="flex items-start gap-2.5 pt-2 border-t border-blue-200 cursor-pointer">
                   <input
@@ -655,7 +705,7 @@ function SellWorkflowContent() {
                     className="mt-0.5 w-4 h-4 text-[#E5325C] rounded border-gray-300 focus:ring-[#E5325C]"
                   />
                   <span className="text-xs font-bold text-gray-900 leading-tight">
-                    I acknowledge and agree to the ₹{inspectionFee} doorstep inspection service fee payable upon the engineer&apos;s arrival.
+                    I acknowledge and agree to the ₹{effectiveFee} doorstep inspection service fee ({wantCompleteReport ? 'Complete Report included' : 'Standard Evaluation'}) payable upon the engineer&apos;s arrival.
                   </span>
                 </label>
               </div>
@@ -673,7 +723,7 @@ function SellWorkflowContent() {
                   disabled={!feeAcknowledged}
                   className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#E5325C] text-white text-xs font-bold hover:bg-[#D4264E] disabled:bg-gray-400 transition-all shadow-md active:scale-98 cursor-pointer"
                 >
-                  <span>Schedule Doorstep Inspection (₹{inspectionFee})</span>
+                  <span>Schedule Doorstep Inspection (₹{effectiveFee})</span>
                   <Check className="w-4 h-4 stroke-[3]" />
                 </button>
               </div>
@@ -706,7 +756,7 @@ function SellWorkflowContent() {
                 </div>
                 <div className="flex justify-between items-center pt-1 border-t border-gray-200">
                   <span className="text-[#6B7078]">Inspection Type:</span>
-                  <span className="font-bold text-[#101216]">Doorstep Physical Inspection (₹{inspectionFee} Fee)</span>
+                  <span className="font-bold text-[#101216]">{wantCompleteReport ? `Doorstep Physical Inspection + Complete Report (₹${effectiveFee} Fee)` : `Doorstep Physical Inspection (₹${effectiveFee} Fee)`}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[#6B7078]">Inspection Fee Status:</span>
