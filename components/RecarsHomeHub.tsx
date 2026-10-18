@@ -265,42 +265,46 @@ export default function RecarsHomeHub({
         </div>
 
         {/* ========================================================
-            4. THE 2 PRIMARY SERVICE CARDS: BUY A CAR & SELL YOUR CAR (COMPACT SIZE)
+            4. THE 2 PRIMARY SERVICE CARDS: BUY A CAR & SELL YOUR CAR (WIDE RECTANGLE BARS)
         ========================================================= */}
-        <div className="max-w-[310px] sm:max-w-2xl lg:max-w-3xl mx-auto grid grid-cols-2 gap-2.5 sm:gap-4.5 mb-4 sm:mb-5">
+        <div className="w-full grid grid-cols-2 gap-3 sm:gap-5 lg:gap-6 mb-4 sm:mb-6">
           {/* CARD 1: BUY A CAR -> OPENS /buy */}
           <Link
             href="/buy"
-            className="group relative block rounded-xl sm:rounded-2xl overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer"
+            className="group relative block w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] cursor-pointer bg-[#2E0854]"
             aria-label="Buy a Car"
           >
-            <img
-              src="/images/card-buy-car.png"
-              alt="Buy a Car — Recars"
-              className="w-full h-auto max-h-[105px] sm:max-h-[210px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
-              loading="eager"
-            />
+            <div className="relative w-full aspect-[2/1] sm:aspect-[2.2/1] lg:aspect-[2.35/1]">
+              <img
+                src="/images/card-buy-car.png"
+                alt="Buy a Car — Recars"
+                className="w-full h-full object-cover object-top block transition-transform duration-300 group-hover:scale-[1.03]"
+                loading="eager"
+              />
+            </div>
           </Link>
 
           {/* CARD 2: SELL YOUR CAR -> OPENS /sell */}
           <Link
             href="/sell"
-            className="group relative block rounded-xl sm:rounded-2xl overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer"
+            className="group relative block w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] cursor-pointer bg-[#0E2F21]"
             aria-label="Sell Your Car"
           >
-            <img
-              src="/images/card-sell-car.png"
-              alt="Sell Your Car — Recars"
-              className="w-full h-auto max-h-[105px] sm:max-h-[210px] object-contain block transition-transform duration-300 group-hover:scale-[1.02]"
-              loading="eager"
-            />
+            <div className="relative w-full aspect-[2/1] sm:aspect-[2.2/1] lg:aspect-[2.35/1]">
+              <img
+                src="/images/card-sell-car.png"
+                alt="Sell Your Car — Recars"
+                className="w-full h-full object-cover object-top block transition-transform duration-300 group-hover:scale-[1.03]"
+                loading="eager"
+              />
+            </div>
           </Link>
         </div>
 
         {/* ========================================================
             5. NEW CAR PRE-DELIVERY INSPECTION (PDI) QUICK CALLOUT
         ========================================================= */}
-        <div className="max-w-xl sm:max-w-2xl lg:max-w-3xl mx-auto">
+        <div className="w-full">
           <Link
             href="/pdi"
             className="flex items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl bg-white border border-[#E5325C]/30 hover:border-[#E5325C] shadow-xs hover:shadow-md transition-all group cursor-pointer"
