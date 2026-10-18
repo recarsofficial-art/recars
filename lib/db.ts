@@ -476,13 +476,19 @@ export async function dbGetDealers(): Promise<RegisteredDealer[]> {
     }));
   } catch (err: any) {
     console.error('dbGetDealers error:', err?.message);
-    return [
-      { id: 'DLR-001', name: 'Sri Sai Motors', contactPerson: 'Ramesh Rao', phone: '+91 98480 12345', city: 'Warangal' },
-      { id: 'DLR-002', name: 'ABC Automobiles', contactPerson: 'Suresh Patel', phone: '+91 98765 43210', city: 'Hyderabad' },
-      { id: 'DLR-003', name: 'Royal Cars', contactPerson: 'Vikram Reddy', phone: '+91 99887 76655', city: 'Warangal' },
-      { id: 'DLR-004', name: 'Laxmi Motors', contactPerson: 'K. Venkatesh', phone: '+91 94401 22334', city: 'Warangal' },
-      { id: 'DLR-005', name: 'Balaji Auto World', contactPerson: 'Naresh Goud', phone: '+91 98492 55667', city: 'Karimnagar' },
-    ];
+    return [];
+  }
+}
+
+export async function dbDeleteDealer(id: string): Promise<boolean> {
+  await ensureDealerAndCarsSchema();
+  try {
+    const res = await pool.query('DELETE FROM public.dealers WHERE id = $1 RETURNING id', [id]);
+    await pool.query('UPDATE public.cars SET dealer_id = NULL, dealer_name = NULL, dealer_contact = NULL WHERE dealer_id = $1', [id]);
+    return (res.rowCount ?? 0) > 0;
+  } catch (err: any) {
+    console.error('dbDeleteDealer error:', err?.message);
+    return false;
   }
 }
 

@@ -51,9 +51,15 @@ export function useRecarsState() {
       setWishlistIds(storedWishlist);
 
       const custom = getStoredItem<Car[]>(STORAGE_KEYS.CUSTOM_CARS, []);
+      const demoDealerNames = ['Sri Sai Motors', 'ABC Automobiles', 'Royal Cars', 'Laxmi Motors', 'Balaji Auto World'];
+      const demoCarIds = ['recars-101', 'recars-102', 'recars-103', 'recars-104', 'recars-105'];
+      const filteredCustom = custom.filter((c) => !demoCarIds.includes(c.id) && !demoDealerNames.includes((c as any).dealerName || ''));
+      if (filteredCustom.length !== custom.length) {
+        localStorage.setItem(STORAGE_KEYS.CUSTOM_CARS, JSON.stringify(filteredCustom));
+      }
       const deleted = getStoredItem<string[]>(STORAGE_KEYS.DELETED_CARS, []);
       const map = new Map<string, Car>();
-      custom.forEach((c) => map.set(c.id, c));
+      filteredCustom.forEach((c) => map.set(c.id, c));
       setCars(Array.from(map.values()).filter((c) => !deleted.includes(c.id)));
 
       const storedSellRequests = getStoredItem<SellRequest[]>(STORAGE_KEYS.SELL_REQUESTS, []);
@@ -74,6 +80,7 @@ export function useRecarsState() {
         .then((data) => {
           if (Array.isArray(data?.cars)) {
             setCars(data.cars);
+            localStorage.setItem(STORAGE_KEYS.CUSTOM_CARS, JSON.stringify(data.cars));
           }
         })
         .catch(() => {});

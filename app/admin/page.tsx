@@ -350,6 +350,22 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== 'undefined') {
+      try {
+        const rawCustom = localStorage.getItem('recars_custom_cars');
+        if (rawCustom) {
+          const parsed = JSON.parse(rawCustom);
+          if (Array.isArray(parsed)) {
+            const demoDealerNames = ['Sri Sai Motors', 'ABC Automobiles', 'Royal Cars', 'Laxmi Motors', 'Balaji Auto World'];
+            const demoCarIds = ['recars-101', 'recars-102', 'recars-103', 'recars-104', 'recars-105'];
+            const cleaned = parsed.filter((c: any) => !demoCarIds.includes(c.id) && !demoDealerNames.includes(c.dealerName));
+            localStorage.setItem('recars_custom_cars', JSON.stringify(cleaned));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
     checkAdminAuth().then((authed) => {
       if (authed) syncAllFromSupabase();
     });
@@ -385,14 +401,8 @@ export default function AdminDashboardPage() {
   const customers = liveCustomers;
   const testDrives = liveTestDrives;
 
-  // Registered Dealers State
-  const [dealersList, setDealersList] = useState<RegisteredDealer[]>([
-    { id: 'DLR-001', name: 'Sri Sai Motors', contactPerson: 'Ramesh Rao', phone: '+91 98480 12345', city: 'Warangal' },
-    { id: 'DLR-002', name: 'ABC Automobiles', contactPerson: 'Suresh Patel', phone: '+91 98765 43210', city: 'Hyderabad' },
-    { id: 'DLR-003', name: 'Royal Cars', contactPerson: 'Vikram Reddy', phone: '+91 99887 76655', city: 'Warangal' },
-    { id: 'DLR-004', name: 'Laxmi Motors', contactPerson: 'K. Venkatesh', phone: '+91 94401 22334', city: 'Warangal' },
-    { id: 'DLR-005', name: 'Balaji Auto World', contactPerson: 'Naresh Goud', phone: '+91 98492 55667', city: 'Karimnagar' },
-  ]);
+  // Registered Dealers State (loaded from Supabase / empty by default)
+  const [dealersList, setDealersList] = useState<RegisteredDealer[]>([]);
 
   // Search & Filter state for Cars tab
   const [carSearch, setCarSearch] = useState('');
@@ -2788,7 +2798,7 @@ export default function AdminDashboardPage() {
                     onChange={(e) => setSpecificDealerFilter(e.target.value)}
                     className="px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-indigo-600"
                   >
-                    <option value="All">All Dealers</option>
+                    <option value="All">All Dealers ({dealersList.length})</option>
                     {dealersList.map((d) => (
                       <option key={d.id} value={d.name}>
                         {d.name} ({d.city || 'Hub'})
@@ -4465,7 +4475,7 @@ export default function AdminDashboardPage() {
                           }}
                           className="w-full px-3 py-2.5 bg-white border border-purple-300 rounded-xl font-bold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                         >
-                          <option value="">-- Choose Existing Registered Dealer --</option>
+                          <option value="">{dealersList.length === 0 ? '-- No Registered Dealers Yet --' : '-- Choose Existing Registered Dealer --'}</option>
                           {dealersList.map((d) => (
                             <option key={d.id} value={d.name}>
                               {d.name} ({d.city || 'Hub'})

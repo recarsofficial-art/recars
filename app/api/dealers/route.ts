@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { dbGetDealers, dbInsertDealer } from '@/lib/db';
+import { dbGetDealers, dbInsertDealer, dbDeleteDealer } from '@/lib/db';
 import { RegisteredDealer } from '@/lib/types';
 
 export async function GET(request: Request) {
@@ -56,6 +56,29 @@ export async function POST(request: Request) {
     console.error('Error registering dealer:', error);
     return NextResponse.json(
       { success: false, error: error?.message || 'Failed to register dealer' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Dealer ID is required' },
+        { status: 400 }
+      );
+    }
+    const deleted = await dbDeleteDealer(id);
+    return NextResponse.json({
+      success: deleted,
+      message: deleted ? 'Dealer removed successfully' : 'Dealer not found',
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Failed to delete dealer' },
       { status: 500 }
     );
   }
