@@ -200,6 +200,20 @@ export function useRecarsState() {
     }).catch((err) => console.error('Error deleting car from Supabase:', err));
   };
 
+  const updateCarListing = (updatedCar: Car) => {
+    setCars((prev) => {
+      const updated = prev.map((c) => (c.id === updatedCar.id ? updatedCar : c));
+      localStorage.setItem(STORAGE_KEYS.CUSTOM_CARS, JSON.stringify(updated));
+      return updated;
+    });
+    // Persist to Supabase
+    fetch('/api/cars', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedCar),
+    }).catch((err) => console.error('Error updating car listing in Supabase:', err));
+  };
+
   const addInquiry = (inquiry: CarInquiry) => {
     setInquiries((prev) => {
       const updated = [inquiry, ...prev];
@@ -269,6 +283,7 @@ export function useRecarsState() {
     addSellRequest,
     addTestDrive,
     addCarListing,
+    updateCarListing,
     removeCarListing,
     addInquiry,
     removeInquiry,

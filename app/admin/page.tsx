@@ -73,6 +73,7 @@ export default function AdminDashboardPage() {
     inquiries: storeInquiries,
     pdiBookings: storePDIBookings,
     addCarListing,
+    updateCarListing,
     removeCarListing,
     removeInquiry,
     updateInquiryStatus,
@@ -388,9 +389,10 @@ export default function AdminDashboardPage() {
 
   // Modals state
   const [isAddCarModalOpen, setIsAddCarModalOpen] = useState(false);
+  const [editingCarId, setEditingCarId] = useState<string | null>(null);
   const [carToDelete, setCarToDelete] = useState<CarType | null>(null);
 
-  // New Car form fields
+  // New / Edit Car form fields
   const [newMake, setNewMake] = useState('Hyundai');
   const [newModel, setNewModel] = useState('Venue');
   const [newVariant, setNewVariant] = useState('SX 1.0 Turbo DCT');
@@ -423,6 +425,70 @@ export default function AdminDashboardPage() {
   const [newIsVerified, setNewIsVerified] = useState(true);
   const [newIsSelect, setNewIsSelect] = useState(true);
   const [newDescription, setNewDescription] = useState('Dealer managed immaculate single-owner vehicle with full service record.');
+
+  const handleOpenEditCarModal = (car: CarType) => {
+    setEditingCarId(car.id);
+    setNewMake(car.make || 'Hyundai');
+    setNewModel(car.model || '');
+    setNewVariant(car.variant || '');
+    setNewYear(car.year || 2023);
+    setNewMfgYear(car.manufacturingYear || car.year || 2022);
+    setNewRegYear(car.registrationYear || car.year || 2023);
+    setNewPrice(car.price || 0);
+    setNewKm(car.kilometers || 0);
+    setNewFuel(car.fuelType || 'Petrol');
+    setNewTransmission(car.transmission || 'Automatic');
+    setNewBodyType(car.bodyType || 'SUV');
+    setNewOwnership((car.ownership as any) || '1st Owner');
+    setNewAvailability((car.availabilityStatus as any) || 'Available');
+    setNewInsuranceStatus((car.insuranceStatus as any) || 'Valid');
+    setNewInsuranceExpiry(car.insuranceExpiry || 'Active');
+    setNewInsuranceType((car.insuranceType as any) || 'Comprehensive');
+    setNewFinanceAvailable((car.financeAvailable as any) || 'Available');
+    setNewSuggestedMin(car.suggestedPriceMin || Math.round((car.price || 1000000) * 0.93));
+    setNewSuggestedMax(car.suggestedPriceMax || Math.round((car.price || 1000000) * 1.05));
+    setNewCity(car.city || 'Warangal');
+    setNewLocationArea(car.locationArea || `${car.city || 'Warangal'} Hub`);
+    setNewImage(car.image || '/car-creta-hd.jpg');
+    setNewGalleryImages(car.galleryImages && car.galleryImages.length > 0 ? car.galleryImages : [car.image || '/car-creta-hd.jpg']);
+    setNewScore(car.inspectionScore || 95);
+    setNewIsVerified(car.isVerified ?? true);
+    setNewIsSelect(car.isRecarsSelect ?? true);
+    setNewDescription(car.description || '');
+    setIsAddCarModalOpen(true);
+  };
+
+  const handleOpenAddCarModal = () => {
+    setEditingCarId(null);
+    setNewMake('Hyundai');
+    setNewModel('');
+    setNewVariant('');
+    setNewYear(2023);
+    setNewMfgYear(2022);
+    setNewRegYear(2023);
+    setNewPrice(1050000);
+    setNewKm(22000);
+    setNewFuel('Petrol');
+    setNewTransmission('Automatic');
+    setNewBodyType('SUV');
+    setNewOwnership('1st Owner');
+    setNewAvailability('Available');
+    setNewInsuranceStatus('Valid');
+    setNewInsuranceExpiry('Nov 2026');
+    setNewInsuranceType('Comprehensive');
+    setNewFinanceAvailable('Available');
+    setNewSuggestedMin(980000);
+    setNewSuggestedMax(1080000);
+    setNewCity('Warangal');
+    setNewLocationArea('Hanamkonda Recars Hub');
+    setNewImage('/car-creta-hd.jpg');
+    setNewGalleryImages(['/car-creta-hd.jpg']);
+    setNewScore(97);
+    setNewIsVerified(true);
+    setNewIsSelect(true);
+    setNewDescription('Dealer managed immaculate single-owner vehicle with full service record.');
+    setIsAddCarModalOpen(true);
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -741,11 +807,15 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleCreateCar = async (e: React.FormEvent) => {
+  const handleSaveCar = async (e: React.FormEvent) => {
     e.preventDefault();
-    const created: CarType = {
-      id: `recars-${Date.now()}`,
-      createdAt: new Date().toISOString(),
+    const carId = editingCarId || `recars-${Date.now()}`;
+    const existingCar = cars.find((c) => c.id === editingCarId);
+
+    const carData: CarType = {
+      ...existingCar,
+      id: carId,
+      createdAt: existingCar?.createdAt || new Date().toISOString(),
       make: newMake,
       model: newModel,
       variant: newVariant,
@@ -775,37 +845,55 @@ export default function AdminDashboardPage() {
       featured: true,
       inspectionScore: Number(newScore),
       specifications: {
-        engine: '1.2L Turbo Dual VVT',
-        maxPower: '118 bhp',
-        torque: '172 Nm',
-        mileage: '18.2 kmpl',
-        seatingCapacity: 5,
-        bootSpace: '380 Litres',
-        fuelTankCapacity: '45 Litres',
-        groundClearance: '195 mm',
+        engine: existingCar?.specifications?.engine || '1.2L Turbo Dual VVT',
+        maxPower: existingCar?.specifications?.maxPower || '118 bhp',
+        torque: existingCar?.specifications?.torque || '172 Nm',
+        mileage: existingCar?.specifications?.mileage || '18.2 kmpl',
+        seatingCapacity: existingCar?.specifications?.seatingCapacity || 5,
+        bootSpace: existingCar?.specifications?.bootSpace || '380 Litres',
+        fuelTankCapacity: existingCar?.specifications?.fuelTankCapacity || '45 Litres',
+        groundClearance: existingCar?.specifications?.groundClearance || '195 mm',
         rto: `${newCity.slice(0, 2).toUpperCase()}-09`,
         regYear: newRegYear,
         insuranceValidTill: newInsuranceExpiry,
-        color: 'Polar White',
+        color: existingCar?.specifications?.color || 'Polar White',
       },
-      features: ['Touchscreen Infotainment', 'Apple CarPlay & Android Auto', 'Push Button Start', 'Reverse Camera', 'ABS with EBD'],
+      features: existingCar?.features || ['Touchscreen Infotainment', 'Apple CarPlay & Android Auto', 'Push Button Start', 'Reverse Camera', 'ABS with EBD'],
       description: newDescription,
     };
 
-    addCarListing(created);
-    setIsAddCarModalOpen(false);
-    showToast(`Adding "${created.make} ${created.model}" to Supabase inventory...`);
+    if (editingCarId) {
+      updateCarListing(carData);
+      setIsAddCarModalOpen(false);
+      showToast(`Updating "${carData.make} ${carData.model}" in Supabase...`);
 
-    try {
-      await fetch('/api/cars', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(created),
-      });
-      await syncAllFromSupabase();
-      showToast(`Successfully added "${created.make} ${created.model}" to live marketplace inventory!`);
-    } catch {
-      showToast(`Added "${created.make} ${created.model}" locally.`);
+      try {
+        await fetch('/api/cars', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(carData),
+        });
+        await syncAllFromSupabase();
+        showToast(`Successfully updated "${carData.make} ${carData.model}" in live marketplace!`);
+      } catch {
+        showToast(`Updated "${carData.make} ${carData.model}" locally.`);
+      }
+    } else {
+      addCarListing(carData);
+      setIsAddCarModalOpen(false);
+      showToast(`Adding "${carData.make} ${carData.model}" to Supabase inventory...`);
+
+      try {
+        await fetch('/api/cars', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(carData),
+        });
+        await syncAllFromSupabase();
+        showToast(`Successfully added "${carData.make} ${carData.model}" to live marketplace inventory!`);
+      } catch {
+        showToast(`Added "${carData.make} ${carData.model}" locally.`);
+      }
     }
   };
 
@@ -1556,7 +1644,7 @@ export default function AdminDashboardPage() {
           <div className="pt-2">
             <button
               onClick={() => {
-                setIsAddCarModalOpen(true);
+                handleOpenAddCarModal();
                 setIsSidebarOpen(false);
               }}
               className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
@@ -1907,7 +1995,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="flex items-center gap-2.5">
                   <button
-                    onClick={() => setIsAddCarModalOpen(true)}
+                    onClick={handleOpenAddCarModal}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#FFF0F3] hover:bg-[#FFE0E6] text-[#E5325C] text-xs font-bold border border-[#FFD6DF] transition-all cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[3]" />
@@ -1940,13 +2028,23 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <span className="text-xs font-extrabold text-[#101216] block">{formatINR(car.price)}</span>
-                      <Link
-                        href={`/cars/${car.id}`}
-                        className="text-[10px] text-[#E5325C] font-bold hover:underline inline-flex items-center gap-0.5"
-                      >
-                        <span>View</span>
-                        <ArrowUpRight className="w-3 h-3" />
-                      </Link>
+                      <div className="flex items-center gap-2 justify-end mt-1">
+                        <Link
+                          href={`/cars/${car.id}`}
+                          className="text-[10px] text-gray-500 hover:text-[#E5325C] font-bold hover:underline inline-flex items-center gap-0.5"
+                        >
+                          <span>View</span>
+                          <ArrowUpRight className="w-2.5 h-2.5" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditCarModal(car)}
+                          className="text-[10px] text-blue-600 hover:text-blue-700 font-bold hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                        >
+                          <Edit className="w-2.5 h-2.5" />
+                          <span>Edit</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -2522,7 +2620,7 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
                 <div className="flex items-center gap-2 text-xs text-gray-600">
                   <Filter className="w-3.5 h-3.5 text-gray-400" />
                   <span>City:</span>
@@ -2537,6 +2635,15 @@ export default function AdminDashboardPage() {
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
+
+                <button
+                  type="button"
+                  onClick={handleOpenAddCarModal}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-bold transition-all shadow-xs cursor-pointer ml-auto"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>Add Vehicle</span>
+                </button>
               </div>
             </div>
 
@@ -2629,18 +2736,27 @@ export default function AdminDashboardPage() {
                           </div>
                         </td>
                         <td className="p-4 text-right">
-                          <div className="inline-flex items-center gap-2 justify-end">
+                          <div className="inline-flex items-center gap-1.5 justify-end">
                             <Link
                               href={`/cars/${car.id}`}
-                              className="px-3 py-1.5 rounded-lg border border-gray-200 hover:border-[#E5325C] text-gray-700 hover:text-[#E5325C] font-semibold text-xs transition-colors"
+                              className="px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-[#E5325C] text-gray-700 hover:text-[#E5325C] font-semibold text-xs transition-colors"
                               title="View car page"
                             >
                               View
                             </Link>
                             <button
                               type="button"
+                              onClick={() => handleOpenEditCarModal(car)}
+                              className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
+                              title="Edit vehicle specifications, pricing, and images"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => setCarToDelete(car)}
-                              className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
                               title="Delete vehicle from inventory"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -3926,8 +4042,14 @@ export default function AdminDashboardPage() {
                   <Car className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-lg text-[#101216]">Add Verified Vehicle to Inventory</h3>
-                  <p className="text-xs text-gray-500">Fill in vehicle specifications to publish on Recars marketplace</p>
+                  <h3 className="font-black text-lg text-[#101216]">
+                    {editingCarId ? 'Edit Vehicle Details' : 'Add Verified Vehicle to Inventory'}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {editingCarId
+                      ? `Editing ${newMake} ${newModel} (ID: ${editingCarId})`
+                      : 'Fill in vehicle specifications to publish on Recars marketplace'}
+                  </p>
                 </div>
               </div>
               <button
@@ -3938,7 +4060,7 @@ export default function AdminDashboardPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateCar} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveCar} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block font-bold text-[#101216] mb-1">Make / Brand</label>
@@ -4439,7 +4561,7 @@ export default function AdminDashboardPage() {
                   type="submit"
                   className="px-6 py-2.5 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
                 >
-                  Publish Vehicle to Recars
+                  {editingCarId ? 'Save & Update Vehicle' : 'Publish Vehicle to Recars'}
                 </button>
               </div>
             </form>
