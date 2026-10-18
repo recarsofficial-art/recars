@@ -274,11 +274,11 @@ export default function RecarsHomeHub({
             className="group relative block w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] cursor-pointer bg-[#2E0854]"
             aria-label="Buy a Car"
           >
-            <div className="relative w-full aspect-[2/1] sm:aspect-[2.2/1] lg:aspect-[2.35/1]">
+            <div className="relative w-full aspect-[1.95/1] sm:aspect-[2/1] lg:aspect-[2.05/1]">
               <img
                 src="/images/card-buy-car.png"
                 alt="Buy a Car — Recars"
-                className="w-full h-full object-cover object-top block transition-transform duration-300 group-hover:scale-[1.03]"
+                className="w-full h-full object-cover object-center block transition-transform duration-300 group-hover:scale-[1.03]"
                 loading="eager"
               />
             </div>
@@ -290,11 +290,11 @@ export default function RecarsHomeHub({
             className="group relative block w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] cursor-pointer bg-[#0E2F21]"
             aria-label="Sell Your Car"
           >
-            <div className="relative w-full aspect-[2/1] sm:aspect-[2.2/1] lg:aspect-[2.35/1]">
+            <div className="relative w-full aspect-[1.95/1] sm:aspect-[2/1] lg:aspect-[2.05/1]">
               <img
                 src="/images/card-sell-car.png"
                 alt="Sell Your Car — Recars"
-                className="w-full h-full object-cover object-top block transition-transform duration-300 group-hover:scale-[1.03]"
+                className="w-full h-full object-cover object-center block transition-transform duration-300 group-hover:scale-[1.03]"
                 loading="eager"
               />
             </div>
