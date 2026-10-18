@@ -175,7 +175,7 @@ export function useRecarsState() {
       return updated;
     });
     // Persist to Supabase
-    fetch('/api/cars', {
+    fetch('/api/cars?admin=true', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newCar),
@@ -207,7 +207,7 @@ export function useRecarsState() {
       return updated;
     });
     // Persist to Supabase
-    fetch('/api/cars', {
+    fetch('/api/cars?admin=true', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedCar),

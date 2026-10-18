@@ -73,6 +73,35 @@ export interface Car {
   financeAvailable?: FinanceAvailability;
   suggestedPriceMin?: number;
   suggestedPriceMax?: number;
+
+  // Dealer Identification & Vehicle Source (Admin Portal only)
+  vehicleSource?: 'Individual Seller' | 'Dealer' | 'Admin';
+  dealerId?: string;
+  dealerName?: string;
+  dealerContact?: string;
+  uploadedBy?: 'Admin' | 'Dealer' | 'Seller';
+  uploadedByUserId?: string;
+  uploadedByRole?: string;
+  listingStatus?: 'Pending' | 'Approved' | 'Published' | 'Rejected' | 'Sold';
+  registrationNumber?: string;
+}
+
+export type VehicleSource = 'Individual Seller' | 'Dealer' | 'Admin';
+export type UploadedByRole = 'Admin' | 'Dealer' | 'Seller';
+export type ListingWorkflowStatus = 'Pending' | 'Approved' | 'Published' | 'Rejected' | 'Sold';
+
+export interface RegisteredDealer {
+  id: string;
+  name: string;
+  contactPerson?: string;
+  phone: string;
+  email?: string;
+  city?: string;
+  address?: string;
+  status?: string;
+  activeCarsCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SellRequest {

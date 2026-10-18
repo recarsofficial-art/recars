@@ -1,6 +1,6 @@
 import { Pool, QueryResult } from 'pg';
 import { createClient } from '@supabase/supabase-js';
-import { Car, SellRequest, TestDriveBooking, CarInquiry, Negotiation, InspectionConfig, PDIBooking } from './types';
+import { Car, SellRequest, TestDriveBooking, CarInquiry, Negotiation, InspectionConfig, PDIBooking, RegisteredDealer } from './types';
 
 function getDatabaseConnectionString(): string {
   let envUrl = (process.env.DATABASE_URL || '').trim();
@@ -138,6 +138,46 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 // 1. CARS INVENTORY DATABASE OPERATIONS
 // ========================================================
 
+let dealerSchemaInitPromise: Promise<void> | null = null;
+export async function ensureDealerAndCarsSchema(): Promise<void> {
+  if (!dealerSchemaInitPromise) {
+    dealerSchemaInitPromise = (async () => {
+      try {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS public.dealers (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            contact_person TEXT,
+            phone TEXT NOT NULL,
+            email TEXT,
+            city TEXT DEFAULT 'Warangal',
+            address TEXT,
+            status TEXT DEFAULT 'Active',
+            created_at TIMESTAMPTZ DEFAULT now(),
+            updated_at TIMESTAMPTZ DEFAULT now()
+          );
+
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS vehicle_source TEXT DEFAULT 'Individual Seller';
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS dealer_id TEXT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS dealer_name TEXT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS dealer_contact TEXT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS uploaded_by TEXT DEFAULT 'Seller';
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS uploaded_by_user_id TEXT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS uploaded_by_role TEXT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS listing_status TEXT DEFAULT 'Published';
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS registration_number TEXT;
+
+          CREATE INDEX IF NOT EXISTS idx_cars_vehicle_source ON public.cars(vehicle_source);
+          CREATE INDEX IF NOT EXISTS idx_cars_dealer_id ON public.cars(dealer_id);
+        `);
+      } catch (err: any) {
+        console.warn('[DB_INIT] ensureDealerAndCarsSchema warning:', err?.message);
+      }
+    })();
+  }
+  return dealerSchemaInitPromise;
+}
+
 export async function dbGetCars(filter?: {
   make?: string;
   bodyType?: string;
@@ -145,6 +185,7 @@ export async function dbGetCars(filter?: {
   minPrice?: number;
   maxPrice?: number;
 }): Promise<Car[]> {
+  await ensureDealerAndCarsSchema();
   let sql = 'SELECT * FROM public.cars WHERE 1=1';
   const values: any[] = [];
   let idx = 1;
@@ -227,10 +268,20 @@ export async function dbGetCars(filter?: {
     financeAvailable: (r.finance_available as any) || 'Available',
     suggestedPriceMin: r.suggested_price_min ? Number(r.suggested_price_min) : Math.round(Number(r.price) * 0.95),
     suggestedPriceMax: r.suggested_price_max ? Number(r.suggested_price_max) : Math.round(Number(r.price) * 1.05),
+    vehicleSource: (r.vehicle_source as any) || 'Individual Seller',
+    dealerId: r.dealer_id || undefined,
+    dealerName: r.dealer_name || undefined,
+    dealerContact: r.dealer_contact || undefined,
+    uploadedBy: (r.uploaded_by as any) || 'Seller',
+    uploadedByUserId: r.uploaded_by_user_id || undefined,
+    uploadedByRole: r.uploaded_by_role || undefined,
+    listingStatus: (r.listing_status as any) || 'Published',
+    registrationNumber: r.registration_number || undefined,
   }));
 }
 
 export async function dbGetCarById(id: string): Promise<Car | null> {
+  await ensureDealerAndCarsSchema();
   const { rows } = await pool.query('SELECT * FROM public.cars WHERE id = $1 LIMIT 1', [id]);
   if (!rows.length) return null;
   const r = rows[0];
@@ -288,20 +339,33 @@ export async function dbGetCarById(id: string): Promise<Car | null> {
     financeAvailable: (r.finance_available as any) || 'Available',
     suggestedPriceMin: r.suggested_price_min ? Number(r.suggested_price_min) : Math.round(Number(r.price) * 0.95),
     suggestedPriceMax: r.suggested_price_max ? Number(r.suggested_price_max) : Math.round(Number(r.price) * 1.05),
+    vehicleSource: (r.vehicle_source as any) || 'Individual Seller',
+    dealerId: r.dealer_id || undefined,
+    dealerName: r.dealer_name || undefined,
+    dealerContact: r.dealer_contact || undefined,
+    uploadedBy: (r.uploaded_by as any) || 'Seller',
+    uploadedByUserId: r.uploaded_by_user_id || undefined,
+    uploadedByRole: r.uploaded_by_role || undefined,
+    listingStatus: (r.listing_status as any) || 'Published',
+    registrationNumber: r.registration_number || undefined,
   };
 }
 
 export async function dbInsertCar(car: Car): Promise<void> {
+  await ensureDealerAndCarsSchema();
   const sql = `
     INSERT INTO public.cars (
       id, make, model, variant, year, price, original_price, emi_per_month,
       kilometers, fuel_type, transmission, body_type, ownership, city,
       location_area, image, gallery_images, score, is_verified, is_select, description,
       availability_status, manufacturing_year, registration_year, insurance_status,
-      insurance_expiry, insurance_type, finance_available, suggested_price_min, suggested_price_max
+      insurance_expiry, insurance_type, finance_available, suggested_price_min, suggested_price_max,
+      vehicle_source, dealer_id, dealer_name, dealer_contact, uploaded_by, uploaded_by_user_id, uploaded_by_role,
+      listing_status, registration_number
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
-      $22, $23, $24, $25, $26, $27, $28, $29, $30
+      $22, $23, $24, $25, $26, $27, $28, $29, $30,
+      $31, $32, $33, $34, $35, $36, $37, $38, $39
     )
     ON CONFLICT (id) DO UPDATE SET
       make = EXCLUDED.make,
@@ -333,6 +397,15 @@ export async function dbInsertCar(car: Car): Promise<void> {
       finance_available = EXCLUDED.finance_available,
       suggested_price_min = EXCLUDED.suggested_price_min,
       suggested_price_max = EXCLUDED.suggested_price_max,
+      vehicle_source = EXCLUDED.vehicle_source,
+      dealer_id = EXCLUDED.dealer_id,
+      dealer_name = EXCLUDED.dealer_name,
+      dealer_contact = EXCLUDED.dealer_contact,
+      uploaded_by = EXCLUDED.uploaded_by,
+      uploaded_by_user_id = EXCLUDED.uploaded_by_user_id,
+      uploaded_by_role = EXCLUDED.uploaded_by_role,
+      listing_status = EXCLUDED.listing_status,
+      registration_number = EXCLUDED.registration_number,
       updated_at = now();
   `;
   await pool.query(sql, [
@@ -366,7 +439,91 @@ export async function dbInsertCar(car: Car): Promise<void> {
     car.financeAvailable || 'Available',
     car.suggestedPriceMin || Math.round(car.price * 0.95),
     car.suggestedPriceMax || Math.round(car.price * 1.05),
+    car.vehicleSource || 'Individual Seller',
+    car.dealerId || null,
+    car.dealerName || null,
+    car.dealerContact || null,
+    car.uploadedBy || 'Seller',
+    car.uploadedByUserId || null,
+    car.uploadedByRole || null,
+    car.listingStatus || 'Published',
+    car.registrationNumber || null,
   ]);
+}
+
+export async function dbGetDealers(): Promise<RegisteredDealer[]> {
+  await ensureDealerAndCarsSchema();
+  try {
+    const { rows } = await pool.query(`
+      SELECT d.*, COUNT(c.id)::int as active_cars_count
+      FROM public.dealers d
+      LEFT JOIN public.cars c ON (c.dealer_id = d.id OR c.dealer_name = d.name)
+      GROUP BY d.id
+      ORDER BY d.name ASC
+    `);
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      contactPerson: r.contact_person || undefined,
+      phone: r.phone,
+      email: r.email || undefined,
+      city: r.city || 'Warangal',
+      address: r.address || undefined,
+      status: r.status || 'Active',
+      activeCarsCount: Number(r.active_cars_count || 0),
+      createdAt: r.created_at ? new Date(r.created_at).toISOString() : undefined,
+      updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : undefined,
+    }));
+  } catch (err: any) {
+    console.error('dbGetDealers error:', err?.message);
+    return [
+      { id: 'DLR-001', name: 'Sri Sai Motors', contactPerson: 'Ramesh Rao', phone: '+91 98480 12345', city: 'Warangal' },
+      { id: 'DLR-002', name: 'ABC Automobiles', contactPerson: 'Suresh Patel', phone: '+91 98765 43210', city: 'Hyderabad' },
+      { id: 'DLR-003', name: 'Royal Cars', contactPerson: 'Vikram Reddy', phone: '+91 99887 76655', city: 'Warangal' },
+      { id: 'DLR-004', name: 'Laxmi Motors', contactPerson: 'K. Venkatesh', phone: '+91 94401 22334', city: 'Warangal' },
+      { id: 'DLR-005', name: 'Balaji Auto World', contactPerson: 'Naresh Goud', phone: '+91 98492 55667', city: 'Karimnagar' },
+    ];
+  }
+}
+
+export async function dbInsertDealer(dealer: RegisteredDealer): Promise<RegisteredDealer> {
+  await ensureDealerAndCarsSchema();
+  const id = dealer.id || `DLR-${Date.now().toString().slice(-4)}`;
+  const sql = `
+    INSERT INTO public.dealers (id, name, contact_person, phone, email, city, address, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      contact_person = EXCLUDED.contact_person,
+      phone = EXCLUDED.phone,
+      email = EXCLUDED.email,
+      city = EXCLUDED.city,
+      address = EXCLUDED.address,
+      status = EXCLUDED.status,
+      updated_at = now()
+    RETURNING *;
+  `;
+  const { rows } = await pool.query(sql, [
+    id,
+    dealer.name.trim(),
+    dealer.contactPerson || null,
+    dealer.phone.trim(),
+    dealer.email || null,
+    dealer.city || 'Warangal',
+    dealer.address || null,
+    dealer.status || 'Active',
+  ]);
+  const r = rows[0];
+  return {
+    id: r.id,
+    name: r.name,
+    contactPerson: r.contact_person,
+    phone: r.phone,
+    email: r.email,
+    city: r.city,
+    address: r.address,
+    status: r.status,
+  };
 }
 
 export async function dbUpdateCarAvailability(id: string, status: string): Promise<boolean> {

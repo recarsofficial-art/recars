@@ -44,12 +44,16 @@ import {
   Send,
   SlidersHorizontal,
   Camera,
+  Building2,
+  User,
+  Info,
+  CheckCircle,
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
 import { useRecarsState } from '@/lib/store';
 import { formatINR, formatKM } from '@/lib/formatters';
-import { Car as CarType, CarInquiry, SellRequest, TestDriveBooking, Negotiation, InspectionConfig, VehicleAvailability, PDIBooking } from '@/lib/types';
+import { Car as CarType, CarInquiry, SellRequest, TestDriveBooking, Negotiation, InspectionConfig, VehicleAvailability, PDIBooking, RegisteredDealer } from '@/lib/types';
 import { MAKES, CITIES } from '@/lib/data';
 
 const AVAILABLE_IMAGES = [
@@ -204,8 +208,8 @@ export default function AdminDashboardPage() {
   const syncAllFromSupabase = async () => {
     setIsSyncing(true);
     try {
-      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes, notifRes] = await Promise.all([
-        fetch('/api/cars').then((r) => r.json()).catch(() => null),
+      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes, notifRes, dealersRes] = await Promise.all([
+        fetch('/api/cars?admin=true').then((r) => r.json()).catch(() => null),
         fetch('/api/sell').then((r) => r.json()).catch(() => null),
         fetch('/api/inquiries').then((r) => r.json()).catch(() => null),
         fetch('/api/customers').then((r) => r.json()).catch(() => null),
@@ -214,9 +218,11 @@ export default function AdminDashboardPage() {
         fetch('/api/settings').then((r) => r.json()).catch(() => null),
         fetch('/api/pdi').then((r) => r.json()).catch(() => null),
         fetch('/api/admin/notifications').then((r) => r.json()).catch(() => null),
+        fetch('/api/dealers').then((r) => r.json()).catch(() => null),
       ]);
 
       if (carsRes?.cars) setLiveCars(carsRes.cars);
+      if (dealersRes?.dealers && Array.isArray(dealersRes.dealers)) setDealersList(dealersRes.dealers);
       if (sellRes?.customerCars) setLiveSellRequests(sellRes.customerCars);
       if (inqRes?.inquiries) setLiveInquiries(inqRes.inquiries);
       if (custRes?.customers) setLiveCustomers(custRes.customers);
@@ -379,9 +385,21 @@ export default function AdminDashboardPage() {
   const customers = liveCustomers;
   const testDrives = liveTestDrives;
 
+  // Registered Dealers State
+  const [dealersList, setDealersList] = useState<RegisteredDealer[]>([
+    { id: 'DLR-001', name: 'Sri Sai Motors', contactPerson: 'Ramesh Rao', phone: '+91 98480 12345', city: 'Warangal' },
+    { id: 'DLR-002', name: 'ABC Automobiles', contactPerson: 'Suresh Patel', phone: '+91 98765 43210', city: 'Hyderabad' },
+    { id: 'DLR-003', name: 'Royal Cars', contactPerson: 'Vikram Reddy', phone: '+91 99887 76655', city: 'Warangal' },
+    { id: 'DLR-004', name: 'Laxmi Motors', contactPerson: 'K. Venkatesh', phone: '+91 94401 22334', city: 'Warangal' },
+    { id: 'DLR-005', name: 'Balaji Auto World', contactPerson: 'Naresh Goud', phone: '+91 98492 55667', city: 'Karimnagar' },
+  ]);
+
   // Search & Filter state for Cars tab
   const [carSearch, setCarSearch] = useState('');
   const [carCityFilter, setCarCityFilter] = useState('All');
+  const [sourceFilter, setSourceFilter] = useState<'All' | 'Dealer' | 'Individual Seller' | 'Admin-Uploaded'>('All');
+  const [specificDealerFilter, setSpecificDealerFilter] = useState<string>('All');
+  const [viewingDetailsCar, setViewingDetailsCar] = useState<CarType | null>(null);
 
   // Search & Filter state for Inquiries tab
   const [inquirySearch, setInquirySearch] = useState('');
@@ -391,6 +409,19 @@ export default function AdminDashboardPage() {
   const [isAddCarModalOpen, setIsAddCarModalOpen] = useState(false);
   const [editingCarId, setEditingCarId] = useState<string | null>(null);
   const [carToDelete, setCarToDelete] = useState<CarType | null>(null);
+
+  // Vehicle Source & Dealer Form Fields
+  const [newVehicleSource, setNewVehicleSource] = useState<'Individual Seller' | 'Dealer' | 'Admin'>('Individual Seller');
+  const [newDealerId, setNewDealerId] = useState<string>('');
+  const [newDealerName, setNewDealerName] = useState<string>('');
+  const [newDealerContact, setNewDealerContact] = useState<string>('');
+  const [newUploadedBy, setNewUploadedBy] = useState<'Admin' | 'Dealer' | 'Seller'>('Admin');
+  const [newListingStatus, setNewListingStatus] = useState<'Pending' | 'Approved' | 'Published' | 'Rejected' | 'Sold'>('Published');
+  const [newRegistrationNumber, setNewRegistrationNumber] = useState<string>('');
+  const [isNewDealerCustom, setIsNewDealerCustom] = useState<boolean>(false);
+  const [customDealerName, setCustomDealerName] = useState<string>('');
+  const [customDealerPhone, setCustomDealerPhone] = useState<string>('');
+  const [customDealerContactPerson, setCustomDealerContactPerson] = useState<string>('');
 
   // New / Edit Car form fields
   const [newMake, setNewMake] = useState('Hyundai');
@@ -455,6 +486,20 @@ export default function AdminDashboardPage() {
     setNewIsVerified(car.isVerified ?? true);
     setNewIsSelect(car.isRecarsSelect ?? true);
     setNewDescription(car.description || '');
+
+    // Dealer & Source Fields
+    setNewVehicleSource(car.vehicleSource || 'Individual Seller');
+    setNewDealerId(car.dealerId || '');
+    setNewDealerName(car.dealerName || '');
+    setNewDealerContact(car.dealerContact || '');
+    setNewUploadedBy(car.uploadedBy || 'Admin');
+    setNewListingStatus(car.listingStatus || 'Published');
+    setNewRegistrationNumber(car.registrationNumber || '');
+    setIsNewDealerCustom(false);
+    setCustomDealerName('');
+    setCustomDealerPhone('');
+    setCustomDealerContactPerson('');
+
     setIsAddCarModalOpen(true);
   };
 
@@ -487,6 +532,20 @@ export default function AdminDashboardPage() {
     setNewIsVerified(true);
     setNewIsSelect(true);
     setNewDescription('Dealer managed immaculate single-owner vehicle with full service record.');
+
+    // Dealer & Source Fields
+    setNewVehicleSource('Individual Seller');
+    setNewDealerId('');
+    setNewDealerName('');
+    setNewDealerContact('');
+    setNewUploadedBy('Admin');
+    setNewListingStatus('Published');
+    setNewRegistrationNumber('');
+    setIsNewDealerCustom(false);
+    setCustomDealerName('');
+    setCustomDealerPhone('');
+    setCustomDealerContactPerson('');
+
     setIsAddCarModalOpen(true);
   };
 
@@ -812,6 +871,53 @@ export default function AdminDashboardPage() {
     const carId = editingCarId || `recars-${Date.now()}`;
     const existingCar = cars.find((c) => c.id === editingCarId);
 
+    let finalDealerId = newDealerId;
+    let finalDealerName = newDealerName;
+    let finalDealerContact = newDealerContact;
+
+    if (newVehicleSource === 'Dealer') {
+      if (isNewDealerCustom) {
+        if (!customDealerName.trim()) {
+          alert('Dealer business name is mandatory when vehicle source is Dealer.');
+          return;
+        }
+        finalDealerName = customDealerName.trim();
+        finalDealerContact = customDealerPhone.trim()
+          ? `${customDealerContactPerson ? customDealerContactPerson + ' • ' : ''}${customDealerPhone.trim()}`
+          : (customDealerContactPerson || '');
+        finalDealerId = `DLR-${Date.now().toString().slice(-4)}`;
+
+        try {
+          await fetch('/api/dealers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: finalDealerId,
+              name: finalDealerName,
+              contactPerson: customDealerContactPerson,
+              phone: customDealerPhone || '+91 98480 00000',
+              city: newCity,
+            }),
+          });
+          setDealersList((prev) => [
+            ...prev,
+            { id: finalDealerId, name: finalDealerName, contactPerson: customDealerContactPerson, phone: customDealerPhone || '', city: newCity }
+          ]);
+        } catch (e) {
+          console.error('Failed to register dealer:', e);
+        }
+      } else {
+        if (!finalDealerName.trim()) {
+          alert('Please select a registered dealer from the dropdown.');
+          return;
+        }
+      }
+    } else {
+      finalDealerId = '';
+      finalDealerName = '';
+      finalDealerContact = '';
+    }
+
     const carData: CarType = {
       ...existingCar,
       id: carId,
@@ -844,6 +950,13 @@ export default function AdminDashboardPage() {
       isRecarsSelect: newIsSelect,
       featured: true,
       inspectionScore: Number(newScore),
+      vehicleSource: newVehicleSource,
+      dealerId: newVehicleSource === 'Dealer' ? finalDealerId : undefined,
+      dealerName: newVehicleSource === 'Dealer' ? finalDealerName : undefined,
+      dealerContact: newVehicleSource === 'Dealer' ? finalDealerContact : undefined,
+      uploadedBy: newUploadedBy,
+      listingStatus: newListingStatus,
+      registrationNumber: newRegistrationNumber.trim() ? newRegistrationNumber.trim().toUpperCase() : undefined,
       specifications: {
         engine: existingCar?.specifications?.engine || '1.2L Turbo Dual VVT',
         maxPower: existingCar?.specifications?.maxPower || '118 bhp',
@@ -868,7 +981,7 @@ export default function AdminDashboardPage() {
       showToast(`Updating "${carData.make} ${carData.model}" in Supabase...`);
 
       try {
-        await fetch('/api/cars', {
+        await fetch('/api/cars?admin=true', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(carData),
@@ -884,7 +997,7 @@ export default function AdminDashboardPage() {
       showToast(`Adding "${carData.make} ${carData.model}" to Supabase inventory...`);
 
       try {
-        await fetch('/api/cars', {
+        await fetch('/api/cars?admin=true', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(carData),
@@ -921,14 +1034,37 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Filtered cars
+  // Filtered cars with multi-source & dealer filtering
   const filteredCars = cars.filter((car) => {
+    const q = carSearch.toLowerCase();
     const matchesSearch =
-      car.make.toLowerCase().includes(carSearch.toLowerCase()) ||
-      car.model.toLowerCase().includes(carSearch.toLowerCase()) ||
-      car.city.toLowerCase().includes(carSearch.toLowerCase());
+      car.make.toLowerCase().includes(q) ||
+      car.model.toLowerCase().includes(q) ||
+      (car.variant && car.variant.toLowerCase().includes(q)) ||
+      car.city.toLowerCase().includes(q) ||
+      car.id.toLowerCase().includes(q) ||
+      (car.dealerName && car.dealerName.toLowerCase().includes(q)) ||
+      (car.registrationNumber && car.registrationNumber.toLowerCase().includes(q));
+
     const matchesCity = carCityFilter === 'All' || car.city === carCityFilter;
-    return matchesSearch && matchesCity;
+
+    const matchesSource =
+      sourceFilter === 'All'
+        ? true
+        : sourceFilter === 'Dealer'
+        ? car.vehicleSource === 'Dealer'
+        : sourceFilter === 'Individual Seller'
+        ? car.vehicleSource === 'Individual Seller'
+        : sourceFilter === 'Admin-Uploaded'
+        ? car.uploadedBy === 'Admin'
+        : true;
+
+    const matchesDealer =
+      specificDealerFilter === 'All'
+        ? true
+        : car.dealerName === specificDealerFilter || car.dealerId === specificDealerFilter;
+
+    return matchesSearch && matchesCity && matchesSource && matchesDealer;
   });
 
   // Filtered inquiries
@@ -2021,9 +2157,20 @@ export default function AdminDashboardPage() {
                       <div className="min-w-0">
                         <h4 className="text-xs font-bold text-[#101216] truncate">{car.make} {car.model}</h4>
                         <p className="text-[11px] text-gray-500 truncate">{car.year} • {car.city} • {formatKM(car.kilometers)}</p>
-                        <span className="inline-block mt-0.5 text-[10px] text-[#237A52] font-bold">
-                          ★ {car.inspectionScore}/100 Inspection
-                        </span>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span className="text-[10px] text-[#237A52] font-bold">
+                            ★ {car.inspectionScore}/100
+                          </span>
+                          {car.vehicleSource === 'Dealer' ? (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200" title={car.dealerName}>
+                              🏢 {car.dealerName || 'Dealer'}
+                            </span>
+                          ) : (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              👤 Individual Seller
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -2608,42 +2755,116 @@ export default function AdminDashboardPage() {
         {activeTab === 'cars' && (
           <div className="space-y-4">
             {/* Search & Filter Bar */}
-            <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
-              <div className="relative w-full sm:w-80">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Filter by make, model, city..."
-                  value={carSearch}
-                  onChange={(e) => setCarSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:border-[#E5325C]"
-                />
+            <div className="bg-white rounded-3xl border border-[#E5E7EB] p-5 space-y-4 shadow-2xs">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-3">
+                {/* Search Bar */}
+                <div className="relative w-full lg:w-96">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search by vehicle, dealer name, reg number, or ID..."
+                    value={carSearch}
+                    onChange={(e) => setCarSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                  />
+                  {carSearch && (
+                    <button
+                      onClick={() => setCarSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                {/* Specific Dealer Filter & Hub */}
+                <div className="flex items-center gap-2.5 w-full lg:w-auto flex-wrap">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-700">
+                    <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Dealer:</span>
+                  </div>
+                  <select
+                    value={specificDealerFilter}
+                    onChange={(e) => setSpecificDealerFilter(e.target.value)}
+                    className="px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-indigo-600"
+                  >
+                    <option value="All">All Dealers</option>
+                    {dealersList.map((d) => (
+                      <option key={d.id} value={d.name}>
+                        {d.name} ({d.city || 'Hub'})
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-700 ml-1">
+                    <Filter className="w-3.5 h-3.5 text-gray-400" />
+                    <span>Hub:</span>
+                  </div>
+                  <select
+                    value={carCityFilter}
+                    onChange={(e) => setCarCityFilter(e.target.value)}
+                    className="px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  >
+                    <option value="All">All Hubs</option>
+                    {CITIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenAddCarModal}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-bold transition-all shadow-xs cursor-pointer ml-auto"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>Add Vehicle</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <Filter className="w-3.5 h-3.5 text-gray-400" />
-                  <span>City:</span>
-                </div>
-                <select
-                  value={carCityFilter}
-                  onChange={(e) => setCarCityFilter(e.target.value)}
-                  className="px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
-                >
-                  <option value="All">All Hubs</option>
-                  {CITIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+              {/* Source Quick-Filter Badges */}
+              <div className="flex items-center gap-2 pt-2 border-t border-gray-100 overflow-x-auto pb-1">
+                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Filter Source:
+                </span>
+                {[
+                  { id: 'All', label: 'All Vehicles', count: cars.length, icon: null },
+                  { id: 'Dealer', label: 'Dealer Vehicles', count: cars.filter((c) => c.vehicleSource === 'Dealer').length, icon: '🏢' },
+                  { id: 'Individual Seller', label: 'Individual Seller', count: cars.filter((c) => c.vehicleSource === 'Individual Seller').length, icon: '👤' },
+                  { id: 'Admin-Uploaded', label: 'Admin-Uploaded', count: cars.filter((c) => c.uploadedBy === 'Admin').length, icon: '🛡️' },
+                ].map((pill) => (
+                  <button
+                    key={pill.id}
+                    onClick={() => setSourceFilter(pill.id as any)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      sourceFilter === pill.id
+                        ? 'bg-[#101216] text-white shadow-2xs'
+                        : 'bg-[#F8F9FA] text-gray-600 hover:text-black border border-[#E5E7EB]'
+                    }`}
+                  >
+                    {pill.icon && <span>{pill.icon}</span>}
+                    <span>{pill.label}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      sourceFilter === pill.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+                    }`}>
+                      {pill.count}
+                    </span>
+                  </button>
+                ))}
 
-                <button
-                  type="button"
-                  onClick={handleOpenAddCarModal}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-bold transition-all shadow-xs cursor-pointer ml-auto"
-                >
-                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                  <span>Add Vehicle</span>
-                </button>
+                {(sourceFilter !== 'All' || specificDealerFilter !== 'All' || carCityFilter !== 'All' || carSearch) && (
+                  <button
+                    onClick={() => {
+                      setSourceFilter('All');
+                      setSpecificDealerFilter('All');
+                      setCarCityFilter('All');
+                      setCarSearch('');
+                    }}
+                    className="text-[11px] text-[#E5325C] hover:underline font-bold ml-auto whitespace-nowrap"
+                  >
+                    Reset Filters
+                  </button>
+                )}
               </div>
             </div>
 
@@ -2654,6 +2875,7 @@ export default function AdminDashboardPage() {
                   <thead className="bg-[#101216] text-white">
                     <tr>
                       <th className="p-4">Car Model</th>
+                      <th className="p-4">Vehicle Source & Dealer</th>
                       <th className="p-4">Specs & Ownership</th>
                       <th className="p-4">Price & Suggested</th>
                       <th className="p-4">Availability Status</th>
@@ -2672,7 +2894,69 @@ export default function AdminDashboardPage() {
                             <div>
                               <h4 className="font-bold text-sm text-[#101216]">{car.make} {car.model}</h4>
                               <p className="text-[11px] text-gray-500">{car.variant} • {car.city}</p>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                {car.registrationNumber && (
+                                  <span className="font-mono text-[10px] font-bold text-gray-700 bg-gray-100 px-1.5 py-0.2 rounded border border-gray-200">
+                                    {car.registrationNumber}
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-gray-400 font-mono">ID: {car.id}</span>
+                              </div>
                             </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="space-y-1">
+                            {/* Source Badge */}
+                            {car.vehicleSource === 'Dealer' ? (
+                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                <Building2 className="w-3 h-3" />
+                                <span>Dealer</span>
+                              </div>
+                            ) : car.vehicleSource === 'Admin' ? (
+                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                                <Shield className="w-3 h-3" />
+                                <span>Admin Stock</span>
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <User className="w-3 h-3" />
+                                <span>Individual Seller</span>
+                              </div>
+                            )}
+
+                            {/* Dealer Name displayed directly beside vehicle information */}
+                            <div className="font-extrabold text-xs text-[#101216]">
+                              {car.vehicleSource === 'Dealer' && car.dealerName ? (
+                                <span className="text-indigo-950 font-bold">{car.dealerName}</span>
+                              ) : car.vehicleSource === 'Individual Seller' ? (
+                                <span className="text-gray-400 font-semibold">—</span>
+                              ) : (
+                                <span className="text-blue-950 font-bold">Recars Direct</span>
+                              )}
+                            </div>
+
+                            {/* Uploaded By */}
+                            <div className="text-[10px] text-gray-500 font-medium">
+                              <span>Uploaded by: </span>
+                              <span className={`font-bold ${
+                                car.uploadedBy === 'Admin'
+                                  ? 'text-blue-600'
+                                  : car.uploadedBy === 'Dealer'
+                                  ? 'text-indigo-600'
+                                  : 'text-emerald-600'
+                              }`}>
+                                {car.uploadedBy || (car.vehicleSource === 'Dealer' ? 'Dealer' : 'Seller')}
+                              </span>
+                            </div>
+
+                            {/* Authorized Contact (Admin only) */}
+                            {car.dealerContact && (
+                              <div className="text-[10px] text-gray-600 font-semibold flex items-center gap-1 pt-0.5">
+                                <Phone className="w-2.5 h-2.5 text-gray-400" />
+                                <span className="truncate max-w-[140px]" title={car.dealerContact}>{car.dealerContact}</span>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="p-4 text-gray-600">
@@ -2746,9 +3030,18 @@ export default function AdminDashboardPage() {
                             </Link>
                             <button
                               type="button"
+                              onClick={() => setViewingDetailsCar(car)}
+                              className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
+                              title="View dealer source, uploader & authorized contact"
+                            >
+                              <Info className="w-3.5 h-3.5" />
+                              <span>Source</span>
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleOpenEditCarModal(car)}
                               className="px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
-                              title="Edit vehicle specifications, pricing, and images"
+                              title="Edit vehicle specifications, pricing, dealer and images"
                             >
                               <Edit className="w-3.5 h-3.5" />
                               <span>Edit</span>
@@ -2768,8 +3061,8 @@ export default function AdminDashboardPage() {
                     ))}
                     {filteredCars.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-gray-500">
-                          No matching vehicles found in inventory.
+                        <td colSpan={7} className="p-8 text-center text-gray-500">
+                          No matching vehicles found with the selected source / dealer filter.
                         </td>
                       </tr>
                     )}
@@ -4061,6 +4354,213 @@ export default function AdminDashboardPage() {
             </div>
 
             <form onSubmit={handleSaveCar} className="space-y-4 text-xs">
+              {/* VEHICLE SOURCE & DEALER IDENTIFICATION (ADMIN ONLY) */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-50/80 to-indigo-50/80 border border-purple-200 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
+                      <Building2 className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-[#101216] text-xs">Vehicle Source & Dealer Association</h4>
+                      <p className="text-[10px] text-gray-500">Internal admin identification only • Hidden from public customer marketplace</p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-100 text-indigo-700 border border-indigo-200">
+                    Admin Portal Only
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  {/* Vehicle Source Selector */}
+                  <div>
+                    <label className="block font-bold text-[#101216] mb-1">
+                      Vehicle Source <span className="text-[#E5325C]">*</span>
+                    </label>
+                    <select
+                      value={newVehicleSource}
+                      onChange={(e) => {
+                        const val = e.target.value as 'Individual Seller' | 'Dealer' | 'Admin';
+                        setNewVehicleSource(val);
+                        if (val === 'Individual Seller') {
+                          setNewUploadedBy('Seller');
+                        } else if (val === 'Dealer') {
+                          setNewUploadedBy('Admin');
+                        } else {
+                          setNewUploadedBy('Admin');
+                        }
+                      }}
+                      className="w-full px-3 py-2.5 bg-white border border-[#E5E7EB] rounded-xl font-bold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                    >
+                      <option value="Individual Seller">👤 Individual Seller</option>
+                      <option value="Dealer">🏢 Dealer</option>
+                      <option value="Admin">🛡️ Admin Stock</option>
+                    </select>
+                  </div>
+
+                  {/* Uploaded By */}
+                  <div>
+                    <label className="block font-bold text-[#101216] mb-1">
+                      Uploaded By <span className="text-[#E5325C]">*</span>
+                    </label>
+                    <select
+                      value={newUploadedBy}
+                      onChange={(e) => setNewUploadedBy(e.target.value as any)}
+                      className="w-full px-3 py-2.5 bg-white border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                    >
+                      <option value="Admin">Admin (on behalf of Dealer/Seller)</option>
+                      <option value="Dealer">Dealer (Direct Upload)</option>
+                      <option value="Seller">Seller (Direct Upload)</option>
+                    </select>
+                  </div>
+
+                  {/* Listing Workflow Status */}
+                  <div>
+                    <label className="block font-bold text-[#101216] mb-1">Listing Status</label>
+                    <select
+                      value={newListingStatus}
+                      onChange={(e) => setNewListingStatus(e.target.value as any)}
+                      className="w-full px-3 py-2.5 bg-white border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                    >
+                      <option value="Published">Published (Live)</option>
+                      <option value="Approved">Approved</option>
+                      <option value="Pending">Pending Review</option>
+                      <option value="Reserved">Reserved</option>
+                      <option value="Sold">Sold</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* When Dealer is selected, show mandatory Select Dealer dropdown */}
+                {newVehicleSource === 'Dealer' && (
+                  <div className="pt-2 border-t border-purple-200/60 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold text-[#101216] mb-1">
+                          Select Dealer <span className="text-[#E5325C]">* Mandatory</span>
+                        </label>
+                        <select
+                          value={isNewDealerCustom ? '__custom__' : (newDealerName || '')}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '__custom__') {
+                              setIsNewDealerCustom(true);
+                              setNewDealerId('');
+                              setNewDealerName('');
+                              setNewDealerContact('');
+                            } else {
+                              setIsNewDealerCustom(false);
+                              const found = dealersList.find((d) => d.name === val);
+                              if (found) {
+                                setNewDealerId(found.id);
+                                setNewDealerName(found.name);
+                                setNewDealerContact(
+                                  found.phone
+                                    ? `${found.contactPerson ? found.contactPerson + ' • ' : ''}${found.phone}`
+                                    : ''
+                                );
+                              }
+                            }
+                          }}
+                          className="w-full px-3 py-2.5 bg-white border border-purple-300 rounded-xl font-bold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                        >
+                          <option value="">-- Choose Existing Registered Dealer --</option>
+                          {dealersList.map((d) => (
+                            <option key={d.id} value={d.name}>
+                              {d.name} ({d.city || 'Hub'})
+                            </option>
+                          ))}
+                          <option value="__custom__">➕ Enter New Dealer Details...</option>
+                        </select>
+                      </div>
+
+                      {/* Registration Number */}
+                      <div>
+                        <label className="block font-bold text-[#101216] mb-1">Registration Number (RTO)</label>
+                        <input
+                          type="text"
+                          value={newRegistrationNumber}
+                          onChange={(e) => setNewRegistrationNumber(e.target.value.toUpperCase())}
+                          placeholder="e.g. TS 03 FA 4421"
+                          className="w-full px-3 py-2.5 bg-white border border-[#E5E7EB] rounded-xl font-mono font-semibold text-gray-800 uppercase focus:outline-none focus:border-[#E5325C]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* If entering custom new dealer */}
+                    {isNewDealerCustom ? (
+                      <div className="p-3 bg-white rounded-xl border border-purple-300 space-y-2">
+                        <p className="text-[11px] font-bold text-indigo-700">Enter New Dealer Business Information:</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Business Name *</label>
+                            <input
+                              type="text"
+                              required
+                              value={customDealerName}
+                              onChange={(e) => setCustomDealerName(e.target.value)}
+                              placeholder="e.g. Hyderabad Auto Hub"
+                              className="w-full px-2.5 py-1.5 bg-[#F8F9FA] border border-gray-300 rounded-lg text-xs font-semibold"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Contact Person</label>
+                            <input
+                              type="text"
+                              value={customDealerContactPerson}
+                              onChange={(e) => setCustomDealerContactPerson(e.target.value)}
+                              placeholder="e.g. Rajesh Kumar"
+                              className="w-full px-2.5 py-1.5 bg-[#F8F9FA] border border-gray-300 rounded-lg text-xs font-semibold"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Contact Phone *</label>
+                            <input
+                              type="text"
+                              value={customDealerPhone}
+                              onChange={(e) => setCustomDealerPhone(e.target.value)}
+                              placeholder="+91 98480 12345"
+                              className="w-full px-2.5 py-1.5 bg-[#F8F9FA] border border-gray-300 rounded-lg text-xs font-semibold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : newDealerName ? (
+                      <div className="flex items-center gap-2 p-2.5 bg-white/90 rounded-xl border border-purple-200 text-xs flex-wrap">
+                        <span className="font-bold text-indigo-900">Selected Dealer:</span>
+                        <span className="font-extrabold text-[#101216]">{newDealerName}</span>
+                        {newDealerId && <span className="text-[10px] font-mono text-gray-500 bg-gray-100 px-1 rounded">ID: {newDealerId}</span>}
+                        {newDealerContact && (
+                          <span className="text-[11px] text-gray-600 ml-auto inline-flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-indigo-600" />
+                            <span>{newDealerContact}</span>
+                          </span>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
+                {newVehicleSource === 'Individual Seller' && (
+                  <div className="pt-2 border-t border-purple-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-gray-600">
+                    <div className="flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      <span>Listing submitted by individual vehicle owner or approved customer car.</span>
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        value={newRegistrationNumber}
+                        onChange={(e) => setNewRegistrationNumber(e.target.value.toUpperCase())}
+                        placeholder="Reg No: TS 03 AB 1234"
+                        className="px-2.5 py-1 bg-white border border-[#E5E7EB] rounded-lg font-mono text-xs uppercase"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block font-bold text-[#101216] mb-1">Make / Brand</label>
@@ -4565,6 +5065,156 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          VEHICLE SOURCE & DEALER DETAILS MODAL (ADMIN ONLY)
+      ========================================================= */}
+      {viewingDetailsCar && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-[#E5E7EB] p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-[#101216]">Vehicle Source & Dealer Information</h3>
+                  <p className="text-[11px] text-gray-500">Internal Admin Verification Record • ID: {viewingDetailsCar.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingDetailsCar(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Vehicle Card Header */}
+            <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-gray-50 border border-gray-200">
+              <div className="w-16 h-12 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0">
+                <img src={viewingDetailsCar.image} alt={viewingDetailsCar.model} className="w-full h-full object-cover" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="font-extrabold text-sm text-[#101216] truncate">
+                  {viewingDetailsCar.year} {viewingDetailsCar.make} {viewingDetailsCar.model}
+                </h4>
+                <p className="text-xs text-gray-500 truncate">{viewingDetailsCar.variant} • {viewingDetailsCar.city}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="font-mono text-[10px] font-bold text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-200">
+                    {viewingDetailsCar.registrationNumber || 'Registration Pending'}
+                  </span>
+                  <span className="font-black text-xs text-[#E5325C]">{formatINR(viewingDetailsCar.price)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Source & Dealer Specifications */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-[#F8F9FA] border border-gray-200">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Vehicle Source</span>
+                <span className="font-extrabold text-sm text-[#101216] mt-0.5 inline-flex items-center gap-1.5">
+                  {viewingDetailsCar.vehicleSource === 'Dealer' ? (
+                    <>
+                      <Building2 className="w-4 h-4 text-indigo-600" />
+                      <span className="text-indigo-950 font-black">Dealer Stock</span>
+                    </>
+                  ) : viewingDetailsCar.vehicleSource === 'Admin' ? (
+                    <>
+                      <Shield className="w-4 h-4 text-blue-600" />
+                      <span className="text-blue-950 font-black">Admin Stock</span>
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-4 h-4 text-emerald-600" />
+                      <span className="text-emerald-950 font-black">Individual Seller</span>
+                    </>
+                  )}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#F8F9FA] border border-gray-200">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Uploaded By</span>
+                <span className="font-extrabold text-sm text-[#101216] mt-0.5 block">
+                  {viewingDetailsCar.uploadedBy || 'Admin'}
+                  <span className="text-[10px] text-gray-500 font-normal ml-1">
+                    ({viewingDetailsCar.uploadedByRole || 'Admin Role'})
+                  </span>
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#F8F9FA] border border-gray-200 col-span-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Dealer Name & Association
+                </span>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="font-extrabold text-sm text-[#101216]">
+                    {viewingDetailsCar.vehicleSource === 'Dealer' ? (
+                      viewingDetailsCar.dealerName || 'Unnamed Dealer'
+                    ) : (
+                      <span className="text-gray-400 font-semibold">— (Individual Owner Listing)</span>
+                    )}
+                  </span>
+                  {viewingDetailsCar.dealerId && (
+                    <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      ID: {viewingDetailsCar.dealerId}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#F8F9FA] border border-gray-200 col-span-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Authorized Contact Details (Admin Only)
+                </span>
+                <span className="font-bold text-xs text-gray-800 mt-1 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>{viewingDetailsCar.dealerContact || 'Direct Recars Admin Concierge (+91 98480 00000)'}</span>
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#F8F9FA] border border-gray-200">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Listing Workflow</span>
+                <span className="font-extrabold text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block mt-1">
+                  {viewingDetailsCar.listingStatus || 'Published'}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#F8F9FA] border border-gray-200">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Upload Date</span>
+                <span className="font-semibold text-xs text-gray-700 block mt-1">
+                  {viewingDetailsCar.createdAt ? new Date(viewingDetailsCar.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recently'}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Action in Modal */}
+            <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+              {viewingDetailsCar.vehicleSource === 'Dealer' && viewingDetailsCar.dealerName && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSpecificDealerFilter(viewingDetailsCar.dealerName || 'All');
+                    setSourceFilter('Dealer');
+                    setViewingDetailsCar(null);
+                  }}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-bold hover:underline cursor-pointer inline-flex items-center gap-1"
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>View all cars from {viewingDetailsCar.dealerName} →</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setViewingDetailsCar(null)}
+                className="px-4 py-2 rounded-xl bg-[#101216] text-white font-bold text-xs hover:bg-black transition-colors ml-auto cursor-pointer"
+              >
+                Close Details
+              </button>
+            </div>
           </div>
         </div>
       )}
