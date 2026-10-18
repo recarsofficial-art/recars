@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Shield,
@@ -430,6 +430,107 @@ export default function AdminDashboardPage() {
   };
 
   const pdiList = livePDIBookings.length > 0 ? livePDIBookings : storePDIBookings;
+
+  // ========================================================
+  // UNREAD REMINDER STATE & TRACKING (Pink message unread badges)
+  // ========================================================
+  const [readRequestIds, setReadRequestIds] = useState<Set<string>>(new Set());
+
+  // Load persisted read IDs from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('recars_admin_read_requests_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setReadRequestIds(new Set(parsed));
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load read request IDs from localStorage', e);
+    }
+  }, []);
+
+  const markRequestAsRead = useCallback((id: string) => {
+    if (!id) return;
+    setReadRequestIds((prev) => {
+      if (prev.has(id)) return prev;
+      const updated = new Set(prev);
+      updated.add(id);
+      try {
+        localStorage.setItem('recars_admin_read_requests_v1', JSON.stringify(Array.from(updated)));
+      } catch (e) {
+        console.warn('Failed to save read request ID', e);
+      }
+      return updated;
+    });
+  }, []);
+
+  const markAllRequestsAsRead = useCallback((ids: string[], sectionLabel = 'requests') => {
+    if (!ids.length) return;
+    setReadRequestIds((prev) => {
+      const updated = new Set(prev);
+      let changed = false;
+      ids.forEach((id) => {
+        if (!updated.has(id)) {
+          updated.add(id);
+          changed = true;
+        }
+      });
+      if (!changed) return prev;
+      try {
+        localStorage.setItem('recars_admin_read_requests_v1', JSON.stringify(Array.from(updated)));
+      } catch (e) {
+        console.warn('Failed to save read request IDs', e);
+      }
+      return updated;
+    });
+    showToast(`Marked ${ids.length} ${sectionLabel} as opened and checked!`);
+  }, []);
+
+  const isRequestUnread = useCallback(
+    (id: string, status?: string) => {
+      if (!id || readRequestIds.has(id)) return false;
+      // If already resolved or rejected, it no longer needs an unread reminder
+      if (status === 'Closed' || status === 'Rejected' || status === 'Cancelled' || status === 'Completed' || status === 'Car Purchased') {
+        return false;
+      }
+      return true;
+    },
+    [readRequestIds]
+  );
+
+  const unreadInquiriesCount = useMemo(
+    () => inquiries.filter((i) => isRequestUnread(i.id, i.status)).length,
+    [inquiries, isRequestUnread]
+  );
+
+  const unreadSellRequestsCount = useMemo(
+    () => sellRequests.filter((r) => isRequestUnread(r.id, r.status)).length,
+    [sellRequests, isRequestUnread]
+  );
+
+  const unreadTestDrivesCount = useMemo(
+    () => testDrives.filter((t) => isRequestUnread(t.id, t.status)).length,
+    [testDrives, isRequestUnread]
+  );
+
+  const unreadPDICount = useMemo(
+    () => pdiList.filter((p) => isRequestUnread(p.id, p.status)).length,
+    [pdiList, isRequestUnread]
+  );
+
+  const unreadNegotiationsCount = useMemo(
+    () => liveNegotiations.filter((n) => isRequestUnread(n.id, n.status)).length,
+    [liveNegotiations, isRequestUnread]
+  );
+
+  const totalUnreadCount =
+    unreadInquiriesCount +
+    unreadSellRequestsCount +
+    unreadTestDrivesCount +
+    unreadPDICount +
+    unreadNegotiationsCount;
 
   const handleUpdatePDIStatus = async (
     bookingId: string,
@@ -1202,18 +1303,27 @@ export default function AdminDashboardPage() {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="block">PDI Bookings</span>
-                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-[#E5325C] text-white">New</span>
+                      {unreadPDICount > 0 ? (
+                        <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" title="Unread PDI bookings" />
+                      ) : (
+                        <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-gray-200 text-gray-600">PDI</span>
+                      )}
                     </div>
                     <span className="text-[10px] font-normal text-gray-400 block">Showroom inspections</span>
                   </div>
                 </div>
-                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
-                  pdiList.some((p) => p.status === 'Booked')
-                    ? 'bg-[#E5325C] text-white animate-pulse'
-                    : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {pdiList.length}
-                </span>
+                {unreadPDICount > 0 ? (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-[#E5325C] text-white shadow-xs animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                    <span>{unreadPDICount} unread</span>
+                  </span>
+                ) : (
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                    activeTab === 'pdi' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {pdiList.length}
+                  </span>
+                )}
               </button>
 
               {/* Dedicated Section: Negotiations */}
@@ -1235,17 +1345,27 @@ export default function AdminDashboardPage() {
                     <Handshake className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="block">Negotiations</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="block">Negotiations</span>
+                      {unreadNegotiationsCount > 0 && (
+                        <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" title="Unread price offers" />
+                      )}
+                    </div>
                     <span className="text-[10px] font-normal text-gray-400 block">Offers & counteroffers</span>
                   </div>
                 </div>
-                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
-                  liveNegotiations.some((n) => n.status === 'Pending')
-                    ? 'bg-[#E5325C] text-white animate-pulse'
-                    : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {liveNegotiations.length}
-                </span>
+                {unreadNegotiationsCount > 0 ? (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-[#E5325C] text-white shadow-xs animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                    <span>{unreadNegotiationsCount} unread</span>
+                  </span>
+                ) : (
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                    activeTab === 'negotiations' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {liveNegotiations.length}
+                  </span>
+                )}
               </button>
 
               <button
@@ -1266,15 +1386,27 @@ export default function AdminDashboardPage() {
                     <MessageSquare className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="block">Car Inquiries</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="block">Car Inquiries</span>
+                      {unreadInquiriesCount > 0 && (
+                        <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" title="Unread customer inquiries" />
+                      )}
+                    </div>
                     <span className="text-[10px] font-normal text-gray-400 block">Quotes & questions</span>
                   </div>
                 </div>
-                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
-                  activeTab === 'inquiries' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {inquiries.length}
-                </span>
+                {unreadInquiriesCount > 0 ? (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-[#E5325C] text-white shadow-xs animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                    <span>{unreadInquiriesCount} unread</span>
+                  </span>
+                ) : (
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                    activeTab === 'inquiries' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {inquiries.length}
+                  </span>
+                )}
               </button>
 
               <button
@@ -1295,15 +1427,27 @@ export default function AdminDashboardPage() {
                     <Sparkles className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="block">Sell Requests</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="block">Sell Requests</span>
+                      {unreadSellRequestsCount > 0 && (
+                        <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" title="Unread car sell submissions" />
+                      )}
+                    </div>
                     <span className="text-[10px] font-normal text-gray-400 block">Customer submitted cars</span>
                   </div>
                 </div>
-                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
-                  activeTab === 'leads' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {sellRequests.length}
-                </span>
+                {unreadSellRequestsCount > 0 ? (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-[#E5325C] text-white shadow-xs animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                    <span>{unreadSellRequestsCount} unread</span>
+                  </span>
+                ) : (
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                    activeTab === 'leads' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {sellRequests.length}
+                  </span>
+                )}
               </button>
 
               <button
@@ -1353,15 +1497,27 @@ export default function AdminDashboardPage() {
                     <Calendar className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="block">Test Drives</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="block">Test Drives</span>
+                      {unreadTestDrivesCount > 0 && (
+                        <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" title="Unread test drive bookings" />
+                      )}
+                    </div>
                     <span className="text-[10px] font-normal text-gray-400 block">Hub & doorstep visits</span>
                   </div>
                 </div>
-                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
-                  activeTab === 'testdrives' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {testDrives.length}
-                </span>
+                {unreadTestDrivesCount > 0 ? (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-[#E5325C] text-white shadow-xs animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                    <span>{unreadTestDrivesCount} unread</span>
+                  </span>
+                ) : (
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                    activeTab === 'testdrives' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {testDrives.length}
+                  </span>
+                )}
               </button>
 
               {/* Dedicated Section: Inspection & Platform Settings */}
@@ -1508,6 +1664,24 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {totalUnreadCount > 0 ? (
+              <div
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFF0F3] border border-[#FFD6DF] text-[#E5325C] text-xs font-black shadow-xs animate-pulse"
+                title={`${totalUnreadCount} unread request reminder(s) pending your review`}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5325C] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E5325C]"></span>
+                </span>
+                <span>{totalUnreadCount} Unread Reminder{totalUnreadCount > 1 ? 's' : ''}</span>
+              </div>
+            ) : (
+              <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>All Requests Checked</span>
+              </div>
+            )}
+
             <button
               onClick={syncAllFromSupabase}
               disabled={isSyncing}
@@ -1571,35 +1745,73 @@ export default function AdminDashboardPage() {
           <div
             onClick={() => setActiveTab('inquiries')}
             className={`bg-white rounded-2xl border p-5 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
-              activeTab === 'inquiries' ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]' : 'border-[#E5E7EB]'
+              activeTab === 'inquiries'
+                ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]'
+                : unreadInquiriesCount > 0
+                ? 'border-[#FFD6DF] ring-1 ring-[#FFD6DF]'
+                : 'border-[#E5E7EB]'
             }`}
           >
             <div className="flex items-center justify-between text-gray-500 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Car Inquiries</span>
+              <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span>Car Inquiries</span>
+                {unreadInquiriesCount > 0 && <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" />}
+              </span>
               <div className="w-8 h-8 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
                 <MessageSquare className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-3xl font-black text-[#101216]">{inquiries.length}</div>
-            <p className="text-[11px] text-[#E5325C] font-semibold mt-1">
-              {inquiries.filter((i) => i.status === 'New').length} pending inquiries →
-            </p>
+            <div className="flex items-baseline justify-between">
+              <div className="text-3xl font-black text-[#101216]">{inquiries.length}</div>
+              {unreadInquiriesCount > 0 && (
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#E5325C] text-white animate-pulse">
+                  {unreadInquiriesCount} UNREAD
+                </span>
+              )}
+            </div>
+            {unreadInquiriesCount > 0 ? (
+              <p className="text-[11px] text-[#E5325C] font-extrabold mt-1 flex items-center gap-1">
+                <span>{unreadInquiriesCount} unread inquiry reminder(s) →</span>
+              </p>
+            ) : (
+              <p className="text-[11px] text-[#237A52] font-semibold mt-1">All inquiries reviewed ✓</p>
+            )}
           </div>
 
           <div
             onClick={() => setActiveTab('leads')}
             className={`bg-white rounded-2xl border p-5 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
-              activeTab === 'leads' ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]' : 'border-[#E5E7EB]'
+              activeTab === 'leads'
+                ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]'
+                : unreadSellRequestsCount > 0
+                ? 'border-[#FFD6DF] ring-1 ring-[#FFD6DF]'
+                : 'border-[#E5E7EB]'
             }`}
           >
             <div className="flex items-center justify-between text-gray-500 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Sell Requests</span>
+              <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span>Sell Requests</span>
+                {unreadSellRequestsCount > 0 && <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" />}
+              </span>
               <div className="w-8 h-8 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
                 <Sparkles className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-3xl font-black text-[#101216]">{sellRequests.length}</div>
-            <p className="text-[11px] text-gray-500 font-semibold mt-1">Customer cars submitted →</p>
+            <div className="flex items-baseline justify-between">
+              <div className="text-3xl font-black text-[#101216]">{sellRequests.length}</div>
+              {unreadSellRequestsCount > 0 && (
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#E5325C] text-white animate-pulse">
+                  {unreadSellRequestsCount} UNREAD
+                </span>
+              )}
+            </div>
+            {unreadSellRequestsCount > 0 ? (
+              <p className="text-[11px] text-[#E5325C] font-extrabold mt-1 flex items-center gap-1">
+                <span>{unreadSellRequestsCount} unread sell submission(s) →</span>
+              </p>
+            ) : (
+              <p className="text-[11px] text-gray-500 font-semibold mt-1">All sell requests reviewed ✓</p>
+            )}
           </div>
 
           <div
@@ -1621,19 +1833,37 @@ export default function AdminDashboardPage() {
           <div
             onClick={() => setActiveTab('pdi')}
             className={`bg-white rounded-2xl border p-5 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
-              activeTab === 'pdi' ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]' : 'border-[#E5E7EB]'
+              activeTab === 'pdi'
+                ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]'
+                : unreadPDICount > 0
+                ? 'border-[#FFD6DF] ring-1 ring-[#FFD6DF]'
+                : 'border-[#E5E7EB]'
             }`}
           >
             <div className="flex items-center justify-between text-gray-500 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">PDI Bookings</span>
+              <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span>PDI Bookings</span>
+                {unreadPDICount > 0 && <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" />}
+              </span>
               <div className="w-8 h-8 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
                 <ShieldCheck className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-3xl font-black text-[#101216]">{pdiList.length}</div>
-            <p className="text-[11px] text-[#E5325C] font-semibold mt-1">
-              {pdiList.filter((p) => p.status === 'Booked' || p.status === 'Representative Assigned').length} showroom visits pending →
-            </p>
+            <div className="flex items-baseline justify-between">
+              <div className="text-3xl font-black text-[#101216]">{pdiList.length}</div>
+              {unreadPDICount > 0 && (
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#E5325C] text-white animate-pulse">
+                  {unreadPDICount} UNREAD
+                </span>
+              )}
+            </div>
+            {unreadPDICount > 0 ? (
+              <p className="text-[11px] text-[#E5325C] font-extrabold mt-1 flex items-center gap-1">
+                <span>{unreadPDICount} unread inspection visit(s) →</span>
+              </p>
+            ) : (
+              <p className="text-[11px] text-gray-500 font-semibold mt-1">All PDI requests reviewed ✓</p>
+            )}
           </div>
 
           <div
@@ -2078,6 +2308,27 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
+            {/* Unread PDI Reminder Banner */}
+            {unreadPDICount > 0 && (
+              <div className="bg-[#FFF0F3] border border-[#FFD6DF] rounded-2xl p-3 px-4 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5325C] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E5325C]"></span>
+                  </span>
+                  <span className="font-extrabold text-[#E5325C]">
+                    {unreadPDICount} showroom inspection reminder{unreadPDICount > 1 ? 's' : ''} unread. Click to review booking and dispatch representative.
+                  </span>
+                </div>
+                <button
+                  onClick={() => markAllRequestsAsRead(pdiList.map((p) => p.id), 'PDI bookings')}
+                  className="px-3 py-1 rounded-xl bg-white border border-[#FFD6DF] text-[#E5325C] font-extrabold hover:bg-[#E5325C] hover:text-white transition-all shadow-2xs cursor-pointer text-xs whitespace-nowrap"
+                >
+                  Mark all as read ✓
+                </button>
+              </div>
+            )}
+
             {/* PDI Bookings Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {pdiList
@@ -2095,28 +2346,43 @@ export default function AdminDashboardPage() {
                     p.id.toLowerCase().includes(query);
                   return matchStatus && matchSearch;
                 })
-                .map((p) => (
-                  <div
-                    key={p.id}
-                    className="bg-white rounded-3xl border border-[#E5E7EB] p-5 shadow-2xs hover:border-[#E5325C]/40 hover:shadow-xs transition-all space-y-4 flex flex-col justify-between"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB]">
-                        <span className="font-mono text-[11px] font-black text-[#101216]">
-                          {p.id}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                          p.status === 'Inspection Completed'
-                            ? 'bg-[#F0F9F4] text-[#237A52] border border-[#D1EAD9]'
-                            : p.status === 'Representative Dispatched'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                            : p.status === 'Representative Assigned'
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                            : 'bg-[#FFF0F3] text-[#E5325C] border border-[#FFD6DF]'
-                        }`}>
-                          {p.status}
-                        </span>
-                      </div>
+                .map((p) => {
+                  const isUnread = isRequestUnread(p.id, p.status);
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => isUnread && markRequestAsRead(p.id)}
+                      className={`rounded-3xl border p-5 shadow-2xs hover:shadow-xs transition-all space-y-4 flex flex-col justify-between ${
+                        isUnread
+                          ? 'bg-gradient-to-br from-[#FFF0F3]/40 via-white to-white border-[#FFD6DF] ring-2 ring-[#FFD6DF]'
+                          : 'bg-white border-[#E5E7EB] hover:border-[#E5325C]/40'
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-[#E5E7EB] flex-wrap gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[11px] font-black text-[#101216]">
+                              {p.id}
+                            </span>
+                            {isUnread && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#E5325C] text-white shadow-2xs animate-pulse">
+                                <span className="w-1 h-1 rounded-full bg-white animate-ping" />
+                                Unread
+                              </span>
+                            )}
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            p.status === 'Inspection Completed'
+                              ? 'bg-[#F0F9F4] text-[#237A52] border border-[#D1EAD9]'
+                              : p.status === 'Representative Dispatched'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : p.status === 'Representative Assigned'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-[#FFF0F3] text-[#E5325C] border border-[#FFD6DF]'
+                          }`}>
+                            {p.status}
+                          </span>
+                        </div>
 
                       {/* Customer Info */}
                       <div>
@@ -2225,7 +2491,8 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                );
+              })}
               {pdiList.length === 0 && (
                 <div className="col-span-3 text-center py-12 bg-white rounded-3xl border border-[#E5E7EB] space-y-2">
                   <ShieldCheck className="w-8 h-8 text-gray-300 mx-auto" />
@@ -2433,9 +2700,31 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
+            {/* Unread Inquiries Reminder Banner */}
+            {unreadInquiriesCount > 0 && (
+              <div className="bg-[#FFF0F3] border border-[#FFD6DF] rounded-2xl p-3 px-4 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5325C] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E5325C]"></span>
+                  </span>
+                  <span className="font-extrabold text-[#E5325C]">
+                    {unreadInquiriesCount} car inquiry reminder{unreadInquiriesCount > 1 ? 's' : ''} unread. Click any inquiry to open and mark as checked.
+                  </span>
+                </div>
+                <button
+                  onClick={() => markAllRequestsAsRead(inquiries.map((i) => i.id), 'inquiries')}
+                  className="px-3 py-1 rounded-xl bg-white border border-[#FFD6DF] text-[#E5325C] font-extrabold hover:bg-[#E5325C] hover:text-white transition-all shadow-2xs cursor-pointer text-xs whitespace-nowrap"
+                >
+                  Mark all as read ✓
+                </button>
+              </div>
+            )}
+
             {/* Inquiries Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {filteredInquiries.map((inq) => {
+                const isUnread = isRequestUnread(inq.id, inq.status);
                 const statusStyles = {
                   'New': 'bg-[#FFF0F3] text-[#E5325C] border-[#FFD6DF]',
                   'In Progress': 'bg-amber-50 text-amber-700 border-amber-200',
@@ -2446,14 +2735,25 @@ export default function AdminDashboardPage() {
                 return (
                   <div
                     key={inq.id}
-                    className="bg-white rounded-3xl border border-[#E5E7EB] p-6 shadow-2xs flex flex-col justify-between space-y-4 hover:border-[#E5325C]/40 transition-colors"
+                    onClick={() => isUnread && markRequestAsRead(inq.id)}
+                    className={`rounded-3xl border p-6 shadow-2xs flex flex-col justify-between space-y-4 transition-all ${
+                      isUnread
+                        ? 'bg-gradient-to-br from-[#FFF0F3]/40 via-white to-white border-[#FFD6DF] ring-2 ring-[#FFD6DF]'
+                        : 'bg-white border-[#E5E7EB] hover:border-[#E5325C]/40'
+                    }`}
                   >
                     <div>
                       {/* Top Row: Customer Info + Status selector */}
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-extrabold text-base text-[#101216]">{inq.userName}</h4>
+                            {isUnread && (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#E5325C] text-white shadow-xs animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                Unread
+                              </span>
+                            )}
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusStyles}`}>
                               {inq.status}
                             </span>
@@ -2626,26 +2926,60 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
+            {/* Unread Sell Requests Reminder Banner */}
+            {unreadSellRequestsCount > 0 && (
+              <div className="bg-[#FFF0F3] border border-[#FFD6DF] rounded-2xl p-3 px-4 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5325C] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E5325C]"></span>
+                  </span>
+                  <span className="font-extrabold text-[#E5325C]">
+                    {unreadSellRequestsCount} customer sell submission reminder{unreadSellRequestsCount > 1 ? 's' : ''} unread. Click to review vehicle and photos.
+                  </span>
+                </div>
+                <button
+                  onClick={() => markAllRequestsAsRead(sellRequests.map((r) => r.id), 'sell requests')}
+                  className="px-3 py-1 rounded-xl bg-white border border-[#FFD6DF] text-[#E5325C] font-extrabold hover:bg-[#E5325C] hover:text-white transition-all shadow-2xs cursor-pointer text-xs whitespace-nowrap"
+                >
+                  Mark all as read ✓
+                </button>
+              </div>
+            )}
+
             {/* Sell Requests Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {filteredSellRequests.map((req) => (
-                <div
-                  key={req.id}
-                  className="bg-white rounded-3xl border border-[#E5E7EB] p-6 shadow-2xs flex flex-col justify-between space-y-4 hover:border-[#E5325C]/40 transition-colors"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-extrabold text-base text-[#101216]">
-                            {req.year} {req.make} {req.model}
-                          </h4>
-                          <span className="font-mono text-[10px] text-gray-500 bg-[#F8F9FA] px-2 py-0.5 rounded-md border border-[#E5E7EB]">
-                            {req.id}
-                          </span>
+              {filteredSellRequests.map((req) => {
+                const isUnread = isRequestUnread(req.id, req.status);
+                return (
+                  <div
+                    key={req.id}
+                    onClick={() => isUnread && markRequestAsRead(req.id)}
+                    className={`rounded-3xl border p-6 shadow-2xs flex flex-col justify-between space-y-4 transition-all ${
+                      isUnread
+                        ? 'bg-gradient-to-br from-[#FFF0F3]/40 via-white to-white border-[#FFD6DF] ring-2 ring-[#FFD6DF]'
+                        : 'bg-white border-[#E5E7EB] hover:border-[#E5325C]/40'
+                    }`}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-extrabold text-base text-[#101216]">
+                              {req.year} {req.make} {req.model}
+                            </h4>
+                            {isUnread && (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#E5325C] text-white shadow-xs animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                Unread Request
+                              </span>
+                            )}
+                            <span className="font-mono text-[10px] text-gray-500 bg-[#F8F9FA] px-2 py-0.5 rounded-md border border-[#E5E7EB]">
+                              {req.id}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">{req.variant || 'Standard Variant'} • {req.fuelType || 'Petrol'} • {req.transmission || 'Manual'}</p>
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5">{req.variant || 'Standard Variant'} • {req.fuelType || 'Petrol'} • {req.transmission || 'Manual'}</p>
-                      </div>
 
                       <select
                         value={req.status}
@@ -2785,7 +3119,8 @@ export default function AdminDashboardPage() {
                     </span>
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
 
             {filteredSellRequests.length === 0 && (
@@ -2855,23 +3190,59 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
+            {/* Unread Test Drives Reminder Banner */}
+            {unreadTestDrivesCount > 0 && (
+              <div className="bg-[#FFF0F3] border border-[#FFD6DF] rounded-2xl p-3 px-4 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5325C] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E5325C]"></span>
+                  </span>
+                  <span className="font-extrabold text-[#E5325C]">
+                    {unreadTestDrivesCount} test drive appointment reminder{unreadTestDrivesCount > 1 ? 's' : ''} unread. Click to review customer schedule.
+                  </span>
+                </div>
+                <button
+                  onClick={() => markAllRequestsAsRead(testDrives.map((t) => t.id), 'test drives')}
+                  className="px-3 py-1 rounded-xl bg-white border border-[#FFD6DF] text-[#E5325C] font-extrabold hover:bg-[#E5325C] hover:text-white transition-all shadow-2xs cursor-pointer text-xs whitespace-nowrap"
+                >
+                  Mark all as read ✓
+                </button>
+              </div>
+            )}
+
             {/* Test Drive Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredTestDrives.map((td) => (
-                <div
-                  key={td.id}
-                  className="bg-white rounded-3xl border border-[#E5E7EB] p-5 shadow-2xs flex flex-col justify-between space-y-3 hover:border-[#E5325C]/40 transition-colors"
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-extrabold text-sm text-[#101216]">{td.carTitle}</h4>
-                        <p className="text-xs text-gray-500 mt-0.5">Booking ID: {td.id}</p>
+              {filteredTestDrives.map((td) => {
+                const isUnread = isRequestUnread(td.id, td.status);
+                return (
+                  <div
+                    key={td.id}
+                    onClick={() => isUnread && markRequestAsRead(td.id)}
+                    className={`rounded-3xl border p-5 shadow-2xs flex flex-col justify-between space-y-3 transition-all ${
+                      isUnread
+                        ? 'bg-gradient-to-br from-[#FFF0F3]/40 via-white to-white border-[#FFD6DF] ring-2 ring-[#FFD6DF]'
+                        : 'bg-white border-[#E5E7EB] hover:border-[#E5325C]/40'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-extrabold text-sm text-[#101216]">{td.carTitle}</h4>
+                            {isUnread && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#E5325C] text-white shadow-xs animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                Unread
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">Booking ID: {td.id}</p>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full bg-[#F0F9F4] border border-[#D1EAD9] text-[#237A52] font-bold text-[10px]">
+                          {td.status}
+                        </span>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full bg-[#F0F9F4] border border-[#D1EAD9] text-[#237A52] font-bold text-[10px]">
-                        {td.status}
-                      </span>
-                    </div>
 
                     <div className="p-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] mt-3 space-y-1 text-xs">
                       <div className="flex items-center justify-between">
@@ -2908,7 +3279,8 @@ export default function AdminDashboardPage() {
                     </a>
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
 
             {filteredTestDrives.length === 0 && (
@@ -3105,6 +3477,27 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
+            {/* Unread Negotiations Reminder Banner */}
+            {unreadNegotiationsCount > 0 && (
+              <div className="bg-[#FFF0F3] border border-[#FFD6DF] rounded-2xl p-3 px-4 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs shadow-2xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5325C] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E5325C]"></span>
+                  </span>
+                  <span className="font-extrabold text-[#E5325C]">
+                    {unreadNegotiationsCount} price negotiation offer reminder{unreadNegotiationsCount > 1 ? 's' : ''} unread. Review customer discount requests.
+                  </span>
+                </div>
+                <button
+                  onClick={() => markAllRequestsAsRead(liveNegotiations.map((n) => n.id), 'negotiations')}
+                  className="px-3 py-1 rounded-xl bg-white border border-[#FFD6DF] text-[#E5325C] font-extrabold hover:bg-[#E5325C] hover:text-white transition-all shadow-2xs cursor-pointer text-xs whitespace-nowrap"
+                >
+                  Mark all as read ✓
+                </button>
+              </div>
+            )}
+
             {/* Negotiations Table */}
             <div className="bg-white rounded-3xl border border-[#E5E7EB] overflow-hidden shadow-2xs">
               <div className="overflow-x-auto">
@@ -3120,6 +3513,7 @@ export default function AdminDashboardPage() {
                   </thead>
                   <tbody className="divide-y divide-[#E5E7EB]">
                     {filteredNegotiations.map((neg) => {
+                      const isUnread = isRequestUnread(neg.id, neg.status);
                       const discountAmount = neg.listedPrice - neg.customerOffer;
                       const discountPercent = neg.listedPrice > 0 ? Math.round((discountAmount / neg.listedPrice) * 100) : 0;
                       const statusStyles = {
@@ -3131,10 +3525,26 @@ export default function AdminDashboardPage() {
                       }[neg.status] || 'bg-gray-100 text-gray-700 border-gray-200';
 
                       return (
-                        <tr key={neg.id} className="hover:bg-[#FFF0F3]/30 transition-colors">
+                        <tr
+                          key={neg.id}
+                          onClick={() => isUnread && markRequestAsRead(neg.id)}
+                          className={`transition-colors ${
+                            isUnread
+                              ? 'bg-[#FFF0F3]/50 hover:bg-[#FFF0F3]/70 font-semibold'
+                              : 'hover:bg-[#FFF0F3]/30'
+                          }`}
+                        >
                           <td className="p-4">
                             <div>
-                              <h4 className="font-bold text-sm text-[#101216]">{neg.customerName}</h4>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h4 className="font-bold text-sm text-[#101216]">{neg.customerName}</h4>
+                                {isUnread && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#E5325C] text-white shadow-2xs animate-pulse">
+                                    <span className="w-1 h-1 rounded-full bg-white animate-ping" />
+                                    Unread
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-2 mt-1 text-gray-500">
                                 <Phone className="w-3.5 h-3.5 text-gray-400" />
                                 <span className="font-mono">{neg.customerPhone}</span>
