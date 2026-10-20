@@ -52,7 +52,7 @@ import {
 import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
 import { useRecarsState } from '@/lib/store';
-import { formatINR, formatKM } from '@/lib/formatters';
+import { formatINR, formatKM, formatDateWithDay, formatTime, formatRelativeTime, formatDateTimeWithDay } from '@/lib/formatters';
 import { Car as CarType, CarInquiry, SellRequest, TestDriveBooking, Negotiation, InspectionConfig, VehicleAvailability, PDIBooking, RegisteredDealer } from '@/lib/types';
 import { MAKES, CITIES } from '@/lib/data';
 
@@ -2251,9 +2251,15 @@ export default function AdminDashboardPage() {
                         &ldquo;{inq.message}&rdquo;
                       </p>
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-200 text-xs">
-                      <span className="text-[11px] text-gray-500">{inq.city}</span>
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-200 text-xs gap-2">
+                      <div className="min-w-0">
+                        <span className="text-[11px] text-gray-500 font-semibold">{inq.city}</span>
+                        <div className="text-[10px] text-gray-600 font-medium flex items-center gap-1 mt-0.5">
+                          <Calendar className="w-3 h-3 text-[#E5325C]" />
+                          <span>{formatDateWithDay(inq.createdAt)} • {formatTime(inq.createdAt)}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         <a
                           href={`tel:${inq.userPhone}`}
                           className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold border border-emerald-200"
@@ -2331,10 +2337,16 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-200 text-xs">
-                      <span className="text-[11px] text-gray-500">
-                        Slot: {req.preferredInspectionDate} ({req.preferredInspectionTime || 'Morning'})
-                      </span>
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-200 text-xs gap-2">
+                      <div className="min-w-0">
+                        <span className="text-[11px] text-gray-500 block">
+                          Slot: {req.preferredInspectionDate} ({req.preferredInspectionTime || 'Morning'})
+                        </span>
+                        <span className="text-[10px] text-gray-600 font-medium flex items-center gap-1 mt-0.5">
+                          <Calendar className="w-3 h-3 text-[#E5325C]" />
+                          <span>Submitted: {formatDateWithDay(req.createdAt)} • {formatTime(req.createdAt)}</span>
+                        </span>
+                      </div>
                       <div className="flex items-center gap-2">
                         <a
                           href={`tel:${req.sellerPhone}`}
@@ -3177,15 +3189,23 @@ export default function AdminDashboardPage() {
                               {inq.status}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                          <div className="flex items-center gap-2.5 text-xs text-gray-500 mt-1 flex-wrap">
                             <span className="flex items-center gap-1">
                               <MapPin className="w-3 h-3 text-gray-400" />
                               <span>{inq.city}</span>
                             </span>
                             <span>•</span>
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 font-bold text-gray-800">
+                              <Calendar className="w-3.5 h-3.5 text-[#E5325C]" />
+                              <span>{formatDateWithDay(inq.createdAt)}</span>
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1 font-mono text-gray-600">
                               <Clock className="w-3 h-3 text-gray-400" />
-                              <span>{inq.createdAt?.includes('T') ? inq.createdAt.split('T')[0] : inq.createdAt}</span>
+                              <span>{formatTime(inq.createdAt)}</span>
+                            </span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                              {formatRelativeTime(inq.createdAt)}
                             </span>
                           </div>
                         </div>
@@ -3398,6 +3418,20 @@ export default function AdminDashboardPage() {
                             </span>
                           </div>
                           <p className="text-xs text-gray-500 mt-0.5">{req.variant || 'Standard Variant'} • {req.fuelType || 'Petrol'} • {req.transmission || 'Manual'}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-600 mt-1 flex-wrap">
+                            <span className="flex items-center gap-1 font-bold text-gray-800">
+                              <Calendar className="w-3.5 h-3.5 text-[#E5325C]" />
+                              <span>{formatDateWithDay(req.createdAt)}</span>
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1 font-mono text-gray-500">
+                              <Clock className="w-3 h-3 text-gray-400" />
+                              <span>{formatTime(req.createdAt)}</span>
+                            </span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                              {formatRelativeTime(req.createdAt)}
+                            </span>
+                          </div>
                         </div>
 
                       <select
@@ -3656,7 +3690,18 @@ export default function AdminDashboardPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 mt-0.5">Booking ID: {td.id}</p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <p className="text-xs text-gray-500">Booking ID: {td.id}</p>
+                            <span>•</span>
+                            <span className="flex items-center gap-1 text-xs font-bold text-gray-800">
+                              <Calendar className="w-3.5 h-3.5 text-[#E5325C]" />
+                              <span>{formatDateWithDay(td.createdAt)}</span>
+                            </span>
+                            <span className="text-xs font-mono text-gray-500">{formatTime(td.createdAt)}</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                              {formatRelativeTime(td.createdAt)}
+                            </span>
+                          </div>
                         </div>
                         <span className="px-2.5 py-1 rounded-full bg-[#F0F9F4] border border-[#D1EAD9] text-[#237A52] font-bold text-[10px]">
                           {td.status}
@@ -3767,7 +3812,7 @@ export default function AdminDashboardPage() {
                       <th className="py-3.5 px-6">Phone Number</th>
                       <th className="py-3.5 px-6">Email Address</th>
                       <th className="py-3.5 px-6">Location</th>
-                      <th className="py-3.5 px-6">Created In DB</th>
+                      <th className="py-3.5 px-6">Enquiry Date & Time</th>
                       <th className="py-3.5 px-6 text-right">Direct Actions</th>
                     </tr>
                   </thead>
@@ -3814,12 +3859,29 @@ export default function AdminDashboardPage() {
                               <span>{cust.city || 'India'}</span>
                             </div>
                           </td>
-                          <td className="py-4 px-6 text-gray-500 text-[11px]">
-                            {cust.created_at ? new Date(cust.created_at).toLocaleDateString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric'
-                            }) : 'Recently'}
+                          <td className="py-4 px-6">
+                            {(() => {
+                              const dateVal = cust.createdAt || cust.created_at;
+                              if (!dateVal) {
+                                return <span className="text-gray-400 text-[11px]">Recently</span>;
+                              }
+                              return (
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-1.5 font-bold text-gray-900 text-xs">
+                                    <Calendar className="w-3.5 h-3.5 text-[#E5325C]" />
+                                    <span>{formatDateWithDay(dateVal)}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-[11px] text-gray-500 font-mono">
+                                    <Clock className="w-3 h-3 text-gray-400" />
+                                    <span>{formatTime(dateVal)}</span>
+                                    <span className="text-gray-300">•</span>
+                                    <span className="text-emerald-700 font-sans font-semibold text-[10px] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                                      {formatRelativeTime(dateVal)}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="py-4 px-6 text-right">
                             <div className="inline-flex items-center gap-2">

@@ -2,6 +2,7 @@ import { Car, CarBodyType } from './types';
 
 export const CITIES = [
   'Warangal',
+  'Hyderabad',
 ] as const;
 
 export const CAR_TYPES: { type: CarBodyType; label: string; startingPrice: string; image: string }[] = [

@@ -40,8 +40,8 @@ export function useRecarsState() {
   useEffect(() => {
     try {
       const storedCity = localStorage.getItem(STORAGE_KEYS.CITY);
-      if (storedCity && storedCity === 'Warangal') {
-        setSelectedCity('Warangal');
+      if (storedCity && (storedCity === 'Warangal' || storedCity === 'Hyderabad')) {
+        setSelectedCity(storedCity);
       } else {
         setSelectedCity('Warangal');
         localStorage.setItem(STORAGE_KEYS.CITY, 'Warangal');

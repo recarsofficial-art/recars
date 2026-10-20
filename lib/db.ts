@@ -557,6 +557,7 @@ export interface CustomerRecord {
   city?: string;
   address?: string;
   createdAt?: string;
+  created_at?: string;
 }
 
 export async function dbUpsertCustomer(c: CustomerRecord): Promise<string> {
@@ -581,26 +582,30 @@ export async function dbUpsertCustomer(c: CustomerRecord): Promise<string> {
 
 export async function dbGetCustomers(): Promise<CustomerRecord[]> {
   const { rows } = await safeDbQuery<any>(
-    'SELECT * FROM public.customers ORDER BY created_at DESC',
+    'SELECT id, name, phone, email, city, address, COALESCE(created_at, updated_at, now()) AS created_at FROM public.customers ORDER BY created_at DESC',
     [],
     'dbGetCustomers'
   );
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    phone: r.phone,
-    email: r.email,
-    city: r.city,
-    address: r.address,
-    createdAt: r.created_at,
-  }));
+  return rows.map((r) => {
+    const iso = r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString();
+    return {
+      id: r.id,
+      name: r.name,
+      phone: r.phone,
+      email: r.email,
+      city: r.city,
+      address: r.address,
+      createdAt: iso,
+      created_at: iso,
+    };
+  });
 }
 
 export async function dbFindCustomer(query: string): Promise<CustomerRecord | null> {
   const trimmed = query.trim();
   const digitsOnly = trimmed.replace(/\D/g, '');
   const { rows } = await safeDbQuery<any>(
-    `SELECT * FROM public.customers 
+    `SELECT id, name, phone, email, city, address, COALESCE(created_at, updated_at, now()) AS created_at FROM public.customers 
      WHERE phone = $1 
         OR email ILIKE $2 
         OR ($3 <> '' AND phone LIKE $4)
@@ -610,6 +615,7 @@ export async function dbFindCustomer(query: string): Promise<CustomerRecord | nu
   );
   if (!rows.length) return null;
   const r = rows[0];
+  const iso = r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString();
   return {
     id: r.id,
     name: r.name,
@@ -617,7 +623,8 @@ export async function dbFindCustomer(query: string): Promise<CustomerRecord | nu
     email: r.email,
     city: r.city,
     address: r.address,
-    createdAt: r.created_at,
+    createdAt: iso,
+    created_at: iso,
   };
 }
 
