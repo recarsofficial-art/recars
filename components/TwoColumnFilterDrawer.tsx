@@ -125,8 +125,8 @@ export default function TwoColumnFilterDrawer({
   const tabs: { key: FilterTabKey; label: string; badge?: string; count?: number }[] = [
     { key: 'price', label: 'Price Range', count: minPrice > 50000 || maxPrice < 5000000 ? 1 : undefined },
     { key: 'makes', label: 'Brands + Models', count: selectedMakes.length || undefined },
-    { key: 'year', label: 'Year', count: minYear > 2017 ? 1 : undefined },
-    { key: 'km', label: 'Kms Driven', count: maxKm < 100000 ? 1 : undefined },
+    { key: 'year', label: 'Year', count: minYear > 2000 ? 1 : undefined },
+    { key: 'km', label: 'Kms Driven', count: maxKm < 500000 ? 1 : undefined },
     { key: 'fuel', label: 'Fuel Type', count: selectedFuels.length || undefined },
     { key: 'body', label: 'Body Type', count: selectedBodyTypes.length || undefined },
     { key: 'transmission', label: 'Transmission', count: selectedTransmissions.length || undefined },
@@ -349,7 +349,7 @@ export default function TwoColumnFilterDrawer({
                     { label: '2021 & Newer', year: 2021 },
                     { label: '2019 & Newer', year: 2019 },
                     { label: '2017 & Newer', year: 2017 },
-                    { label: 'Any Year', year: 2010 },
+                    { label: 'Any Year', year: 2000 },
                   ].map((opt) => (
                     <button
                       key={opt.label}
@@ -381,7 +381,7 @@ export default function TwoColumnFilterDrawer({
                     { label: 'Under 50,000 km', km: 50000 },
                     { label: 'Under 75,000 km', km: 75000 },
                     { label: 'Under 1,00,000 km', km: 100000 },
-                    { label: 'Any Kms', km: 200000 },
+                    { label: 'Any Kms', km: 500000 },
                   ].map((opt) => (
                     <button
                       key={opt.label}

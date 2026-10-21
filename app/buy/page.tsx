@@ -91,8 +91,8 @@ function BuyContent() {
     return 7000000;
   });
 
-  const [maxKm, setMaxKm] = useState<number>(80000);
-  const [minYear, setMinYear] = useState<number>(2018);
+  const [maxKm, setMaxKm] = useState<number>(500000);
+  const [minYear, setMinYear] = useState<number>(2000);
   const [onlyVerified, setOnlyVerified] = useState<boolean>(false);
   const [onlyRecarsSelect, setOnlyRecarsSelect] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>(() => searchParams.get('q') || '');
@@ -126,8 +126,8 @@ function BuyContent() {
     setSelectedFeatures([]);
     setMinPrice(50000);
     setMaxPrice(7000000);
-    setMaxKm(80000);
-    setMinYear(2018);
+    setMaxKm(500000);
+    setMinYear(2000);
     setOnlyVerified(false);
     setOnlyRecarsSelect(false);
     setSearchQuery('');
@@ -257,6 +257,8 @@ function BuyContent() {
     (onlyVerified ? 1 : 0) +
     (onlyRecarsSelect ? 1 : 0) +
     (minPrice > 50000 || maxPrice < 7000000 ? 1 : 0) +
+    (maxKm < 500000 ? 1 : 0) +
+    (minYear > 2000 ? 1 : 0) +
     (searchQuery ? 1 : 0);
 
   const countMatchesForWizard = (wizardFilters: {
