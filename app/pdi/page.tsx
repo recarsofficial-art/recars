@@ -157,6 +157,8 @@ export default function PDIPage() {
 
   // Booking Form State
   const [carMake, setCarMake] = useState('Hyundai');
+  const [isCustomMake, setIsCustomMake] = useState(false);
+  const [customMakeName, setCustomMakeName] = useState('');
   const [carModel, setCarModel] = useState('Creta');
   const [carVariant, setCarVariant] = useState('SX (O) 1.5');
   const [fuelType, setFuelType] = useState<FuelType>('Petrol');
@@ -197,6 +199,8 @@ export default function PDIPage() {
 
     setIsSubmitting(true);
     const bookingId = `PDI-${Date.now().toString().slice(-6)}`;
+    const resolvedMake = isCustomMake ? (customMakeName.trim() || 'Custom Make') : carMake;
+
     const newBooking: PDIBooking = {
       id: bookingId,
       customerName,
@@ -205,7 +209,7 @@ export default function PDIPage() {
       city,
       dealershipName,
       dealershipAddress: dealershipAddress || `${city} Showroom`,
-      carMake,
+      carMake: resolvedMake,
       carModel,
       carVariant,
       fuelType,
@@ -578,17 +582,53 @@ export default function PDIPage() {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Make / Brand *</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-gray-700">Make / Brand *</label>
+                      {isCustomMake && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomMake(false);
+                            setCarMake('Hyundai');
+                          }}
+                          className="text-[11px] font-bold text-[#E5325C] hover:underline cursor-pointer"
+                        >
+                          Choose from list
+                        </button>
+                      )}
+                    </div>
                     <select
-                      value={carMake}
-                      onChange={(e) => setCarMake(e.target.value)}
+                      value={isCustomMake ? 'Other' : carMake}
+                      onChange={(e) => {
+                        if (e.target.value === 'Other') {
+                          setIsCustomMake(true);
+                          setCustomMakeName('');
+                        } else {
+                          setIsCustomMake(false);
+                          setCarMake(e.target.value);
+                        }
+                      }}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[#F8F9FA] border border-gray-200 text-xs font-semibold focus:outline-none focus:border-[#E5325C]"
                       required
                     >
                       {MAKES.map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
+                      <option value="Other">+ Other (Car brand not in list)</option>
                     </select>
+
+                    {isCustomMake && (
+                      <div className="mt-2 space-y-1">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Type car brand name (e.g. Isuzu, BYD, Lotus...)"
+                          value={customMakeName}
+                          onChange={(e) => setCustomMakeName(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl bg-white border-2 border-[#E5325C] text-xs font-semibold focus:outline-none placeholder:text-gray-400 shadow-2xs"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div>

@@ -435,6 +435,8 @@ export default function AdminDashboardPage() {
 
   // New / Edit Car form fields
   const [newMake, setNewMake] = useState('Hyundai');
+  const [isCustomMake, setIsCustomMake] = useState(false);
+  const [customMakeName, setCustomMakeName] = useState('');
   const [newModel, setNewModel] = useState('Venue');
   const [newVariant, setNewVariant] = useState('SX 1.0 Turbo DCT');
   const [newYear, setNewYear] = useState(2023);
@@ -469,7 +471,16 @@ export default function AdminDashboardPage() {
 
   const handleOpenEditCarModal = (car: CarType) => {
     setEditingCarId(car.id);
-    setNewMake(car.make || 'Hyundai');
+    const isKnown = (MAKES as readonly string[]).includes(car.make);
+    if (isKnown) {
+      setNewMake(car.make || 'Hyundai');
+      setIsCustomMake(false);
+      setCustomMakeName('');
+    } else {
+      setNewMake('Other');
+      setIsCustomMake(true);
+      setCustomMakeName(car.make || '');
+    }
     setNewModel(car.model || '');
     setNewVariant(car.variant || '');
     setNewYear(car.year || 2023);
@@ -516,6 +527,8 @@ export default function AdminDashboardPage() {
   const handleOpenAddCarModal = () => {
     setEditingCarId(null);
     setNewMake('Hyundai');
+    setIsCustomMake(false);
+    setCustomMakeName('');
     setNewModel('');
     setNewVariant('');
     setNewYear(2023);
@@ -928,11 +941,13 @@ export default function AdminDashboardPage() {
       finalDealerContact = '';
     }
 
+    const resolvedMake = isCustomMake ? (customMakeName.trim() || 'Other') : newMake;
+
     const carData: CarType = {
       ...existingCar,
       id: carId,
       createdAt: existingCar?.createdAt || new Date().toISOString(),
-      make: newMake,
+      make: resolvedMake,
       model: newModel,
       variant: newVariant,
       year: newYear,
@@ -4635,16 +4650,55 @@ export default function AdminDashboardPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block font-bold text-[#101216] mb-1">Make / Brand</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-[#101216]">Make / Brand</label>
+                    {isCustomMake && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomMake(false);
+                          setNewMake('Hyundai');
+                        }}
+                        className="text-[11px] font-bold text-[#E5325C] hover:underline cursor-pointer"
+                      >
+                        Choose from list
+                      </button>
+                    )}
+                  </div>
                   <select
-                    value={newMake}
-                    onChange={(e) => setNewMake(e.target.value)}
+                    value={isCustomMake ? 'Other' : newMake}
+                    onChange={(e) => {
+                      if (e.target.value === 'Other') {
+                        setIsCustomMake(true);
+                        setCustomMakeName('');
+                      } else {
+                        setIsCustomMake(false);
+                        setNewMake(e.target.value);
+                      }
+                    }}
                     className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   >
                     {MAKES.map((m) => (
                       <option key={m} value={m}>{m}</option>
                     ))}
+                    <option value="Other">+ Other (Enter Custom Brand)</option>
                   </select>
+
+                  {isCustomMake && (
+                    <div className="mt-2 space-y-1">
+                      <input
+                        type="text"
+                        required
+                        placeholder="Type custom brand name (e.g. Isuzu, BYD, Lotus...)"
+                        value={customMakeName}
+                        onChange={(e) => setCustomMakeName(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border-2 border-[#E5325C] rounded-xl font-semibold text-gray-800 focus:outline-none placeholder:text-gray-400 text-xs sm:text-sm shadow-xs"
+                      />
+                      <p className="text-[11px] text-gray-500">
+                        Brand not available in list? Type any make name above.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div>

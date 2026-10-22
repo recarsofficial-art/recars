@@ -12,6 +12,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { MAKES, MODELS_BY_MAKE } from '@/lib/data';
 import { BrandLogo } from './BrandLogos';
 
 interface SpinnyHeroProps {
@@ -43,56 +44,12 @@ const TOP_BRANDS = [
 ];
 
 const ALL_ADDITIONAL_BRANDS = [
-  'Toyota',
-  'Mercedes-Benz',
-  'Skoda',
-  'MG',
-  'Nissan',
-  'Jeep',
-  'Volvo',
-  'Land Rover',
-  'Jaguar',
-  'Porsche',
-  'Mini',
+  ...MAKES.filter((m) => !TOP_BRANDS.includes(m as any)),
 ];
 
-const ALL_MAKES = [
-  'Maruti Suzuki',
-  'Hyundai',
-  'Tata',
-  'Honda',
-  'Toyota',
-  'Mahindra',
-  'Kia',
-  'Volkswagen',
-  'Renault',
-  'Ford',
-  'BMW',
-  'Mercedes-Benz',
-  'Skoda',
-  'MG',
-  'Nissan',
-  'Jeep',
-];
+const ALL_MAKES = MAKES;
 
-const MODELS_BY_MAKE_EXTENDED: Record<string, string[]> = {
-  'Maruti Suzuki': ['Swift', 'Baleno', 'Brezza', 'Dzire', 'Grand Vitara', 'Ertiga', 'Wagon R', 'Alto K10', 'Fronx', 'Jimny'],
-  Hyundai: ['Creta', 'Venue', 'i20', 'Verna', 'Tucson', 'Aura', 'Exter', 'Alcazar'],
-  Tata: ['Nexon EV', 'Nexon', 'Harrier', 'Safari', 'Punch', 'Altroz', 'Tiago', 'Tigor'],
-  Honda: ['City', 'Amaze', 'Elevate', 'WR-V', 'Jazz', 'Civic'],
-  Toyota: ['Fortuner', 'Innova Crysta', 'Innova Hycross', 'Urban Cruiser', 'Hyryder', 'Camry', 'Glanza'],
-  Mahindra: ['XUV700', 'Thar', 'Scorpio-N', 'Scorpio Classic', 'XUV300', 'Bolero', 'XUV400 EV'],
-  Kia: ['Seltos', 'Sonet', 'Carens', 'EV6', 'Carnival'],
-  Volkswagen: ['Virtus', 'Taigun', 'Polo', 'Vento', 'Tiguan'],
-  Renault: ['Kwid', 'Triber', 'Kiger', 'Duster'],
-  Ford: ['EcoSport', 'Endeavour', 'Figo', 'Aspire'],
-  BMW: ['3 Series', '5 Series', 'X1', 'X3', 'X5', 'M340i'],
-  'Mercedes-Benz': ['C-Class', 'E-Class', 'GLA', 'GLC', 'A-Class'],
-  Skoda: ['Slavia', 'Kushaq', 'Octavia', 'Superb', 'Kodiaq'],
-  MG: ['Hector', 'ZS EV', 'Astor', 'Comet EV', 'Gloster'],
-  Nissan: ['Magnite', 'Kicks'],
-  Jeep: ['Compass', 'Meridian', 'Wrangler'],
-};
+const MODELS_BY_MAKE_EXTENDED: Record<string, string[]> = MODELS_BY_MAKE;
 
 const YEARS = [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010];
 const FUELS = ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid'];
@@ -108,7 +65,11 @@ export default function SpinnyHero({
   const [selectedMake, setSelectedMake] = useState(
     selectedBrand && selectedBrand !== 'All' ? selectedBrand : 'Hyundai'
   );
+  const [isCustomMake, setIsCustomMake] = useState(false);
+  const [customMakeName, setCustomMakeName] = useState('');
   const [selectedModel, setSelectedModel] = useState('Creta');
+  const [isCustomModel, setIsCustomModel] = useState(false);
+  const [customModelName, setCustomModelName] = useState('');
   const [selectedYear, setSelectedYear] = useState<number>(2022);
   const [selectedFuel, setSelectedFuel] = useState('Petrol');
   const [selectedTransmission, setSelectedTransmission] = useState('Automatic');
@@ -119,6 +80,8 @@ export default function SpinnyHero({
 
   useEffect(() => {
     if (selectedBrand && selectedBrand !== 'All') {
+      setIsCustomMake(false);
+      setIsCustomModel(false);
       setSelectedMake(selectedBrand);
       const availableModels = MODELS_BY_MAKE_EXTENDED[selectedBrand] || ['Standard'];
       setSelectedModel(availableModels[0] || 'Standard');
@@ -126,18 +89,29 @@ export default function SpinnyHero({
   }, [selectedBrand]);
 
   const handleMakeChange = (newMake: string) => {
-    setSelectedMake(newMake);
-    const availableModels = MODELS_BY_MAKE_EXTENDED[newMake] || ['Standard'];
-    setSelectedModel(availableModels[0] || 'Standard');
+    if (newMake === 'Other') {
+      setIsCustomMake(true);
+      setIsCustomModel(true);
+      setSelectedMake('Other');
+      setSelectedModel('Other');
+    } else {
+      setIsCustomMake(false);
+      setSelectedMake(newMake);
+      const availableModels = MODELS_BY_MAKE_EXTENDED[newMake] || ['Standard'];
+      setSelectedModel(availableModels[0] || 'Standard');
+    }
   };
 
   const handleGetPrice = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg('');
+    const finalMake = isCustomMake ? (customMakeName.trim() || 'Custom Make') : selectedMake;
+    const finalModel = isCustomModel ? (customModelName.trim() || 'Custom Model') : selectedModel;
+
     if (onSubmitDetails) {
       onSubmitDetails({
-        make: selectedMake,
-        model: selectedModel,
+        make: finalMake,
+        model: finalModel,
         year: selectedYear,
         fuel: selectedFuel,
         transmission: selectedTransmission,
@@ -145,8 +119,8 @@ export default function SpinnyHero({
       });
     } else {
       const params = new URLSearchParams({
-        make: selectedMake,
-        model: selectedModel,
+        make: finalMake,
+        model: finalModel,
         year: selectedYear.toString(),
         fuel: selectedFuel,
         transmission: selectedTransmission,
@@ -157,6 +131,8 @@ export default function SpinnyHero({
   };
 
   const handleBrandClick = (brand: string) => {
+    setIsCustomMake(false);
+    setIsCustomModel(false);
     setSelectedMake(brand);
     const availableModels = MODELS_BY_MAKE_EXTENDED[brand] || ['Standard'];
     setSelectedModel(availableModels[0] || 'Standard');
@@ -216,11 +192,26 @@ export default function SpinnyHero({
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                       {/* 1. Make / Brand */}
                       <div>
-                        <label className="block text-[10px] sm:text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1">
-                          Select Brand / Make
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[10px] sm:text-[11px] font-bold text-gray-600 uppercase tracking-wider">
+                            Select Brand
+                          </label>
+                          {isCustomMake && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsCustomMake(false);
+                                setSelectedMake('Hyundai');
+                                setSelectedModel('Creta');
+                              }}
+                              className="text-[10px] font-bold text-[#E5325C] hover:underline cursor-pointer"
+                            >
+                              List
+                            </button>
+                          )}
+                        </div>
                         <select
-                          value={selectedMake}
+                          value={isCustomMake ? 'Other' : selectedMake}
                           onChange={(e) => handleMakeChange(e.target.value)}
                           className="w-full px-2.5 sm:px-3 py-2 sm:py-2.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-bold text-[#101216] focus:outline-none focus:border-[#E5325C] focus:ring-2 focus:ring-[#E5325C]/20 transition-all cursor-pointer"
                         >
@@ -229,25 +220,82 @@ export default function SpinnyHero({
                               {brand}
                             </option>
                           ))}
+                          <option value="Other">+ Other (Not in list)</option>
                         </select>
+                        {isCustomMake && (
+                          <input
+                            type="text"
+                            required
+                            placeholder="Type car brand..."
+                            value={customMakeName}
+                            onChange={(e) => setCustomMakeName(e.target.value)}
+                            className="mt-1.5 w-full px-2.5 py-1.5 bg-white border-2 border-[#E5325C] rounded-lg text-xs font-bold text-[#101216] focus:outline-none"
+                          />
+                        )}
                       </div>
 
                       {/* 2. Model */}
                       <div>
-                        <label className="block text-[10px] sm:text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-1">
-                          Model
-                        </label>
-                        <select
-                          value={selectedModel}
-                          onChange={(e) => setSelectedModel(e.target.value)}
-                          className="w-full px-2.5 sm:px-3 py-2 sm:py-2.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-bold text-[#101216] focus:outline-none focus:border-[#E5325C] focus:ring-2 focus:ring-[#E5325C]/20 transition-all cursor-pointer"
-                        >
-                          {(MODELS_BY_MAKE_EXTENDED[selectedMake] || ['Standard']).map((m) => (
-                            <option key={m} value={m}>
-                              {m}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[10px] sm:text-[11px] font-bold text-gray-600 uppercase tracking-wider">
+                            Model
+                          </label>
+                          {isCustomModel && !isCustomMake && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsCustomModel(false);
+                                setSelectedModel(MODELS_BY_MAKE_EXTENDED[selectedMake]?.[0] || 'Standard');
+                              }}
+                              className="text-[10px] font-bold text-[#E5325C] hover:underline cursor-pointer"
+                            >
+                              List
+                            </button>
+                          )}
+                        </div>
+                        {!isCustomMake ? (
+                          <>
+                            <select
+                              value={isCustomModel ? 'Other' : selectedModel}
+                              onChange={(e) => {
+                                if (e.target.value === 'Other') {
+                                  setIsCustomModel(true);
+                                  setCustomModelName('');
+                                } else {
+                                  setIsCustomModel(false);
+                                  setSelectedModel(e.target.value);
+                                }
+                              }}
+                              className="w-full px-2.5 sm:px-3 py-2 sm:py-2.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-bold text-[#101216] focus:outline-none focus:border-[#E5325C] focus:ring-2 focus:ring-[#E5325C]/20 transition-all cursor-pointer"
+                            >
+                              {(MODELS_BY_MAKE_EXTENDED[selectedMake] || ['Standard']).map((m) => (
+                                <option key={m} value={m}>
+                                  {m}
+                                </option>
+                              ))}
+                              <option value="Other">+ Other (Model not listed)</option>
+                            </select>
+                            {isCustomModel && (
+                              <input
+                                type="text"
+                                required
+                                placeholder="Type model name..."
+                                value={customModelName}
+                                onChange={(e) => setCustomModelName(e.target.value)}
+                                className="mt-1.5 w-full px-2.5 py-1.5 bg-white border-2 border-[#E5325C] rounded-lg text-xs font-bold text-[#101216] focus:outline-none"
+                              />
+                            )}
+                          </>
+                        ) : (
+                          <input
+                            type="text"
+                            required
+                            placeholder="Type car model..."
+                            value={customModelName}
+                            onChange={(e) => setCustomModelName(e.target.value)}
+                            className="w-full px-2.5 sm:px-3 py-2 sm:py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-bold text-[#101216] focus:outline-none focus:border-[#E5325C]"
+                          />
+                        )}
                       </div>
 
                       {/* 3. Year */}
@@ -465,21 +513,32 @@ export default function SpinnyHero({
               Choose your car make to get an instant valuation and guaranteed offer
             </p>
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-80 overflow-y-auto p-1">
-              {[...TOP_BRANDS, ...ALL_ADDITIONAL_BRANDS].map((brand) => (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-80 overflow-y-auto p-1">
+                {[...TOP_BRANDS, ...ALL_ADDITIONAL_BRANDS].map((brand) => (
+                  <button
+                    key={brand}
+                    onClick={() => {
+                      setIsMoreBrandsOpen(false);
+                      handleBrandClick(brand);
+                    }}
+                    className="p-3 rounded-xl bg-gray-50 hover:bg-[#FFF0F3] border border-gray-200 hover:border-[#E5325C] text-xs font-bold text-[#101216] hover:text-[#E5325C] transition-all flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer"
+                  >
+                    <BrandLogo brand={brand} className="h-6 max-w-[80px]" />
+                    <span className="text-[11px] font-semibold">{brand}</span>
+                  </button>
+                ))}
                 <button
-                  key={brand}
+                  type="button"
                   onClick={() => {
                     setIsMoreBrandsOpen(false);
-                    handleBrandClick(brand);
+                    handleMakeChange('Other');
                   }}
-                  className="p-3 rounded-xl bg-gray-50 hover:bg-[#FFF0F3] border border-gray-200 hover:border-[#E5325C] text-xs font-bold text-[#101216] hover:text-[#E5325C] transition-all flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer"
+                  className="p-3 rounded-xl bg-[#FFF0F3] hover:bg-[#FFE5EC] border-2 border-dashed border-[#E5325C] text-xs font-bold text-[#E5325C] transition-all flex flex-col items-center justify-center text-center gap-1 cursor-pointer"
                 >
-                  <BrandLogo brand={brand} className="h-6 max-w-[80px]" />
-                  <span className="text-[11px] font-semibold">{brand}</span>
+                  <span className="w-6 h-6 rounded-full bg-[#E5325C] text-white flex items-center justify-center text-xs font-black">+</span>
+                  <span className="text-[11px] font-extrabold">Other Brand</span>
                 </button>
-              ))}
-            </div>
+              </div>
           </div>
         </div>
       )}

@@ -96,6 +96,18 @@ const SEARCH_BRANDS = [
     logo: '/images/brands/mg.svg',
     className: 'w-7.5 h-7.5 sm:w-8.5 sm:h-8.5 object-contain',
   },
+  {
+    name: 'Ford',
+    filterMake: 'Ford',
+    logo: '/images/brands/ford.svg',
+    className: 'w-8.5 h-auto object-contain',
+  },
+  {
+    name: 'Audi',
+    filterMake: 'Audi',
+    logo: '/images/brands/audi.svg',
+    className: 'w-8.5 h-auto object-contain',
+  },
 ];
 
 const SEARCH_BUDGETS = [

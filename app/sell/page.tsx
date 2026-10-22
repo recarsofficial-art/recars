@@ -50,7 +50,11 @@ function SellWorkflowContent() {
   // Step 1: Vehicle Identification
   const [regNumber, setRegNumber] = useState(searchParams.get('reg') || '');
   const [make, setMake] = useState(searchParams.get('make') || 'Hyundai');
+  const [isCustomMake, setIsCustomMake] = useState(false);
+  const [customMakeName, setCustomMakeName] = useState('');
   const [model, setModel] = useState(searchParams.get('model') || 'Creta');
+  const [isCustomModel, setIsCustomModel] = useState(false);
+  const [customModelName, setCustomModelName] = useState('');
   const [year, setYear] = useState<number>(() => Number(searchParams.get('year')) || 2021);
   const [variant, setVariant] = useState(searchParams.get('variant') || 'SX (O) 1.5 Petrol');
   const [fuelType, setFuelType] = useState<FuelType>(
@@ -158,13 +162,23 @@ function SellWorkflowContent() {
 
   const calculateSuggestedPrice = () => {
     let base = 850000;
-    if (make === 'Toyota') base = 1600000;
-    else if (make === 'Hyundai' || make === 'Kia') base = 950000;
-    else if (make === 'Honda') base = 900000;
-    else if (make === 'BMW' || make === 'Mercedes-Benz') base = 2600000;
-    else if (make === 'Mahindra') base = 1200000;
-    else if (make === 'Tata') base = 850000;
-    else if (make === 'Maruti Suzuki') base = 600000;
+    if (make === 'BMW' || make === 'Mercedes-Benz' || make === 'Audi' || make === 'Jaguar' || make === 'Land Rover' || make === 'Range Rover' || make === 'Volvo') {
+      base = 2800000;
+    } else if (make === 'Toyota') {
+      base = 1600000;
+    } else if (make === 'Mahindra' || make === 'Jeep') {
+      base = 1300000;
+    } else if (make === 'Hyundai' || make === 'Kia' || make === 'Volkswagen' || make === 'Skoda' || make === 'MG' || make === 'JSW' || make === 'VinFast') {
+      base = 1000000;
+    } else if (make === 'Honda') {
+      base = 900000;
+    } else if (make === 'Tata') {
+      base = 850000;
+    } else if (make === 'Ford' || make === 'Renault' || make === 'Nissan' || make === 'Citroen' || make === 'Mitsubishi') {
+      base = 750000;
+    } else if (make === 'Maruti Suzuki' || make === 'Fiat' || make === 'Chevrolet' || make === 'Hindustan Motors') {
+      base = 600000;
+    }
 
     const age = Math.max(0, 2026 - year);
     const ageDeprec = Math.min(0.65, age * 0.08);
@@ -199,13 +213,16 @@ function SellWorkflowContent() {
       return;
     }
 
+    const displayMake = isCustomMake ? (customMakeName.trim() || 'Custom Make') : make;
+    const displayModel = isCustomModel ? (customModelName.trim() || 'Custom Model') : model;
+
     const priceRange = calculateSuggestedPrice();
     const reqId = getNextRequestId();
     const newRequest: SellRequest = {
       id: reqId,
       registrationNumber: regNumber || 'TS 09 EA 4589',
-      make,
-      model,
+      make: displayMake,
+      model: displayModel,
       variant,
       year,
       fuelType,
@@ -234,7 +251,12 @@ function SellWorkflowContent() {
 
   const availableModels = MODELS_BY_MAKE[make] || ['Standard'];
 
+  const displayMake = isCustomMake ? (customMakeName.trim() || 'Custom Make') : make;
+  const displayModel = isCustomModel ? (customModelName.trim() || 'Custom Model') : model;
+
   const handleHeroSelectBrand = (selectedB: string) => {
+    setIsCustomMake(false);
+    setIsCustomModel(false);
     setMake(selectedB);
     const availableModelsList = MODELS_BY_MAKE[selectedB] || ['Standard'];
     setModel(availableModelsList[0] || 'Standard');
@@ -249,8 +271,25 @@ function SellWorkflowContent() {
     variant: string;
     regNumber?: string;
   }) => {
-    setMake(details.make);
-    setModel(details.model);
+    const isKnownMake = (MAKES as readonly string[]).includes(details.make);
+    if (!isKnownMake && details.make) {
+      setIsCustomMake(true);
+      setCustomMakeName(details.make);
+      setMake('Other');
+    } else {
+      setIsCustomMake(false);
+      setMake(details.make);
+    }
+
+    const availableList = MODELS_BY_MAKE[details.make] || [];
+    if (!availableList.includes(details.model) && details.model && details.model !== 'Standard') {
+      setIsCustomModel(true);
+      setCustomModelName(details.model);
+      setModel('Other');
+    } else {
+      setIsCustomModel(false);
+      setModel(details.model);
+    }
     setYear(details.year);
     setFuelType(details.fuel as FuelType);
     setTransmission(details.transmission as TransmissionType);
@@ -346,12 +385,35 @@ function SellWorkflowContent() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#101216] mb-1">Make / Brand</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-[#101216]">Make / Brand</label>
+                    {isCustomMake && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomMake(false);
+                          setMake('Hyundai');
+                          setModel(MODELS_BY_MAKE['Hyundai']?.[0] || 'Creta');
+                        }}
+                        className="text-[11px] font-bold text-[#E5325C] hover:underline cursor-pointer"
+                      >
+                        Choose from list
+                      </button>
+                    )}
+                  </div>
                   <select
-                    value={make}
+                    value={isCustomMake ? 'Other' : make}
                     onChange={(e) => {
-                      setMake(e.target.value);
-                      setModel(MODELS_BY_MAKE[e.target.value]?.[0] || '');
+                      if (e.target.value === 'Other') {
+                        setIsCustomMake(true);
+                        setIsCustomModel(true);
+                        setCustomMakeName('');
+                        setCustomModelName('');
+                      } else {
+                        setIsCustomMake(false);
+                        setMake(e.target.value);
+                        setModel(MODELS_BY_MAKE[e.target.value]?.[0] || '');
+                      }
                     }}
                     className="w-full bg-[#F8F9FA] px-4 py-2.5 rounded-xl border border-[#E5E7EB] text-xs font-semibold focus:outline-none"
                   >
@@ -360,22 +422,96 @@ function SellWorkflowContent() {
                         {m}
                       </option>
                     ))}
+                    <option value="Other">+ Other (Car brand not in list)</option>
                   </select>
+
+                  {isCustomMake && (
+                    <div className="mt-2 space-y-1">
+                      <input
+                        type="text"
+                        required
+                        placeholder="Type car brand name (e.g. Isuzu, BYD, Lotus...)"
+                        value={customMakeName}
+                        onChange={(e) => setCustomMakeName(e.target.value)}
+                        className="w-full bg-white px-3.5 py-2 rounded-xl border-2 border-[#E5325C] text-xs font-semibold focus:outline-none placeholder:text-gray-400 shadow-2xs"
+                      />
+                      <p className="text-[11px] text-gray-500">
+                        Car brand not available? Type it above.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#101216] mb-1">Model</label>
-                  <select
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    className="w-full bg-[#F8F9FA] px-4 py-2.5 rounded-xl border border-[#E5E7EB] text-xs font-semibold focus:outline-none"
-                  >
-                    {availableModels.map((mdl) => (
-                      <option key={mdl} value={mdl}>
-                        {mdl}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-[#101216]">Model</label>
+                    {isCustomModel && !isCustomMake && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomModel(false);
+                          setModel(MODELS_BY_MAKE[make]?.[0] || '');
+                        }}
+                        className="text-[11px] font-bold text-[#E5325C] hover:underline cursor-pointer"
+                      >
+                        Choose from list
+                      </button>
+                    )}
+                  </div>
+                  {!isCustomMake ? (
+                    <>
+                      <select
+                        value={isCustomModel ? 'Other' : model}
+                        onChange={(e) => {
+                          if (e.target.value === 'Other') {
+                            setIsCustomModel(true);
+                            setCustomModelName('');
+                          } else {
+                            setIsCustomModel(false);
+                            setModel(e.target.value);
+                          }
+                        }}
+                        className="w-full bg-[#F8F9FA] px-4 py-2.5 rounded-xl border border-[#E5E7EB] text-xs font-semibold focus:outline-none"
+                      >
+                        {availableModels.map((mdl) => (
+                          <option key={mdl} value={mdl}>
+                            {mdl}
+                          </option>
+                        ))}
+                        <option value="Other">+ Other (Model not in list)</option>
+                      </select>
+
+                      {isCustomModel && (
+                        <div className="mt-2 space-y-1">
+                          <input
+                            type="text"
+                            required
+                            placeholder="Type car model name..."
+                            value={customModelName}
+                            onChange={(e) => setCustomModelName(e.target.value)}
+                            className="w-full bg-white px-3.5 py-2 rounded-xl border-2 border-[#E5325C] text-xs font-semibold focus:outline-none placeholder:text-gray-400 shadow-2xs"
+                          />
+                          <p className="text-[11px] text-gray-500">
+                            Model not in list? Type it above.
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        required
+                        placeholder="Type car model name..."
+                        value={customModelName}
+                        onChange={(e) => setCustomModelName(e.target.value)}
+                        className="w-full bg-white px-3.5 py-2.5 rounded-xl border border-[#E5E7EB] text-xs font-semibold focus:outline-none placeholder:text-gray-400"
+                      />
+                      <p className="text-[11px] text-gray-500">
+                        Enter model name for custom brand.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -605,7 +741,7 @@ function SellWorkflowContent() {
                   </span>
                 </div>
                 <p className="text-[11px] text-amber-800 leading-relaxed">
-                  Estimated market value based on {year} {make} {model} ({ownership}, {kilometers.toLocaleString('en-IN')} km). This is contextual guidance; your final binding purchase price is determined during physical 28+ point inspection.
+                  Estimated market value based on {year} {displayMake} {displayModel} ({ownership}, {kilometers.toLocaleString('en-IN')} km). This is contextual guidance; your final binding purchase price is determined during physical 28+ point inspection.
                 </p>
               </div>
 
@@ -852,7 +988,7 @@ function SellWorkflowContent() {
               <div className="p-6 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] max-w-md mx-auto text-left space-y-2.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-[#6B7078]">Vehicle:</span>
-                  <span className="font-bold text-[#101216]">{year} {make} {model} ({variant})</span>
+                  <span className="font-bold text-[#101216]">{year} {displayMake} {displayModel} ({variant})</span>
                 </div>
                 <div className="flex justify-between items-center pt-1 border-t border-gray-200">
                   <span className="text-[#6B7078]">Inspection Type:</span>
