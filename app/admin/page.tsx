@@ -495,6 +495,7 @@ export default function AdminDashboardPage() {
   const [carSearch, setCarSearch] = useState('');
   const [carCityFilter, setCarCityFilter] = useState('All');
   const [sourceFilter, setSourceFilter] = useState<'All' | 'Dealer' | 'Individual Seller' | 'Admin-Uploaded'>('All');
+  const [carAvailabilityFilter, setCarAvailabilityFilter] = useState<'All' | 'Available' | 'Reserved' | 'Sold Out'>('All');
   const [specificDealerFilter, setSpecificDealerFilter] = useState<string>('All');
   const [viewingDetailsCar, setViewingDetailsCar] = useState<CarType | null>(null);
 
@@ -1206,7 +1207,17 @@ export default function AdminDashboardPage() {
         ? true
         : car.dealerName === specificDealerFilter || car.dealerId === specificDealerFilter;
 
-    return matchesSearch && matchesCity && matchesSource && matchesDealer;
+    const carStatus = car.availabilityStatus || 'Available';
+    const matchesAvailability =
+      carAvailabilityFilter === 'All'
+        ? true
+        : carAvailabilityFilter === 'Available'
+        ? carStatus === 'Available'
+        : carAvailabilityFilter === 'Sold Out'
+        ? carStatus === 'Sold Out'
+        : carStatus === carAvailabilityFilter;
+
+    return matchesSearch && matchesCity && matchesSource && matchesDealer && matchesAvailability;
   });
 
   // Filtered inquiries
@@ -2604,9 +2615,31 @@ export default function AdminDashboardPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    <div className="text-right flex-shrink-0 flex flex-col items-end gap-1.5">
                       <span className="text-xs font-extrabold text-[#101216] block">{formatINR(car.price)}</span>
-                      <div className="flex items-center gap-2 justify-end mt-1">
+                      
+                      {/* Direct One-Click Availability Action */}
+                      {car.availabilityStatus === 'Sold Out' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateCarAvailability(car.id, 'Available')}
+                          className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-2xs inline-flex items-center gap-1"
+                          title="Restore sold car to Available"
+                        >
+                          <span>↺ Set Available</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateCarAvailability(car.id, 'Sold Out')}
+                          className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-600 hover:bg-rose-700 text-white transition-colors cursor-pointer shadow-2xs inline-flex items-center gap-1"
+                          title="Keep this car Sold Out"
+                        >
+                          <span>✓ Mark Sold Out</span>
+                        </button>
+                      )}
+
+                      <div className="flex items-center gap-2 justify-end">
                         <Link
                           href={`/cars/${car.id}`}
                           className="text-[10px] text-gray-500 hover:text-[#E5325C] font-bold hover:underline inline-flex items-center gap-0.5"
@@ -3552,6 +3585,40 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
+              {/* Availability Status Quick-Filter Badges */}
+              <div className="flex items-center gap-2 pt-2 border-t border-gray-100 overflow-x-auto pb-1">
+                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Availability:
+                </span>
+                {[
+                  { id: 'All', label: 'All Statuses', count: cars.length },
+                  { id: 'Available', label: '🟢 Available', count: cars.filter((c) => (c.availabilityStatus || 'Available') === 'Available').length },
+                  { id: 'Reserved', label: '🟡 Reserved', count: cars.filter((c) => c.availabilityStatus === 'Reserved').length },
+                  { id: 'Sold Out', label: '🔴 Sold Out', count: cars.filter((c) => c.availabilityStatus === 'Sold Out').length },
+                ].map((pill) => (
+                  <button
+                    key={pill.id}
+                    onClick={() => setCarAvailabilityFilter(pill.id as any)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      carAvailabilityFilter === pill.id
+                        ? pill.id === 'Sold Out'
+                          ? 'bg-rose-600 text-white shadow-2xs'
+                          : pill.id === 'Available'
+                          ? 'bg-emerald-700 text-white shadow-2xs'
+                          : 'bg-[#101216] text-white shadow-2xs'
+                        : 'bg-[#F8F9FA] text-gray-600 hover:text-black border border-[#E5E7EB]'
+                    }`}
+                  >
+                    <span>{pill.label}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      carAvailabilityFilter === pill.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+                    }`}>
+                      {pill.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
               {/* Source Quick-Filter Badges */}
               <div className="flex items-center gap-2 pt-2 border-t border-gray-100 overflow-x-auto pb-1">
                 <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
@@ -3582,10 +3649,11 @@ export default function AdminDashboardPage() {
                   </button>
                 ))}
 
-                {(sourceFilter !== 'All' || specificDealerFilter !== 'All' || carCityFilter !== 'All' || carSearch) && (
+                {(sourceFilter !== 'All' || carAvailabilityFilter !== 'All' || specificDealerFilter !== 'All' || carCityFilter !== 'All' || carSearch) && (
                   <button
                     onClick={() => {
                       setSourceFilter('All');
+                      setCarAvailabilityFilter('All');
                       setSpecificDealerFilter('All');
                       setCarCityFilter('All');
                       setCarSearch('');
@@ -5559,15 +5627,42 @@ export default function AdminDashboardPage() {
 
                 <div>
                   <label className="block font-bold text-[#101216] mb-1">Availability Status</label>
-                  <select
-                    value={newAvailability}
-                    onChange={(e) => setNewAvailability(e.target.value as any)}
-                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
-                  >
-                    <option value="Available">Available</option>
-                    <option value="Reserved">Reserved</option>
-                    <option value="Sold Out">Sold Out</option>
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={newAvailability}
+                      onChange={(e) => setNewAvailability(e.target.value as any)}
+                      className={`flex-1 px-3 py-2.5 rounded-xl font-bold border transition-colors focus:outline-none ${
+                        newAvailability === 'Sold Out'
+                          ? 'bg-rose-50 text-rose-700 border-rose-300'
+                          : newAvailability === 'Reserved'
+                          ? 'bg-amber-50 text-amber-700 border-amber-300'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                      }`}
+                    >
+                      <option value="Available">🟢 Available</option>
+                      <option value="Reserved">🟡 Reserved</option>
+                      <option value="Sold Out">🔴 Sold Out</option>
+                    </select>
+                    {newAvailability === 'Sold Out' ? (
+                      <button
+                        type="button"
+                        onClick={() => setNewAvailability('Available')}
+                        className="px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shrink-0 cursor-pointer shadow-2xs"
+                        title="Set status back to Available"
+                      >
+                        Set Available
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setNewAvailability('Sold Out')}
+                        className="px-3 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shrink-0 cursor-pointer shadow-2xs"
+                        title="Mark car as Sold Out"
+                      >
+                        Keep Sold Out
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
