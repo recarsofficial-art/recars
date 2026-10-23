@@ -2583,6 +2583,15 @@ export default function AdminDashboardPage() {
                           <span className="text-[10px] text-[#237A52] font-bold">
                             ★ {car.inspectionScore}/100
                           </span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-extrabold ${
+                            car.availabilityStatus === 'Sold Out'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : car.availabilityStatus === 'Reserved'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          }`}>
+                            {car.availabilityStatus === 'Sold Out' ? '🔴 Sold Out' : car.availabilityStatus === 'Reserved' ? '🟡 Reserved' : '🟢 Available'}
+                          </span>
                           {car.vehicleSource === 'Dealer' ? (
                             <span className="text-[9px] px-1.5 py-0.5 rounded font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200" title={car.dealerName}>
                               🏢 {car.dealerName || 'Dealer'}
