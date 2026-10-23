@@ -9,6 +9,8 @@ export type NotificationEnquiryType =
   | 'Price Negotiation Offer'
   | 'Pre-Delivery Inspection (PDI)'
   | 'Car Care & PPF Service Enquiry'
+  | 'Car Finder Request'
+  | 'Find My Car Enquiry'
   | 'Callback Request'
   | 'General Customer Enquiry';
 
@@ -40,7 +42,7 @@ export interface EmailNotificationPayload {
   packageType?: string;
   fee?: number;
   paymentStatus?: string;
-  adminTab?: 'inquiries' | 'leads' | 'testdrives' | 'negotiations' | 'pdi' | 'carcare';
+  adminTab?: 'inquiries' | 'leads' | 'testdrives' | 'negotiations' | 'pdi' | 'carcare' | 'carfinder';
   createdAt?: string;
 }
 

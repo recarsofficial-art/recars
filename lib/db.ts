@@ -13,6 +13,9 @@ import {
   CarCareStatus,
   VehicleAnalyticsItem,
   AdminAnalyticsSummary,
+  VehicleRibbon,
+  CarFinderRequest,
+  CarFinderStatus,
 } from './types';
 
 function getDatabaseConnectionString(): string {
@@ -181,6 +184,7 @@ export async function ensureDealerAndCarsSchema(): Promise<void> {
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS registration_number TEXT;
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS status_updated_at TIMESTAMPTZ DEFAULT now();
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS sold_at TIMESTAMPTZ;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS custom_ribbons JSONB DEFAULT '[]'::jsonb;
 
           CREATE INDEX IF NOT EXISTS idx_cars_vehicle_source ON public.cars(vehicle_source);
           CREATE INDEX IF NOT EXISTS idx_cars_dealer_id ON public.cars(dealer_id);
@@ -215,6 +219,31 @@ export async function ensureDealerAndCarsSchema(): Promise<void> {
           );
           CREATE INDEX IF NOT EXISTS idx_car_care_enquiries_status ON public.car_care_enquiries(status);
           CREATE INDEX IF NOT EXISTS idx_car_care_enquiries_created_at ON public.car_care_enquiries(created_at DESC);
+
+          CREATE TABLE IF NOT EXISTS public.car_finder_requests (
+            id TEXT PRIMARY KEY,
+            customer_name TEXT NOT NULL,
+            customer_phone TEXT NOT NULL,
+            customer_email TEXT,
+            preferred_brand TEXT NOT NULL,
+            preferred_model TEXT,
+            budget_min NUMERIC,
+            budget_max NUMERIC,
+            budget_range TEXT,
+            preferred_fuel TEXT,
+            preferred_transmission TEXT,
+            preferred_year TEXT,
+            preferred_location TEXT,
+            additional_requirements TEXT,
+            status TEXT NOT NULL DEFAULT 'New',
+            internal_notes TEXT DEFAULT '',
+            matched_car_ids JSONB DEFAULT '[]'::jsonb,
+            created_at TIMESTAMPTZ DEFAULT now(),
+            updated_at TIMESTAMPTZ DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS idx_car_finder_status ON public.car_finder_requests(status);
+          CREATE INDEX IF NOT EXISTS idx_car_finder_brand ON public.car_finder_requests(preferred_brand);
+          CREATE INDEX IF NOT EXISTS idx_car_finder_created_at ON public.car_finder_requests(created_at DESC);
         `);
       } catch (err: any) {
         console.warn('[DB_INIT] ensureDealerAndCarsSchema warning:', err?.message);
@@ -398,6 +427,11 @@ export async function dbGetCarById(id: string): Promise<Car | null> {
     uploadedByRole: r.uploaded_by_role || undefined,
     listingStatus: (r.listing_status as any) || 'Published',
     registrationNumber: r.registration_number || undefined,
+    customRibbons: Array.isArray(r.custom_ribbons)
+      ? r.custom_ribbons
+      : typeof r.custom_ribbons === 'string'
+      ? JSON.parse(r.custom_ribbons)
+      : [],
   };
 }
 
@@ -411,11 +445,11 @@ export async function dbInsertCar(car: Car): Promise<void> {
       availability_status, manufacturing_year, registration_year, insurance_status,
       insurance_expiry, insurance_type, finance_available, suggested_price_min, suggested_price_max,
       vehicle_source, dealer_id, dealer_name, dealer_contact, uploaded_by, uploaded_by_user_id, uploaded_by_role,
-      listing_status, registration_number
+      listing_status, registration_number, custom_ribbons
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
       $22, $23, $24, $25, $26, $27, $28, $29, $30,
-      $31, $32, $33, $34, $35, $36, $37, $38, $39
+      $31, $32, $33, $34, $35, $36, $37, $38, $39, $40
     )
     ON CONFLICT (id) DO UPDATE SET
       make = EXCLUDED.make,
@@ -456,6 +490,7 @@ export async function dbInsertCar(car: Car): Promise<void> {
       uploaded_by_role = EXCLUDED.uploaded_by_role,
       listing_status = EXCLUDED.listing_status,
       registration_number = EXCLUDED.registration_number,
+      custom_ribbons = EXCLUDED.custom_ribbons,
       updated_at = now();
   `;
   await pool.query(sql, [
@@ -498,6 +533,7 @@ export async function dbInsertCar(car: Car): Promise<void> {
     car.uploadedByRole || null,
     car.listingStatus || 'Published',
     car.registrationNumber || null,
+    JSON.stringify(car.customRibbons || []),
   ]);
 }
 
@@ -2065,6 +2101,11 @@ export async function dbGetTrendingCars(limit = 6): Promise<Car[]> {
     dealerId: r.dealer_id || undefined,
     dealerName: r.dealer_name || undefined,
     dealerContact: r.dealer_contact || undefined,
+    customRibbons: Array.isArray(r.custom_ribbons)
+      ? r.custom_ribbons
+      : typeof r.custom_ribbons === 'string'
+      ? JSON.parse(r.custom_ribbons)
+      : [],
   }));
 }
 
@@ -2190,3 +2231,208 @@ export async function dbUpdateCarCareEnquiryStatus(
   const res = await pool.query(sql, params);
   return (res.rowCount || 0) > 0;
 }
+
+// ========================================================
+// 11. VEHICLE RIBBONS OPERATIONS
+// ========================================================
+
+export async function dbUpdateCarRibbons(id: string, ribbons: VehicleRibbon[]): Promise<boolean> {
+  await ensureDealerAndCarsSchema();
+  const res = await pool.query(
+    'UPDATE public.cars SET custom_ribbons = $1::jsonb, updated_at = now() WHERE id = $2',
+    [JSON.stringify(ribbons || []), id]
+  );
+  return (res.rowCount || 0) > 0;
+}
+
+// ========================================================
+// 12. CAR FINDER ("LET US FIND YOUR CAR") OPERATIONS
+// ========================================================
+
+export async function dbInsertCarFinderRequest(req: CarFinderRequest): Promise<void> {
+  await ensureDealerAndCarsSchema();
+  const sql = `
+    INSERT INTO public.car_finder_requests (
+      id, customer_name, customer_phone, customer_email,
+      preferred_brand, preferred_model, budget_min, budget_max, budget_range,
+      preferred_fuel, preferred_transmission, preferred_year, preferred_location,
+      additional_requirements, status, internal_notes, matched_car_ids,
+      created_at, updated_at
+    ) VALUES (
+      $1, $2, $3, $4,
+      $5, $6, $7, $8, $9,
+      $10, $11, $12, $13,
+      $14, $15, $16, $17,
+      now(), now()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      status = EXCLUDED.status,
+      internal_notes = EXCLUDED.internal_notes,
+      matched_car_ids = EXCLUDED.matched_car_ids,
+      updated_at = now();
+  `;
+  await pool.query(sql, [
+    req.id,
+    req.customerName,
+    req.customerPhone,
+    req.customerEmail || null,
+    req.preferredBrand,
+    req.preferredModel || null,
+    req.budgetMin || null,
+    req.budgetMax || null,
+    req.budgetRange || null,
+    req.preferredFuel || null,
+    req.preferredTransmission || null,
+    req.preferredYear ? String(req.preferredYear) : null,
+    req.preferredLocation || null,
+    req.additionalRequirements || null,
+    req.status || 'New',
+    req.internalNotes || '',
+    JSON.stringify(req.matchedCarIds || []),
+  ]);
+}
+
+export async function dbGetCarFinderRequests(filters?: {
+  status?: string;
+  brand?: string;
+  search?: string;
+}): Promise<CarFinderRequest[]> {
+  await ensureDealerAndCarsSchema();
+  let sql = 'SELECT * FROM public.car_finder_requests WHERE 1=1';
+  const params: any[] = [];
+  let idx = 1;
+
+  if (filters?.status && filters.status !== 'All') {
+    sql += ` AND status = $${idx++}`;
+    params.push(filters.status);
+  }
+
+  if (filters?.brand && filters.brand !== 'All') {
+    sql += ` AND LOWER(preferred_brand) = LOWER($${idx++})`;
+    params.push(filters.brand);
+  }
+
+  if (filters?.search && filters.search.trim()) {
+    const q = `%${filters.search.trim().toLowerCase()}%`;
+    sql += ` AND (LOWER(customer_name) LIKE $${idx} OR customer_phone LIKE $${idx} OR LOWER(preferred_brand) LIKE $${idx} OR LOWER(COALESCE(preferred_model, '')) LIKE $${idx} OR LOWER(id) LIKE $${idx})`;
+    params.push(q);
+    idx++;
+  }
+
+  sql += ' ORDER BY created_at DESC';
+  const { rows } = await pool.query(sql, params);
+
+  return rows.map((r: any) => ({
+    id: r.id,
+    customerName: r.customer_name,
+    customerPhone: r.customer_phone,
+    mobileNumber: r.customer_phone,
+    customerEmail: r.customer_email || undefined,
+    email: r.customer_email || undefined,
+    preferredBrand: r.preferred_brand,
+    preferredModel: r.preferred_model || undefined,
+    budgetMin: r.budget_min ? Number(r.budget_min) : undefined,
+    budgetMax: r.budget_max ? Number(r.budget_max) : undefined,
+    budgetRange: r.budget_range || undefined,
+    preferredFuel: r.preferred_fuel || undefined,
+    preferredTransmission: r.preferred_transmission || undefined,
+    preferredYear: r.preferred_year || undefined,
+    preferredLocation: r.preferred_location || undefined,
+    additionalRequirements: r.additional_requirements || undefined,
+    status: (r.status as CarFinderStatus) || 'New',
+    internalNotes: r.internal_notes || '',
+    matchedCarIds: Array.isArray(r.matched_car_ids)
+      ? r.matched_car_ids
+      : typeof r.matched_car_ids === 'string'
+      ? JSON.parse(r.matched_car_ids)
+      : [],
+    createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+  }));
+}
+
+export async function dbUpdateCarFinderRequest(
+  id: string,
+  updates: {
+    status?: CarFinderStatus;
+    internalNotes?: string;
+    matchedCarIds?: string[];
+  }
+): Promise<boolean> {
+  await ensureDealerAndCarsSchema();
+  const sets: string[] = [];
+  const params: any[] = [];
+  let idx = 1;
+
+  if (updates.status) {
+    sets.push(`status = $${idx++}`);
+    params.push(updates.status);
+  }
+  if (updates.internalNotes !== undefined) {
+    sets.push(`internal_notes = $${idx++}`);
+    params.push(updates.internalNotes);
+  }
+  if (updates.matchedCarIds !== undefined) {
+    sets.push(`matched_car_ids = $${idx++}::jsonb`);
+    params.push(JSON.stringify(updates.matchedCarIds));
+  }
+
+  if (sets.length === 0) return true;
+
+  sets.push(`updated_at = now()`);
+  params.push(id);
+
+  const sql = `UPDATE public.car_finder_requests SET ${sets.join(', ')} WHERE id = $${idx}`;
+  const res = await pool.query(sql, params);
+  return (res.rowCount || 0) > 0;
+}
+
+export async function dbMatchCarsForRequest(req: {
+  preferredBrand?: string;
+  preferredModel?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  preferredFuel?: string;
+  preferredTransmission?: string;
+}): Promise<Car[]> {
+  const allCars = await dbGetCars();
+  return allCars.filter((car) => {
+    // Only available or reserved cars, exclude sold out
+    if (car.availabilityStatus === 'Sold Out') return false;
+
+    // Brand matching
+    if (req.preferredBrand && req.preferredBrand !== 'Any' && req.preferredBrand !== 'All') {
+      const b = req.preferredBrand.toLowerCase().trim();
+      const carMake = car.make.toLowerCase().trim();
+      if (!carMake.includes(b) && !b.includes(carMake)) return false;
+    }
+
+    // Model matching
+    if (req.preferredModel && req.preferredModel.trim()) {
+      const m = req.preferredModel.toLowerCase().trim();
+      const carModel = car.model.toLowerCase().trim();
+      if (!carModel.includes(m) && !m.includes(carModel)) return false;
+    }
+
+    // Budget matching (with 10% flexible grace window)
+    if (req.budgetMax && req.budgetMax > 0) {
+      if (car.price > req.budgetMax * 1.1) return false;
+    }
+    if (req.budgetMin && req.budgetMin > 0) {
+      if (car.price < req.budgetMin * 0.9) return false;
+    }
+
+    // Fuel matching
+    if (req.preferredFuel && req.preferredFuel !== 'Any' && req.preferredFuel !== 'All') {
+      if (car.fuelType.toLowerCase() !== req.preferredFuel.toLowerCase()) return false;
+    }
+
+    // Transmission matching
+    if (req.preferredTransmission && req.preferredTransmission !== 'Any' && req.preferredTransmission !== 'All') {
+      if (car.transmission.toLowerCase() !== req.preferredTransmission.toLowerCase()) return false;
+    }
+
+    return true;
+  });
+}
+

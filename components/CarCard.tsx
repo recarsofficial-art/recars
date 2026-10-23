@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Heart, Check, ShieldCheck, ArrowRight, MapPin } from 'lucide-react';
 import { Car } from '@/lib/types';
 import { formatINR, formatKM } from '@/lib/formatters';
+import { computeCarRibbons, getRibbonColorStyles } from '@/lib/ribbons';
 
 interface CarCardProps {
   car: Car;
@@ -13,6 +14,9 @@ interface CarCardProps {
 }
 
 export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCardProps) {
+  const activeRibbons = computeCarRibbons(car, (car as any).viewsCount);
+  const isSoldOut = car.availabilityStatus === 'Sold Out';
+
   return (
     <div className="group bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-xl hover:border-[#E5325C]/40 transition-all duration-300 flex flex-col relative">
       {/* Image container */}
@@ -27,7 +31,7 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
         </Link>
 
         {/* Diagonal Corner Ribbon for Sold Out */}
-        {car.availabilityStatus === 'Sold Out' && (
+        {isSoldOut && (
           <div className="absolute -top-1 -right-1 z-30 overflow-hidden w-28 h-28 pointer-events-none">
             <div className="absolute transform rotate-45 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-black text-[10px] tracking-widest py-1.5 right-[-32px] top-[22px] w-[130px] text-center shadow-xl uppercase border-y border-red-300/60 drop-shadow-md">
               SOLD OUT
@@ -35,24 +39,29 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
           </div>
         )}
 
-        {/* Top-Left Availability Badge */}
-        <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 flex-wrap">
-          {car.availabilityStatus === 'Sold Out' ? (
-            <span className="px-2.5 py-1 rounded-md bg-rose-600 text-white text-[10px] font-black tracking-wider uppercase border border-rose-400 shadow-md flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              SOLD OUT
-            </span>
-          ) : car.availabilityStatus === 'Reserved' ? (
-            <span className="px-2.5 py-1 rounded-md bg-amber-600/90 backdrop-blur-xs text-[10px] font-extrabold text-white tracking-wide uppercase border border-amber-400 shadow-sm">
-              Reserved
-            </span>
+        {/* Top-Left Ribbons / Badges (Max 2 per vehicle card) */}
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 flex-wrap max-w-[80%]">
+          {activeRibbons.length > 0 ? (
+            activeRibbons.map((ribbon, idx) => {
+              const styles = getRibbonColorStyles(ribbon.color);
+              return (
+                <span
+                  key={`${ribbon.text}-${idx}`}
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider shadow-md border flex items-center gap-1 ${styles.bg} ${styles.text} ${styles.border}`}
+                >
+                  {ribbon.isStatus && <span className={`w-1.5 h-1.5 rounded-full ${styles.dot} animate-pulse`} />}
+                  <span>{ribbon.text}</span>
+                </span>
+              );
+            })
           ) : (
             <span className="px-2.5 py-1 rounded-md bg-emerald-600/90 backdrop-blur-xs text-[10px] font-extrabold text-white tracking-wide uppercase border border-emerald-400 shadow-sm">
               Available
             </span>
           )}
         </div>
-        {car.availabilityStatus === 'Sold Out' && (
+
+        {isSoldOut && (
           <div className="absolute inset-0 bg-slate-950/20 pointer-events-none" />
         )}
 

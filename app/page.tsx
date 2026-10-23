@@ -34,6 +34,7 @@ import {
   Tag,
   Filter,
   Flame,
+  Phone,
 } from 'lucide-react';
 import { MAKES, MODELS_BY_MAKE, CITIES } from '@/lib/data';
 import SimpleHeader from '@/components/SimpleHeader';
@@ -41,6 +42,7 @@ import RecarsHomeHub from '@/components/RecarsHomeHub';
 import SpinnyHero from '@/components/SpinnyHero';
 import CarCard from '@/components/CarCard';
 import DreamCarWizardModal, { BUDGET_BRACKETS } from '@/components/DreamCarWizardModal';
+import CarFinderModal from '@/components/CarFinderModal';
 import Footer from '@/components/Footer';
 import { useRecarsState } from '@/lib/store';
 
@@ -173,9 +175,16 @@ function HomePageContent() {
   // Modals & Banners
   const [isCookieBannerVisible, setIsCookieBannerVisible] = useState(true);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isCarFinderOpen, setIsCarFinderOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
   const [quickQuery, setQuickQuery] = useState('');
+
+  useEffect(() => {
+    if (searchParams.get('finder') === 'true' || searchParams.get('find') === 'true') {
+      setIsCarFinderOpen(true);
+    }
+  }, [searchParams]);
 
   // Interactive Content States
   const [howItWorksTab, setHowItWorksTab] = useState<'buy' | 'sell'>('buy');
@@ -1025,6 +1034,90 @@ function HomePageContent() {
       </section>
 
       {/* ========================================================
+          10B. DEDICATED CAR FINDER SECTION ("Can't Find Your Dream Car?")
+      ========================================================= */}
+      <section id="car-finder" className="py-16 sm:py-24 bg-gradient-to-br from-[#101216] via-[#1B2028] to-[#101216] text-white relative overflow-hidden border-t border-gray-800">
+        {/* Ambient background glows */}
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#E5325C]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-white mb-6 uppercase tracking-wider">
+            <Sparkles className="w-4 h-4 text-[#E5325C]" />
+            <span>Recars Car Concierge • 100% Free Sourcing</span>
+          </div>
+
+          <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-white mb-4">
+            Can&apos;t Find Your Dream Car?
+          </h2>
+
+          <p className="text-base sm:text-xl text-gray-300 max-w-2xl mx-auto font-medium leading-relaxed mb-9">
+            Tell us what you&apos;re looking for. We&apos;ll help you find the right car for your budget.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={() => setIsCarFinderOpen(true)}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-[#E5325C] to-[#D4264E] hover:from-[#D4264E] hover:to-[#B81D3E] text-white text-base font-black shadow-xl shadow-rose-950/40 hover:shadow-rose-900/60 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 cursor-pointer group"
+            >
+              <Search className="w-5 h-5 text-white stroke-[2.5]" />
+              <span>Find a Car for Me</span>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <a
+              href="tel:+919908796677"
+              className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white text-sm font-bold backdrop-blur-md transition-all flex items-center justify-center gap-2"
+            >
+              <Phone className="w-4 h-4 text-emerald-400" />
+              <span>Concierge Hotline:</span>
+              <span className="text-[#E5325C] font-mono font-black">+91 99087 96677</span>
+            </a>
+          </div>
+
+          {/* Quick value trust badges */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 pt-10 border-t border-white/10 text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-[#E5325C] flex-shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">28+ Inspection</p>
+                <p className="text-[11px] text-gray-400">Strict engineering audit</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-emerald-400 flex-shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">Direct Sourcing</p>
+                <p className="text-[11px] text-gray-400">From verified sellers</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-amber-400 flex-shrink-0">
+                <Tag className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">Price Transparency</p>
+                <p className="text-[11px] text-gray-400">Zero inflated markup</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-sky-400 flex-shrink-0">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">Fast Matching</p>
+                <p className="text-[11px] text-gray-400">Updates within 24-48 hrs</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================
           11. FOOTER
       ========================================================= */}
       <Footer />
@@ -1109,6 +1202,15 @@ function HomePageContent() {
           </div>
         </div>
       )}
+
+      {/* ========================================================
+          8. "LET US FIND YOUR CAR" MODAL FORM
+      ========================================================= */}
+      <CarFinderModal
+        isOpen={isCarFinderOpen}
+        onClose={() => setIsCarFinderOpen(false)}
+        defaultCity={selectedCity}
+      />
     </div>
   );
 }

@@ -190,6 +190,12 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: updated, message: `Availability status set to ${availabilityStatus}` });
     }
 
+    if (body.customRibbons !== undefined) {
+      const { dbUpdateCarRibbons } = await import('@/lib/db');
+      const updated = await dbUpdateCarRibbons(id, body.customRibbons);
+      return NextResponse.json({ success: updated, message: 'Custom ribbons updated successfully' });
+    }
+
     await dbInsertCar(body);
     return NextResponse.json({ success: true, message: 'Vehicle details updated successfully' });
   } catch (error: any) {

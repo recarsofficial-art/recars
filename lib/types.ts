@@ -86,6 +86,7 @@ export interface Car {
   uploadedByRole?: string;
   listingStatus?: 'Pending' | 'Approved' | 'Published' | 'Rejected' | 'Sold';
   registrationNumber?: string;
+  customRibbons?: VehicleRibbon[];
 }
 
 export type VehicleSource = 'Individual Seller' | 'Dealer' | 'Admin';
@@ -347,5 +348,48 @@ export interface AdminAnalyticsSummary {
     conversionRate: string;
   };
 }
+
+// ========================================================
+// VEHICLE RIBBONS & CAPTIONS TYPES
+// ========================================================
+export type RibbonColor = 'red' | 'rose' | 'amber' | 'emerald' | 'blue' | 'purple' | 'dark';
+
+export interface VehicleRibbon {
+  text: string;
+  color?: RibbonColor;
+  priority?: number; // Lower number = higher precedence
+  isCustom?: boolean;
+}
+
+// ========================================================
+// CAR FINDER ("LET US FIND YOUR CAR") TYPES
+// ========================================================
+export type CarFinderStatus = 'New' | 'Searching' | 'Matched' | 'Contacted' | 'Closed';
+
+export interface CarFinderRequest {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  mobileNumber?: string;
+  customerEmail?: string;
+  email?: string;
+  preferredBrand: string;
+  customBrand?: string;
+  preferredModel?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  budgetRange?: string;
+  preferredFuel?: string;
+  preferredTransmission?: string;
+  preferredYear?: number | string;
+  preferredLocation?: string;
+  additionalRequirements?: string;
+  status: CarFinderStatus;
+  internalNotes?: string;
+  matchedCarIds?: string[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
 
 

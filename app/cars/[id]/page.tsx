@@ -40,6 +40,7 @@ import { formatINR, formatKM, calculateEMI } from '@/lib/formatters';
 import { Car, CarInquiry } from '@/lib/types';
 import { useAuth } from '@/lib/authContext';
 import { Suspense } from 'react';
+import { computeCarRibbons, getRibbonColorStyles } from '@/lib/ribbons';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -215,6 +216,7 @@ function CarDetailInner({ params }: PageProps) {
   const availabilityStatus = car.availabilityStatus || 'Available';
   const isSoldOut = availabilityStatus === 'Sold Out';
   const isReserved = availabilityStatus === 'Reserved';
+  const activeRibbons = computeCarRibbons(car);
 
   // Pricing Suggestions
   const suggestedMin = car.suggestedPriceMin || Math.round(car.price * 0.94);
@@ -425,19 +427,22 @@ function CarDetailInner({ params }: PageProps) {
 
                 {/* Badges on Gallery */}
                 <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-                  {/* Availability Badge */}
-                  {isSoldOut ? (
-                    <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-rose-600 text-white border border-rose-400 flex items-center gap-1.5 shadow-lg tracking-wide uppercase">
-                      <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                      <span>SOLD OUT</span>
-                    </span>
-                  ) : isReserved ? (
-                    <span className="px-3 py-1 rounded-full text-xs font-black bg-amber-500/95 text-white border border-amber-400 flex items-center gap-1 shadow-md">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Reserved</span>
-                    </span>
+                  {/* Active Ribbons (Max 2 with priority) */}
+                  {activeRibbons.length > 0 ? (
+                    activeRibbons.map((ribbon, idx) => {
+                      const styles = getRibbonColorStyles(ribbon.color);
+                      return (
+                        <span
+                          key={`${ribbon.text}-${idx}`}
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-lg border flex items-center gap-1.5 ${styles.bg} ${styles.text} ${styles.border}`}
+                        >
+                          {ribbon.isStatus && <span className={`w-2 h-2 rounded-full ${styles.dot} animate-pulse`} />}
+                          <span>{ribbon.text}</span>
+                        </span>
+                      );
+                    })
                   ) : (
-                    <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-600/90 text-white border border-emerald-400 flex items-center gap-1 shadow-md">
+                    <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-600/90 text-white border border-emerald-400 flex items-center gap-1 shadow-md">
                       <CheckCircle className="w-3.5 h-3.5" />
                       <span>Available</span>
                     </span>

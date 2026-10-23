@@ -69,7 +69,12 @@ import {
   CarCareEnquiry,
   VehicleAnalyticsItem,
   AdminAnalyticsSummary,
+  CarFinderRequest,
+  CarFinderStatus,
+  VehicleRibbon,
+  RibbonColor,
 } from '@/lib/types';
+import { computeCarRibbons, getRibbonColorStyles, PRESET_RIBBONS } from '@/lib/ribbons';
 import { MAKES, CITIES } from '@/lib/data';
 
 const AVAILABLE_IMAGES = [
@@ -99,7 +104,7 @@ export default function AdminDashboardPage() {
     updateInquiryStatus,
   } = useRecarsState();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'pdi' | 'carcare' | 'negotiations' | 'inquiries' | 'leads' | 'testdrives' | 'customers' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'carfinder' | 'pdi' | 'carcare' | 'negotiations' | 'inquiries' | 'leads' | 'testdrives' | 'customers' | 'settings'>('overview');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -128,6 +133,21 @@ export default function AdminDashboardPage() {
   const [carCareStatusFilter, setCarCareStatusFilter] = useState<string>('All');
   const [carCareSearch, setCarCareSearch] = useState<string>('');
   const [carCareEditingNotes, setCarCareEditingNotes] = useState<{ id: string; notes: string } | null>(null);
+
+  // Car Finder Requests state
+  const [liveCarFinderRequests, setLiveCarFinderRequests] = useState<CarFinderRequest[]>([]);
+  const [carFinderStatusFilter, setCarFinderStatusFilter] = useState<string>('All');
+  const [carFinderBrandFilter, setCarFinderBrandFilter] = useState<string>('All');
+  const [carFinderBudgetFilter, setCarFinderBudgetFilter] = useState<string>('All');
+  const [carFinderSearch, setCarFinderSearch] = useState<string>('');
+  const [carFinderEditingNotes, setCarFinderEditingNotes] = useState<{ id: string; notes: string } | null>(null);
+
+  // Vehicle Ribbon Management State
+  const [ribbonModalCar, setRibbonModalCar] = useState<CarType | null>(null);
+  const [editingRibbons, setEditingRibbons] = useState<VehicleRibbon[]>([]);
+  const [newCustomCaption, setNewCustomCaption] = useState<string>('');
+  const [newCustomColor, setNewCustomColor] = useState<RibbonColor>('rose');
+  const [newCustomPriority, setNewCustomPriority] = useState<number>(10);
 
   // Smart Analytics State
   const [analyticsData, setAnalyticsData] = useState<{
@@ -241,7 +261,7 @@ export default function AdminDashboardPage() {
   const syncAllFromSupabase = async () => {
     setIsSyncing(true);
     try {
-      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes, notifRes, dealersRes, carCareRes] = await Promise.all([
+      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes, notifRes, dealersRes, carCareRes, carFinderRes] = await Promise.all([
         fetch('/api/cars?admin=true').then((r) => r.json()).catch(() => null),
         fetch('/api/sell').then((r) => r.json()).catch(() => null),
         fetch('/api/inquiries').then((r) => r.json()).catch(() => null),
@@ -253,6 +273,7 @@ export default function AdminDashboardPage() {
         fetch('/api/admin/notifications').then((r) => r.json()).catch(() => null),
         fetch('/api/dealers').then((r) => r.json()).catch(() => null),
         fetch('/api/car-care?admin=true').then((r) => r.json()).catch(() => null),
+        fetch('/api/car-finder?admin=true').then((r) => r.json()).catch(() => null),
       ]);
 
       if (carsRes?.cars) setLiveCars(carsRes.cars);
@@ -265,6 +286,7 @@ export default function AdminDashboardPage() {
       if (setRes?.config) setInspectionConfig(setRes.config);
       if (pdiRes?.bookings) setLivePDIBookings(pdiRes.bookings);
       if (carCareRes?.enquiries && Array.isArray(carCareRes.enquiries)) setLiveCarCareList(carCareRes.enquiries);
+      if (carFinderRes?.requests && Array.isArray(carFinderRes.requests)) setLiveCarFinderRequests(carFinderRes.requests);
       if (notifRes?.notifications) {
         const map: Record<string, any> = {};
         notifRes.notifications.forEach((n: any) => {
@@ -329,6 +351,93 @@ export default function AdminDashboardPage() {
       }
     } catch {
       showToast('Error updating Car Care enquiry');
+    }
+  };
+
+  const handleUpdateCarFinderStatus = async (id: string, status: CarFinderStatus, internalNotes?: string) => {
+    try {
+      const res = await fetch('/api/car-finder', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status, internalNotes }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Car Finder request updated to "${status}"`);
+        const refresh = await fetch('/api/car-finder?admin=true').then((r) => r.json()).catch(() => null);
+        if (refresh?.requests) setLiveCarFinderRequests(refresh.requests);
+      } else {
+        showToast('Failed to update request');
+      }
+    } catch {
+      showToast('Error updating car finder request');
+    }
+  };
+
+  const handleOpenRibbonModal = (car: CarType) => {
+    setRibbonModalCar(car);
+    setEditingRibbons(Array.isArray(car.customRibbons) ? [...car.customRibbons] : []);
+    setNewCustomCaption('');
+    setNewCustomColor('rose');
+    setNewCustomPriority(10);
+  };
+
+  const handleTogglePresetRibbon = (preset: { text: string; color: RibbonColor }) => {
+    const exists = editingRibbons.some((r) => r.text.toLowerCase() === preset.text.toLowerCase());
+    if (exists) {
+      setEditingRibbons(editingRibbons.filter((r) => r.text.toLowerCase() !== preset.text.toLowerCase()));
+    } else {
+      setEditingRibbons([
+        ...editingRibbons,
+        { text: preset.text, color: preset.color, priority: 10 },
+      ]);
+    }
+  };
+
+  const handleAddCustomRibbon = () => {
+    if (!newCustomCaption.trim()) return;
+    const cleanText = newCustomCaption.trim();
+    if (editingRibbons.some((r) => r.text.toLowerCase() === cleanText.toLowerCase())) {
+      showToast('Ribbon with this caption already exists');
+      return;
+    }
+    setEditingRibbons([
+      ...editingRibbons,
+      {
+        text: cleanText,
+        color: newCustomColor,
+        priority: Number(newCustomPriority) || 10,
+      },
+    ]);
+    setNewCustomCaption('');
+    setNewCustomPriority(10);
+  };
+
+  const handleRemoveRibbon = (indexToRemove: number) => {
+    setEditingRibbons(editingRibbons.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleSaveCarRibbons = async () => {
+    if (!ribbonModalCar) return;
+    try {
+      const res = await fetch('/api/cars', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: ribbonModalCar.id,
+          customRibbons: editingRibbons,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Vehicle ribbons updated successfully');
+        setRibbonModalCar(null);
+        await syncAllFromSupabase();
+      } else {
+        showToast('Failed to save ribbons');
+      }
+    } catch {
+      showToast('Error saving ribbons');
     }
   };
 
@@ -761,12 +870,18 @@ export default function AdminDashboardPage() {
     [liveNegotiations, isRequestUnread]
   );
 
+  const newCarFinderCount = useMemo(
+    () => liveCarFinderRequests.filter((r) => r.status === 'New').length,
+    [liveCarFinderRequests]
+  );
+
   const totalUnreadCount =
     unreadInquiriesCount +
     unreadSellRequestsCount +
     unreadTestDrivesCount +
     unreadPDICount +
-    unreadNegotiationsCount;
+    unreadNegotiationsCount +
+    newCarFinderCount;
 
   const activeCarsCount = useMemo(() => cars.filter((c) => c.availabilityStatus !== 'Sold Out').length, [cars]);
   const soldCarsCount = useMemo(() => cars.filter((c) => c.availabilityStatus === 'Sold Out').length, [cars]);
@@ -1659,6 +1774,50 @@ export default function AdminDashboardPage() {
                 </span>
               </button>
 
+              {/* Dedicated Section: Car Finder Requests */}
+              <button
+                onClick={() => {
+                  setActiveTab('carfinder');
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left cursor-pointer ${
+                  activeTab === 'carfinder'
+                    ? 'bg-[#FFF0F3] text-[#E5325C] shadow-xs ring-1 ring-[#FFD6DF]'
+                    : 'text-gray-700 hover:text-black hover:bg-gray-100/70'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                    activeTab === 'carfinder' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    <Search className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="block">Car Finder</span>
+                      {newCarFinderCount > 0 ? (
+                        <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" title="New requests" />
+                      ) : (
+                        <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-rose-100 text-[#E5325C]">Find</span>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-normal text-gray-400 block">Buyer car requests</span>
+                  </div>
+                </div>
+                {newCarFinderCount > 0 ? (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-[#E5325C] text-white shadow-xs animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                    <span>{newCarFinderCount} new</span>
+                  </span>
+                ) : (
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                    activeTab === 'carfinder' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {liveCarFinderRequests.length}
+                  </span>
+                )}
+              </button>
+
               {/* Dedicated Section: Pre-Delivery Inspection (PDI) */}
               <button
                 onClick={() => {
@@ -2058,6 +2217,7 @@ export default function AdminDashboardPage() {
                 <h2 className="text-base font-extrabold text-[#101216]">
                   {activeTab === 'overview' && 'Dashboard Overview (All Dedicated Sections)'}
                   {activeTab === 'cars' && 'Vehicle Inventory Workspace'}
+                  {activeTab === 'carfinder' && 'Car Finder Requests & Inventory Matching Workspace'}
                   {activeTab === 'pdi' && 'Pre-Delivery Inspection (PDI) Workspace'}
                   {activeTab === 'carcare' && 'Car Care & PPF Detailing Services Workspace'}
                   {activeTab === 'negotiations' && 'Customer Price Negotiations Workspace'}
@@ -2242,6 +2402,25 @@ export default function AdminDashboardPage() {
             </div>
             <div className="text-2xl font-black text-[#101216]">{liveCarCareList.length}</div>
             <p className="text-[10px] text-[#E5325C] font-bold mt-1">Service quotes →</p>
+          </div>
+
+          {/* 7. Car Finder Requests */}
+          <div
+            onClick={() => setActiveTab('carfinder')}
+            className={`bg-white rounded-2xl border p-4 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
+              activeTab === 'carfinder' ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]' : 'border-[#E5E7EB]'
+            }`}
+          >
+            <div className="flex items-center justify-between text-gray-500 mb-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600">Car Finder</span>
+              <div className="w-7 h-7 rounded-lg bg-rose-50 text-[#E5325C] flex items-center justify-center">
+                <Search className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-[#101216]">{liveCarFinderRequests.length}</div>
+            <p className="text-[10px] text-rose-600 font-bold mt-1">
+              {newCarFinderCount > 0 ? `${newCarFinderCount} new requests →` : 'Match inventory →'}
+            </p>
           </div>
         </div>
 
@@ -3513,6 +3692,424 @@ export default function AdminDashboardPage() {
         )}
 
         {/* ========================================================
+            TAB: CAR FINDER REQUESTS & INVENTORY MATCHING
+        ========================================================= */}
+        {activeTab === 'carfinder' && (
+          <div className="space-y-6">
+            {/* Header & Filter Bar */}
+            <div className="bg-white rounded-3xl border border-[#E5E7EB] p-5 space-y-4 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center flex-shrink-0">
+                    <Search className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-base text-[#101216]">
+                      Car Finder Requests ({liveCarFinderRequests.length})
+                    </h3>
+                    <p className="text-xs text-gray-400">
+                      Customer requests from &quot;Can&apos;t Find Your Dream Car?&quot; matched against live inventory
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-500">Live Inventory:</span>
+                  <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    {activeCarsCount} available vehicles
+                  </span>
+                </div>
+              </div>
+
+              {/* Filters row */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                {/* Search query */}
+                <div className="relative md:col-span-2">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search customer name, phone, model, city, notes..."
+                    value={carFinderSearch}
+                    onChange={(e) => setCarFinderSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                  />
+                  {carFinderSearch && (
+                    <button
+                      onClick={() => setCarFinderSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                {/* Brand Filter */}
+                <div>
+                  <select
+                    value={carFinderBrandFilter}
+                    onChange={(e) => setCarFinderBrandFilter(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-700 focus:outline-none focus:border-[#E5325C]"
+                  >
+                    <option value="All">All Brands</option>
+                    {MAKES.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Budget Bracket Filter */}
+                <div>
+                  <select
+                    value={carFinderBudgetFilter}
+                    onChange={(e) => setCarFinderBudgetFilter(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-700 focus:outline-none focus:border-[#E5325C]"
+                  >
+                    <option value="All">All Budgets</option>
+                    <option value="Under 3L">Under ₹3 Lakh</option>
+                    <option value="3L - 6L">₹3 - ₹6 Lakh</option>
+                    <option value="6L - 10L">₹6 - ₹10 Lakh</option>
+                    <option value="10L - 15L">₹10 - ₹15 Lakh</option>
+                    <option value="15L - 25L">₹15 - ₹25 Lakh</option>
+                    <option value="Above 25L">Above ₹25 Lakh</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Status Filter Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 text-xs">
+                {(['All', 'New', 'Searching', 'Matched', 'Contacted', 'Closed'] as const).map((st) => {
+                  const count = st === 'All'
+                    ? liveCarFinderRequests.length
+                    : liveCarFinderRequests.filter((r) => r.status === st).length;
+                  return (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setCarFinderStatusFilter(st)}
+                      className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all flex-shrink-0 cursor-pointer ${
+                        carFinderStatusFilter === st
+                          ? 'bg-[#101216] text-white shadow-xs'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <span>{st}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                        carFinderStatusFilter === st
+                          ? 'bg-white/20 text-white'
+                          : 'bg-white text-gray-700'
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Requests Cards List */}
+            <div className="grid grid-cols-1 gap-5">
+              {liveCarFinderRequests
+                .filter((req) => {
+                  const matchStatus = carFinderStatusFilter === 'All' || req.status === carFinderStatusFilter;
+                  const matchBrand = carFinderBrandFilter === 'All' ||
+                    (req.preferredBrand && req.preferredBrand.toLowerCase() === carFinderBrandFilter.toLowerCase()) ||
+                    (req.customBrand && req.customBrand.toLowerCase() === carFinderBrandFilter.toLowerCase());
+                  
+                  let matchBudget = true;
+                  if (carFinderBudgetFilter === 'Under 3L') matchBudget = (req.budgetMax || 0) <= 300000;
+                  else if (carFinderBudgetFilter === '3L - 6L') matchBudget = (req.budgetMin || 0) >= 300000 && (req.budgetMax || 0) <= 600000;
+                  else if (carFinderBudgetFilter === '6L - 10L') matchBudget = (req.budgetMin || 0) >= 600000 && (req.budgetMax || 0) <= 1000000;
+                  else if (carFinderBudgetFilter === '10L - 15L') matchBudget = (req.budgetMin || 0) >= 1000000 && (req.budgetMax || 0) <= 1500000;
+                  else if (carFinderBudgetFilter === '15L - 25L') matchBudget = (req.budgetMin || 0) >= 1500000 && (req.budgetMax || 0) <= 2500000;
+                  else if (carFinderBudgetFilter === 'Above 25L') matchBudget = (req.budgetMin || 0) >= 2500000;
+
+                  const query = carFinderSearch.toLowerCase().trim();
+                  const matchQuery = !query ||
+                    req.customerName.toLowerCase().includes(query) ||
+                    (req.mobileNumber || req.customerPhone || '').toLowerCase().includes(query) ||
+                    (req.preferredBrand && req.preferredBrand.toLowerCase().includes(query)) ||
+                    (req.preferredModel && req.preferredModel.toLowerCase().includes(query)) ||
+                    (req.preferredLocation && req.preferredLocation.toLowerCase().includes(query)) ||
+                    (req.internalNotes && req.internalNotes.toLowerCase().includes(query));
+
+                  return matchStatus && matchBrand && matchBudget && matchQuery;
+                })
+                .map((req) => {
+                  // Matching inventory engine
+                  const matchingCars = cars.filter((c) => {
+                    if (c.availabilityStatus === 'Sold Out') return false;
+                    let matchesBrand = true;
+                    if (req.preferredBrand && req.preferredBrand !== 'Any' && req.preferredBrand !== 'Other / Custom Brand') {
+                      matchesBrand = c.make.toLowerCase() === req.preferredBrand.toLowerCase();
+                    } else if (req.customBrand) {
+                      matchesBrand = c.make.toLowerCase() === req.customBrand.toLowerCase();
+                    }
+
+                    let matchesBudget = true;
+                    if (req.budgetMin && req.budgetMax) {
+                      matchesBudget = c.price >= (req.budgetMin * 0.85) && c.price <= (req.budgetMax * 1.15);
+                    } else if (req.budgetMax) {
+                      matchesBudget = c.price <= (req.budgetMax * 1.15);
+                    }
+
+                    return matchesBrand && matchesBudget;
+                  }).slice(0, 3);
+
+                  return (
+                    <div
+                      key={req.id}
+                      className="bg-white rounded-3xl border border-[#E5E7EB] p-5 sm:p-6 shadow-2xs hover:shadow-xs transition-shadow space-y-4"
+                    >
+                      {/* Top Bar: Customer Info + Status selector */}
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-gray-100">
+                        <div>
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <h4 className="font-black text-lg text-[#101216]">{req.customerName}</h4>
+                            <span className="font-mono text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+                              +91 {req.mobileNumber || req.customerPhone}
+                            </span>
+                            {(req.email || req.customerEmail) && (
+                              <span className="text-xs text-gray-500">{req.email || req.customerEmail}</span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-gray-400 mt-1">
+                            Submitted: {req.createdAt ? formatDateTimeWithDay(req.createdAt) : 'Recently'} • {req.createdAt ? formatRelativeTime(req.createdAt) : ''}
+                          </p>
+                        </div>
+
+                        {/* Status Dropdown & Actions */}
+                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                          <select
+                            value={req.status || 'New'}
+                            onChange={(e) => handleUpdateCarFinderStatus(req.id, e.target.value as CarFinderStatus, req.internalNotes)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border transition-colors cursor-pointer ${
+                              req.status === 'New'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : req.status === 'Searching'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : req.status === 'Matched'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : req.status === 'Contacted'
+                                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                : 'bg-gray-100 text-gray-600 border-gray-200'
+                            }`}
+                          >
+                            <option value="New">🔵 New</option>
+                            <option value="Searching">🟡 Searching</option>
+                            <option value="Matched">🟢 Matched</option>
+                            <option value="Contacted">🟣 Contacted</option>
+                            <option value="Closed">⚪ Closed</option>
+                          </select>
+
+                          {/* Instant Call */}
+                          <a
+                            href={`tel:+91${req.mobileNumber || req.customerPhone}`}
+                            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors cursor-pointer"
+                            title="Call customer directly"
+                          >
+                            <Phone className="w-4 h-4 text-emerald-600" />
+                          </a>
+
+                          {/* Instant WhatsApp */}
+                          <a
+                            href={`https://wa.me/91${req.mobileNumber || req.customerPhone}?text=${encodeURIComponent(`Hello ${req.customerName}, regarding your car search on Recars for ${req.preferredBrand} ${req.preferredModel || ''}: we have matching options available!`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors cursor-pointer"
+                            title="Message on WhatsApp"
+                          >
+                            <MessageSquare className="w-4 h-4 text-emerald-600" />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Customer Preferences Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <div className="p-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Preferred Brand</span>
+                          <span className="text-xs font-black text-[#101216] mt-0.5 block truncate">
+                            {req.customBrand || req.preferredBrand || 'Any'}
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Preferred Model</span>
+                          <span className="text-xs font-black text-[#101216] mt-0.5 block truncate">
+                            {req.preferredModel || 'Any Model'}
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Budget Range</span>
+                          <span className="text-xs font-black text-rose-600 mt-0.5 block truncate">
+                            {req.budgetRange || (req.budgetMax ? `Up to ${formatINR(req.budgetMax)}` : 'Flexible')}
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Fuel & Gear</span>
+                          <span className="text-xs font-black text-gray-800 mt-0.5 block truncate">
+                            {req.preferredFuel || 'Any'} • {req.preferredTransmission || 'Any'}
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Year & Location</span>
+                          <span className="text-xs font-black text-gray-800 mt-0.5 block truncate">
+                            {req.preferredYear || 'Any'} • {req.preferredLocation || 'Any'}
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Inventory Matches</span>
+                          <span className={`text-xs font-black mt-0.5 block ${
+                            matchingCars.length > 0 ? 'text-emerald-600' : 'text-gray-400'
+                          }`}>
+                            {matchingCars.length} available
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Additional Requirements if provided */}
+                      {req.additionalRequirements && (
+                        <div className="p-3 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs text-amber-950 space-y-1">
+                          <span className="font-extrabold uppercase text-[10px] text-amber-800 tracking-wider block">Customer Note / Requirements:</span>
+                          <p className="font-medium leading-relaxed">{req.additionalRequirements}</p>
+                        </div>
+                      )}
+
+                      {/* Matching Vehicles from Inventory Section */}
+                      <div className="p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-white border border-gray-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Car className="w-4 h-4 text-[#E5325C]" />
+                            <span className="text-xs font-black text-[#101216] uppercase tracking-wider">
+                              Live Inventory Matches ({matchingCars.length})
+                            </span>
+                          </div>
+                          {matchingCars.length > 0 && (
+                            <span className="text-[11px] font-bold text-emerald-700">
+                              Ready for customer proposal
+                            </span>
+                          )}
+                        </div>
+
+                        {matchingCars.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {matchingCars.map((mCar) => (
+                              <div
+                                key={mCar.id}
+                                className="p-2.5 rounded-xl bg-white border border-gray-200 flex items-center justify-between gap-3 shadow-2xs hover:border-[#E5325C] transition-colors"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-12 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                    <img src={mCar.image} alt={mCar.model} className="w-full h-full object-cover" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="font-bold text-xs text-[#101216] truncate">
+                                      {mCar.year} {mCar.make} {mCar.model}
+                                    </p>
+                                    <p className="text-[11px] font-black text-rose-600">
+                                      {formatINR(mCar.price)} • {formatKM(mCar.kilometers)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Link
+                                  href={`/cars/${mCar.id}`}
+                                  target="_blank"
+                                  className="px-2 py-1 rounded-lg bg-gray-100 hover:bg-[#E5325C] hover:text-white text-[10px] font-bold text-gray-700 transition-colors flex-shrink-0"
+                                >
+                                  View →
+                                </Link>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-500 py-1 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-400" />
+                            <span>No exact inventory match currently available. Sourcing through dealer network is active.</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Internal Notes & Follow-up Section */}
+                      <div className="pt-2">
+                        <div className="flex items-center justify-between text-xs mb-1.5">
+                          <span className="font-bold text-gray-700">Internal Admin Notes:</span>
+                          {carFinderEditingNotes?.id !== req.id && (
+                            <button
+                              type="button"
+                              onClick={() => setCarFinderEditingNotes({ id: req.id, notes: req.internalNotes || '' })}
+                              className="text-[#E5325C] hover:underline cursor-pointer font-bold text-xs"
+                            >
+                              Edit Note
+                            </button>
+                          )}
+                        </div>
+
+                        {carFinderEditingNotes?.id === req.id ? (
+                          <div className="space-y-1.5">
+                            <textarea
+                              rows={2}
+                              value={carFinderEditingNotes.notes}
+                              onChange={(e) =>
+                                setCarFinderEditingNotes({ id: req.id, notes: e.target.value })
+                              }
+                              placeholder="Add internal followup notes (e.g., contacted customer on 24th Oct, looking for red color)..."
+                              className="w-full p-2.5 bg-white border border-gray-300 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                            />
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setCarFinderEditingNotes(null)}
+                                className="px-3 py-1 rounded-lg text-xs text-gray-600 hover:bg-gray-100 cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleUpdateCarFinderStatus(req.id, req.status, carFinderEditingNotes.notes);
+                                  setCarFinderEditingNotes(null);
+                                }}
+                                className="px-3 py-1 rounded-lg text-xs font-bold bg-[#101216] text-white hover:bg-black cursor-pointer"
+                              >
+                                Save Note
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-100 italic min-h-[34px]">
+                            {req.internalNotes || 'No internal notes added yet.'}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Notification footer */}
+                      <div className="flex items-center gap-1.5 text-[10px] text-gray-500 pt-1 border-t border-gray-100">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Email alert delivered to recars.in@gmail.com</span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {liveCarFinderRequests.length === 0 && (
+              <div className="bg-white rounded-3xl border border-[#E5E7EB] p-12 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center mx-auto">
+                  <Search className="w-6 h-6" />
+                </div>
+                <h4 className="font-bold text-base text-[#101216]">No Car Finder Requests Yet</h4>
+                <p className="text-xs text-gray-400">
+                  When customers submit requests through &quot;Can&apos;t Find Your Dream Car?&quot;, they will appear here in real time.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================
             TAB 2: CARS INVENTORY (ADD & REMOVE CARS)
         ========================================================= */}
         {activeTab === 'cars' && (
@@ -3700,6 +4297,21 @@ export default function AdminDashboardPage() {
                                 )}
                                 <span className="text-[10px] text-gray-400 font-mono">ID: {car.id}</span>
                               </div>
+
+                              {/* Display active customer ribbons */}
+                              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                                {computeCarRibbons(car).map((r, idx) => {
+                                  const s = getRibbonColorStyles(r.color);
+                                  return (
+                                    <span
+                                      key={idx}
+                                      className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider ${s.bg} text-white shadow-2xs`}
+                                    >
+                                      {r.text}
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -3865,6 +4477,15 @@ export default function AdminDashboardPage() {
                             >
                               <Info className="w-3.5 h-3.5" />
                               <span>Source</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRibbonModal(car)}
+                              className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-[#E5325C] font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer"
+                              title="Assign, edit, or customize vehicle ribbons and promotional badges"
+                            >
+                              <Tag className="w-3.5 h-3.5" />
+                              <span>Ribbons {car.customRibbons && car.customRibbons.length > 0 ? `(${car.customRibbons.length})` : ''}</span>
                             </button>
                             <button
                               type="button"
@@ -6447,6 +7068,242 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ========================================================
+          VEHICLE RIBBON & BADGES MANAGER MODAL
+      ========================================================= */}
+      {ribbonModalCar && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-[#E5E7EB] p-6 space-y-5 animate-in fade-in duration-200 my-8">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center font-bold">
+                  <Tag className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg text-[#101216]">Manage Vehicle Ribbons</h3>
+                  <p className="text-xs text-gray-400">
+                    {ribbonModalCar.year} {ribbonModalCar.make} {ribbonModalCar.model} {ribbonModalCar.variant}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRibbonModalCar(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Live Customer Preview Box */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-gray-900 to-slate-900 text-white space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Live Customer Preview (Max 2 Ribbons Displayed)
+                </span>
+                <span className="text-[10px] text-gray-400">
+                  Status: <strong className="text-white">{ribbonModalCar.availabilityStatus || 'Available'}</strong>
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                {computeCarRibbons({ ...ribbonModalCar, customRibbons: editingRibbons }).map((rib, idx) => {
+                  const s = getRibbonColorStyles(rib.color);
+                  return (
+                    <span
+                      key={idx}
+                      className={`px-3 py-1 rounded-md text-xs font-black uppercase tracking-wider border shadow-md flex items-center gap-1.5 ${s.bg} ${s.text} ${s.border}`}
+                    >
+                      {rib.isStatus && <span className={`w-1.5 h-1.5 rounded-full ${s.dot} animate-pulse`} />}
+                      <span>{rib.text}</span>
+                    </span>
+                  );
+                })}
+              </div>
+
+              <p className="text-[11px] text-gray-400 leading-relaxed pt-1">
+                Sold Out and Reserved statuses always take top precedence. Data-driven ribbons like <em>Price Dropped</em> and <em>Single Owner</em> are automatically evaluated if criteria match.
+              </p>
+            </div>
+
+            {/* Quick Preset Ribbons */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-600">
+                Suggested Ribbon Presets (Click to Assign / Remove)
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {PRESET_RIBBONS.filter((p) => p.text !== 'Sold Out' && p.text !== 'Reserved').map((preset) => {
+                  const isAssigned = editingRibbons.some(
+                    (r) => r.text.toLowerCase() === preset.text.toLowerCase()
+                  );
+                  const styles = getRibbonColorStyles(preset.color);
+
+                  return (
+                    <button
+                      key={preset.text}
+                      type="button"
+                      onClick={() => handleTogglePresetRibbon(preset)}
+                      className={`p-2 rounded-xl text-xs font-bold border transition-all text-left flex items-center justify-between cursor-pointer ${
+                        isAssigned
+                          ? 'border-[#E5325C] bg-[#FFF0F3] text-[#E5325C] ring-1 ring-[#FFD6DF]'
+                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className="truncate">{preset.text}</span>
+                      {isAssigned ? (
+                        <Check className="w-3.5 h-3.5 text-[#E5325C] flex-shrink-0" />
+                      ) : (
+                        <Plus className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom Ribbon Caption Builder */}
+            <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] space-y-3">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+                Create Custom Ribbon Caption
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                <div className="sm:col-span-6">
+                  <input
+                    type="text"
+                    placeholder="e.g. Corporate Lease, Mint Condition..."
+                    value={newCustomCaption}
+                    onChange={(e) => setNewCustomCaption(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+
+                <div className="sm:col-span-3">
+                  <select
+                    value={newCustomColor}
+                    onChange={(e) => setNewCustomColor(e.target.value as RibbonColor)}
+                    className="w-full px-2.5 py-2 bg-white border border-gray-300 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                  >
+                    <option value="rose">Rose (Brand)</option>
+                    <option value="emerald">Emerald (Green)</option>
+                    <option value="amber">Amber (Gold)</option>
+                    <option value="blue">Blue (Sky)</option>
+                    <option value="purple">Purple (Violet)</option>
+                    <option value="red">Red (Urgent)</option>
+                    <option value="dark">Dark (Obsidian)</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-3">
+                  <button
+                    type="button"
+                    onClick={handleAddCustomRibbon}
+                    disabled={!newCustomCaption.trim()}
+                    className="w-full py-2 px-3 rounded-xl bg-[#101216] hover:bg-black text-white text-xs font-bold disabled:opacity-40 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Ribbon</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Currently Configured Ribbons List */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-600">
+                  Assigned Ribbons ({editingRibbons.length})
+                </label>
+                {editingRibbons.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingRibbons([])}
+                    className="text-xs text-rose-600 hover:underline font-semibold"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              {editingRibbons.length > 0 ? (
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {editingRibbons.map((rib, idx) => {
+                    const styles = getRibbonColorStyles(rib.color || 'rose');
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 border border-gray-200"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${styles.bg} ${styles.text}`}
+                          >
+                            {rib.text}
+                          </span>
+                          <span className="text-[11px] text-gray-500 font-medium">
+                            Color: <strong className="text-gray-800">{rib.color}</strong>
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1 text-[11px] text-gray-500">
+                            <span>Priority:</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={50}
+                              value={rib.priority || 10}
+                              onChange={(e) => {
+                                const newP = Number(e.target.value) || 10;
+                                const updated = [...editingRibbons];
+                                updated[idx] = { ...updated[idx], priority: newP };
+                                setEditingRibbons(updated);
+                              }}
+                              className="w-12 px-1 py-0.5 text-center text-xs font-bold bg-white border border-gray-300 rounded"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRibbon(idx)}
+                            className="p-1 rounded-md text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
+                            title="Remove ribbon"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 italic py-2">
+                  No custom ribbons currently assigned. The system will use default status and automated data ribbons.
+                </p>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center gap-3 pt-4 border-t border-[#E5E7EB]">
+              <button
+                type="button"
+                onClick={() => setRibbonModalCar(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-300 font-bold text-xs text-gray-700 hover:bg-gray-100 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCarRibbons}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#E5325C] to-[#D4264E] hover:from-[#D4264E] hover:to-[#B81D3E] font-bold text-xs text-white shadow-md cursor-pointer transition-all flex items-center justify-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                <span>Save Ribbons Configuration</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
