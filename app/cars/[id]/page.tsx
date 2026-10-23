@@ -387,6 +387,15 @@ function CarDetailInner({ params }: PageProps) {
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
                 />
 
+                {/* Diagonal SOLD OUT Ribbon */}
+                {isSoldOut && (
+                  <div className="absolute -top-1 -right-1 z-30 overflow-hidden w-36 h-36 pointer-events-none">
+                    <div className="absolute transform rotate-45 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-black text-xs tracking-widest py-2 right-[-42px] top-[28px] w-[165px] text-center shadow-xl uppercase border-y border-red-300/60 drop-shadow-md">
+                      SOLD OUT
+                    </div>
+                  </div>
+                )}
+
                 {/* Left / Right Nav Arrows */}
                 {images.length > 1 && (
                   <>
@@ -418,9 +427,9 @@ function CarDetailInner({ params }: PageProps) {
                 <div className="absolute top-4 left-4 flex flex-wrap gap-2">
                   {/* Availability Badge */}
                   {isSoldOut ? (
-                    <span className="px-3 py-1 rounded-full text-xs font-black bg-slate-900/90 text-white border border-slate-700 flex items-center gap-1 shadow-md">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Sold Out</span>
+                    <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-rose-600 text-white border border-rose-400 flex items-center gap-1.5 shadow-lg tracking-wide uppercase">
+                      <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                      <span>SOLD OUT</span>
                     </span>
                   ) : isReserved ? (
                     <span className="px-3 py-1 rounded-full text-xs font-black bg-amber-500/95 text-white border border-amber-400 flex items-center gap-1 shadow-md">

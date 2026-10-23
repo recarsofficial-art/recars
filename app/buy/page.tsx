@@ -174,9 +174,6 @@ function BuyContent() {
         const status = car.availabilityStatus || 'Available';
         if (selectedAvailability.length > 0) {
           if (!selectedAvailability.includes(status)) return false;
-        } else {
-          // By default, hide Sold Out vehicles from available inventory results
-          if (status === 'Sold Out') return false;
         }
 
         // Price

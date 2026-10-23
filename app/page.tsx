@@ -259,9 +259,6 @@ function HomePageContent() {
         }
       }
 
-      // Hide sold-out vehicles from available cars on homepage
-      if (c.availabilityStatus === 'Sold Out') return false;
-
       return true;
     });
   }, [cars, hubSearchQuery, selectedBrand, selectedBodyTypeFilter, selectedBudgetBracket]);

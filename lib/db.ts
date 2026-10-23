@@ -2015,7 +2015,6 @@ export async function dbGetTrendingCars(limit = 6): Promise<Car[]> {
       WHERE created_at >= now() - INTERVAL '30 days'
       GROUP BY car_id
     ) v ON v.car_id = c.id
-    WHERE c.availability_status != 'Sold Out'
     ORDER BY views_count DESC, c.score DESC, c.created_at DESC
     LIMIT $1;
   `;
