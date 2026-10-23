@@ -185,6 +185,7 @@ export async function ensureDealerAndCarsSchema(): Promise<void> {
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS status_updated_at TIMESTAMPTZ DEFAULT now();
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS sold_at TIMESTAMPTZ;
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS custom_ribbons JSONB DEFAULT '[]'::jsonb;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS featured BOOLEAN DEFAULT false;
 
           CREATE INDEX IF NOT EXISTS idx_cars_vehicle_source ON public.cars(vehicle_source);
           CREATE INDEX IF NOT EXISTS idx_cars_dealer_id ON public.cars(dealer_id);
@@ -309,7 +310,7 @@ export async function dbGetCars(filter?: {
     galleryImages: typeof r.gallery_images === 'string' ? JSON.parse(r.gallery_images) : r.gallery_images || [r.image],
     isVerified: r.is_verified,
     isRecarsSelect: r.is_select,
-    featured: r.is_select,
+    featured: Boolean(r.featured),
     inspectionScore: r.score || 95,
     specifications: {
       engine: '1498 cc, 4 Cylinders Inline',
@@ -382,7 +383,7 @@ export async function dbGetCarById(id: string): Promise<Car | null> {
     galleryImages: typeof r.gallery_images === 'string' ? JSON.parse(r.gallery_images) : r.gallery_images || [r.image],
     isVerified: r.is_verified,
     isRecarsSelect: r.is_select,
-    featured: r.is_select,
+    featured: Boolean(r.featured),
     inspectionScore: r.score || 95,
     specifications: {
       engine: '1498 cc, 4 Cylinders Inline',
@@ -445,11 +446,11 @@ export async function dbInsertCar(car: Car): Promise<void> {
       availability_status, manufacturing_year, registration_year, insurance_status,
       insurance_expiry, insurance_type, finance_available, suggested_price_min, suggested_price_max,
       vehicle_source, dealer_id, dealer_name, dealer_contact, uploaded_by, uploaded_by_user_id, uploaded_by_role,
-      listing_status, registration_number, custom_ribbons
+      listing_status, registration_number, custom_ribbons, featured
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
       $22, $23, $24, $25, $26, $27, $28, $29, $30,
-      $31, $32, $33, $34, $35, $36, $37, $38, $39, $40
+      $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41
     )
     ON CONFLICT (id) DO UPDATE SET
       make = EXCLUDED.make,
@@ -491,6 +492,7 @@ export async function dbInsertCar(car: Car): Promise<void> {
       listing_status = EXCLUDED.listing_status,
       registration_number = EXCLUDED.registration_number,
       custom_ribbons = EXCLUDED.custom_ribbons,
+      featured = EXCLUDED.featured,
       updated_at = now();
   `;
   await pool.query(sql, [
@@ -534,7 +536,17 @@ export async function dbInsertCar(car: Car): Promise<void> {
     car.listingStatus || 'Published',
     car.registrationNumber || null,
     JSON.stringify(car.customRibbons || []),
+    Boolean(car.featured),
   ]);
+}
+
+export async function dbUpdateCarFeatured(id: string, featured: boolean): Promise<boolean> {
+  await ensureDealerAndCarsSchema();
+  const res = await pool.query(
+    'UPDATE public.cars SET featured = $1, updated_at = now() WHERE id = $2',
+    [Boolean(featured), id]
+  );
+  return (res.rowCount || 0) > 0;
 }
 
 export async function dbGetDealers(): Promise<RegisteredDealer[]> {
@@ -893,6 +905,7 @@ export async function dbApproveAndPublishCustomerCar(params: {
   inspectionScore?: number;
   isVerified?: boolean;
   isSelect?: boolean;
+  featured?: boolean;
   description?: string;
 }): Promise<{ car: Car; requestId: string }> {
   const { rows } = await pool.query('SELECT * FROM public.customer_cars WHERE id = $1 LIMIT 1', [params.requestId]);
@@ -933,7 +946,7 @@ export async function dbApproveAndPublishCustomerCar(params: {
     galleryImages: gallery,
     isVerified: params.isVerified ?? true,
     isRecarsSelect: params.isSelect ?? true,
-    featured: params.isSelect ?? true,
+    featured: Boolean(params.featured),
     inspectionScore: params.inspectionScore || 96,
     specifications: {
       engine: '1498 cc, 4 Cylinders Inline',
@@ -2075,7 +2088,7 @@ export async function dbGetTrendingCars(limit = 6): Promise<Car[]> {
     galleryImages: typeof r.gallery_images === 'string' ? JSON.parse(r.gallery_images) : r.gallery_images || [r.image],
     isVerified: r.is_verified,
     isRecarsSelect: r.is_select,
-    featured: r.is_select,
+    featured: Boolean(r.featured),
     inspectionScore: r.score || 95,
     specifications: {
       engine: '1498 cc, 4 Cylinders Inline',

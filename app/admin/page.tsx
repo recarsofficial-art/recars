@@ -51,6 +51,7 @@ import {
   Flame,
   BarChart3,
   Droplets,
+  Star,
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
@@ -664,6 +665,7 @@ export default function AdminDashboardPage() {
   const [newScore, setNewScore] = useState(97);
   const [newIsVerified, setNewIsVerified] = useState(true);
   const [newIsSelect, setNewIsSelect] = useState(true);
+  const [newIsFeatured, setNewIsFeatured] = useState(false);
   const [newDescription, setNewDescription] = useState('Dealer managed immaculate single-owner vehicle with full service record.');
 
   const handleOpenEditCarModal = (car: CarType) => {
@@ -703,6 +705,7 @@ export default function AdminDashboardPage() {
     setNewScore(car.inspectionScore || 95);
     setNewIsVerified(car.isVerified ?? true);
     setNewIsSelect(car.isRecarsSelect ?? true);
+    setNewIsFeatured(car.featured === true);
     setNewDescription(car.description || '');
 
     // Dealer & Source Fields
@@ -751,6 +754,7 @@ export default function AdminDashboardPage() {
     setNewScore(97);
     setNewIsVerified(true);
     setNewIsSelect(true);
+    setNewIsFeatured(false);
     setNewDescription('Dealer managed immaculate single-owner vehicle with full service record.');
 
     // Dealer & Source Fields
@@ -952,6 +956,25 @@ export default function AdminDashboardPage() {
       }
     } catch {
       showToast('Error updating vehicle availability');
+    }
+  };
+
+  const handleToggleFeatured = async (carId: string, featured: boolean) => {
+    try {
+      const res = await fetch('/api/cars', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: carId, featured }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(featured ? '⭐ Vehicle marked as Featured!' : 'Vehicle unfeatured');
+        await syncAllFromSupabase();
+      } else {
+        showToast('Failed to update featured status');
+      }
+    } catch {
+      showToast('Error updating featured status');
     }
   };
 
@@ -1206,7 +1229,7 @@ export default function AdminDashboardPage() {
       galleryImages: newGalleryImages.length > 0 ? newGalleryImages : [newImage || '/car-creta-hd.jpg'],
       isVerified: newIsVerified,
       isRecarsSelect: newIsSelect,
-      featured: true,
+      featured: Boolean(newIsFeatured),
       inspectionScore: Number(newScore),
       vehicleSource: newVehicleSource,
       dealerId: newVehicleSource === 'Dealer' ? finalDealerId : undefined,
@@ -2770,6 +2793,12 @@ export default function AdminDashboardPage() {
                         <h4 className="text-xs font-bold text-[#101216] truncate">{car.make} {car.model}</h4>
                         <p className="text-[11px] text-gray-500 truncate">{car.year} • {car.city} • {formatKM(car.kilometers)}</p>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          {car.featured && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-extrabold bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-0.5 shadow-2xs">
+                              <Star className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
+                              <span>Featured</span>
+                            </span>
+                          )}
                           <span className="text-[10px] text-[#237A52] font-bold">
                             ★ {car.inspectionScore}/100
                           </span>
@@ -4289,7 +4318,13 @@ export default function AdminDashboardPage() {
                             <div>
                               <h4 className="font-bold text-sm text-[#101216]">{car.make} {car.model}</h4>
                               <p className="text-[11px] text-gray-500">{car.variant} • {car.city}</p>
-                              <div className="flex items-center gap-1.5 mt-0.5">
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                {car.featured && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-0.5 shadow-2xs">
+                                    <Star className="w-2.5 h-2.5 text-amber-600 fill-amber-500" />
+                                    <span>Featured</span>
+                                  </span>
+                                )}
                                 {car.registrationNumber && (
                                   <span className="font-mono text-[10px] font-bold text-gray-700 bg-gray-100 px-1.5 py-0.2 rounded border border-gray-200">
                                     {car.registrationNumber}
@@ -4477,6 +4512,19 @@ export default function AdminDashboardPage() {
                             >
                               <Info className="w-3.5 h-3.5" />
                               <span>Source</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleFeatured(car.id, !car.featured)}
+                              className={`px-2.5 py-1.5 rounded-lg border font-semibold text-xs transition-colors inline-flex items-center gap-1 cursor-pointer ${
+                                car.featured
+                                  ? 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800 font-bold shadow-2xs'
+                                  : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-600 hover:text-gray-900'
+                              }`}
+                              title={car.featured ? 'Click to unfeature (hide FEATURED badge on homepage)' : 'Click to feature this vehicle on Homepage'}
+                            >
+                              <Star className={`w-3.5 h-3.5 ${car.featured ? 'text-amber-500 fill-amber-400' : 'text-gray-400'}`} />
+                              <span>{car.featured ? 'Featured' : 'Feature'}</span>
                             </button>
                             <button
                               type="button"
@@ -6571,7 +6619,20 @@ export default function AdminDashboardPage() {
               </div>
 
               {/* Badges & Description */}
-              <div className="flex items-center gap-6 pt-1">
+              <div className="flex items-center gap-6 pt-1 flex-wrap">
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
+                  <input
+                    type="checkbox"
+                    checked={newIsFeatured}
+                    onChange={(e) => setNewIsFeatured(e.target.checked)}
+                    className="w-4 h-4 text-amber-500 rounded border-gray-300 focus:ring-amber-500"
+                  />
+                  <span className="inline-flex items-center gap-1 text-amber-900">
+                    <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+                    <span>Featured Vehicle (Displays FEATURED Badge on Homepage)</span>
+                  </span>
+                </label>
+
                 <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800">
                   <input
                     type="checkbox"

@@ -196,6 +196,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: updated, message: 'Custom ribbons updated successfully' });
     }
 
+    if (body.featured !== undefined) {
+      const { dbUpdateCarFeatured } = await import('@/lib/db');
+      const updated = await dbUpdateCarFeatured(id, Boolean(body.featured));
+      return NextResponse.json({
+        success: updated,
+        message: body.featured ? 'Vehicle marked as Featured' : 'Vehicle unfeatured',
+      });
+    }
+
     await dbInsertCar(body);
     return NextResponse.json({ success: true, message: 'Vehicle details updated successfully' });
   } catch (error: any) {
