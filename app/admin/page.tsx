@@ -813,6 +813,27 @@ export default function AdminDashboardPage() {
       }
       return updated;
     });
+    showToast('Marked as read ✓');
+  }, []);
+
+  const toggleRequestUnread = useCallback((id: string) => {
+    if (!id) return;
+    setReadRequestIds((prev) => {
+      const updated = new Set(prev);
+      if (updated.has(id)) {
+        updated.delete(id);
+        showToast('Marked as unread');
+      } else {
+        updated.add(id);
+        showToast('Marked as read ✓');
+      }
+      try {
+        localStorage.setItem('recars_admin_read_requests_v1', JSON.stringify(Array.from(updated)));
+      } catch (e) {
+        console.warn('Failed to toggle read request ID', e);
+      }
+      return updated;
+    });
   }, []);
 
   const markAllRequestsAsRead = useCallback((ids: string[], sectionLabel = 'requests') => {
@@ -874,9 +895,9 @@ export default function AdminDashboardPage() {
     [liveNegotiations, isRequestUnread]
   );
 
-  const newCarFinderCount = useMemo(
-    () => liveCarFinderRequests.filter((r) => r.status === 'New').length,
-    [liveCarFinderRequests]
+  const unreadCarFinderCount = useMemo(
+    () => liveCarFinderRequests.filter((r) => isRequestUnread(r.id, r.status)).length,
+    [liveCarFinderRequests, isRequestUnread]
   );
 
   const totalUnreadCount =
@@ -885,7 +906,19 @@ export default function AdminDashboardPage() {
     unreadTestDrivesCount +
     unreadPDICount +
     unreadNegotiationsCount +
-    newCarFinderCount;
+    unreadCarFinderCount;
+
+  const handleMarkEverythingAsRead = useCallback(() => {
+    const allIds = [
+      ...inquiries.map((i) => i.id),
+      ...sellRequests.map((r) => r.id),
+      ...testDrives.map((t) => t.id),
+      ...pdiList.map((p) => p.id),
+      ...liveNegotiations.map((n) => n.id),
+      ...liveCarFinderRequests.map((r) => r.id),
+    ];
+    markAllRequestsAsRead(allIds, 'notifications & reminders');
+  }, [inquiries, sellRequests, testDrives, pdiList, liveNegotiations, liveCarFinderRequests, markAllRequestsAsRead]);
 
   const activeCarsCount = useMemo(() => cars.filter((c) => c.availabilityStatus !== 'Sold Out').length, [cars]);
   const soldCarsCount = useMemo(() => cars.filter((c) => c.availabilityStatus === 'Sold Out').length, [cars]);
@@ -1818,8 +1851,8 @@ export default function AdminDashboardPage() {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="block">Car Finder</span>
-                      {newCarFinderCount > 0 ? (
-                        <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" title="New requests" />
+                      {unreadCarFinderCount > 0 ? (
+                        <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" title="Unread requests" />
                       ) : (
                         <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-rose-100 text-[#E5325C]">Find</span>
                       )}
@@ -1827,10 +1860,10 @@ export default function AdminDashboardPage() {
                     <span className="text-[10px] font-normal text-gray-400 block">Buyer car requests</span>
                   </div>
                 </div>
-                {newCarFinderCount > 0 ? (
+                {unreadCarFinderCount > 0 ? (
                   <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-[#E5325C] text-white shadow-xs animate-pulse">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                    <span>{newCarFinderCount} new</span>
+                    <span>{unreadCarFinderCount} unread</span>
                   </span>
                 ) : (
                   <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
@@ -2259,15 +2292,26 @@ export default function AdminDashboardPage() {
 
           <div className="flex items-center gap-3">
             {totalUnreadCount > 0 ? (
-              <div
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFF0F3] border border-[#FFD6DF] text-[#E5325C] text-xs font-black shadow-xs animate-pulse"
-                title={`${totalUnreadCount} unread request reminder(s) pending your review`}
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5325C] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E5325C]"></span>
-                </span>
-                <span>{totalUnreadCount} Unread Reminder{totalUnreadCount > 1 ? 's' : ''}</span>
+              <div className="flex items-center gap-2">
+                <div
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFF0F3] border border-[#FFD6DF] text-[#E5325C] text-xs font-black shadow-xs animate-pulse"
+                  title={`${totalUnreadCount} unread request reminder(s) pending your review`}
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5325C] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E5325C]"></span>
+                  </span>
+                  <span>{totalUnreadCount} Unread Reminder{totalUnreadCount > 1 ? 's' : ''}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleMarkEverythingAsRead}
+                  className="px-2.5 py-1.5 rounded-xl bg-white border border-[#FFD6DF] hover:bg-[#E5325C] text-[#E5325C] hover:text-white text-xs font-bold transition-all shadow-2xs cursor-pointer inline-flex items-center gap-1"
+                  title="Mark all notifications and request reminders as read"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Mark all read</span>
+                </button>
               </div>
             ) : (
               <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
@@ -2442,7 +2486,7 @@ export default function AdminDashboardPage() {
             </div>
             <div className="text-2xl font-black text-[#101216]">{liveCarFinderRequests.length}</div>
             <p className="text-[10px] text-rose-600 font-bold mt-1">
-              {newCarFinderCount > 0 ? `${newCarFinderCount} new requests →` : 'Match inventory →'}
+              {unreadCarFinderCount > 0 ? `${unreadCarFinderCount} unread requests →` : 'Match inventory →'}
             </p>
           </div>
         </div>
@@ -3835,6 +3879,29 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
+            {/* Unread Car Finder Requests Banner */}
+            {unreadCarFinderCount > 0 && (
+              <div className="p-3.5 rounded-2xl bg-[#FFF0F3] border border-[#FFD6DF] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5325C] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E5325C]"></span>
+                  </span>
+                  <span className="font-extrabold text-[#E5325C]">
+                    {unreadCarFinderCount} car finder request reminder{unreadCarFinderCount > 1 ? 's' : ''} unread. Click any request or &quot;Mark as read&quot; to clear.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => markAllRequestsAsRead(liveCarFinderRequests.map((r) => r.id), 'car finder requests')}
+                  className="px-3 py-1 rounded-xl bg-white border border-[#FFD6DF] text-[#E5325C] font-extrabold hover:bg-[#E5325C] hover:text-white transition-all shadow-2xs cursor-pointer text-xs whitespace-nowrap inline-flex items-center gap-1"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Mark all as read</span>
+                </button>
+              </div>
+            )}
+
             {/* Requests Cards List */}
             <div className="grid grid-cols-1 gap-5">
               {liveCarFinderRequests
@@ -3864,6 +3931,7 @@ export default function AdminDashboardPage() {
                   return matchStatus && matchBrand && matchBudget && matchQuery;
                 })
                 .map((req) => {
+                  const isUnread = isRequestUnread(req.id, req.status);
                   // Matching inventory engine
                   const matchingCars = cars.filter((c) => {
                     if (c.availabilityStatus === 'Sold Out') return false;
@@ -3887,13 +3955,24 @@ export default function AdminDashboardPage() {
                   return (
                     <div
                       key={req.id}
-                      className="bg-white rounded-3xl border border-[#E5E7EB] p-5 sm:p-6 shadow-2xs hover:shadow-xs transition-shadow space-y-4"
+                      onClick={() => isUnread && markRequestAsRead(req.id)}
+                      className={`rounded-3xl border p-5 sm:p-6 shadow-2xs hover:shadow-xs transition-shadow space-y-4 ${
+                        isUnread
+                          ? 'bg-gradient-to-br from-[#FFF0F3]/30 via-white to-white border-[#FFD6DF] ring-2 ring-[#FFD6DF]'
+                          : 'bg-white border-[#E5E7EB]'
+                      }`}
                     >
                       {/* Top Bar: Customer Info + Status selector */}
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-gray-100">
                         <div>
                           <div className="flex items-center gap-2.5 flex-wrap">
                             <h4 className="font-black text-lg text-[#101216]">{req.customerName}</h4>
+                            {isUnread && (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#E5325C] text-white shadow-xs animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                Unread
+                              </span>
+                            )}
                             <span className="font-mono text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
                               +91 {req.mobileNumber || req.customerPhone}
                             </span>
@@ -3908,6 +3987,34 @@ export default function AdminDashboardPage() {
 
                         {/* Status Dropdown & Actions */}
                         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                          {isUnread ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markRequestAsRead(req.id);
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#FFF0F3] text-[#E5325C] hover:bg-[#E5325C] hover:text-white border border-[#FFD6DF] transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                              title="Mark this customer request as read"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Mark as read</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRequestUnread(req.id);
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-gray-50 text-gray-500 hover:text-gray-800 hover:bg-gray-100 border border-gray-200 transition-colors cursor-pointer inline-flex items-center gap-1"
+                              title="Click to mark as unread"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Read</span>
+                            </button>
+                          )}
+
                           <select
                             value={req.status || 'New'}
                             onChange={(e) => handleUpdateCarFinderStatus(req.id, e.target.value as CarFinderStatus, req.internalNotes)}
