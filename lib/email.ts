@@ -8,6 +8,7 @@ export type NotificationEnquiryType =
   | 'Sell Car Request'
   | 'Price Negotiation Offer'
   | 'Pre-Delivery Inspection (PDI)'
+  | 'Car Care & PPF Service Enquiry'
   | 'Callback Request'
   | 'General Customer Enquiry';
 
@@ -39,7 +40,7 @@ export interface EmailNotificationPayload {
   packageType?: string;
   fee?: number;
   paymentStatus?: string;
-  adminTab?: 'inquiries' | 'leads' | 'testdrives' | 'negotiations' | 'pdi';
+  adminTab?: 'inquiries' | 'leads' | 'testdrives' | 'negotiations' | 'pdi' | 'carcare';
   createdAt?: string;
 }
 
@@ -470,3 +471,5 @@ export async function sendEnquiryNotification(
     };
   }
 }
+
+export const sendAdminEmailNotification = sendEnquiryNotification;

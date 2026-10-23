@@ -29,8 +29,8 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
         {/* Top-Left Availability Badge */}
         <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 flex-wrap">
           {car.availabilityStatus === 'Sold Out' ? (
-            <span className="px-2.5 py-1 rounded-md bg-slate-900/90 backdrop-blur-xs text-[10px] font-extrabold text-white tracking-wide uppercase border border-slate-700 shadow-sm">
-              Sold Out
+            <span className="px-2.5 py-1 rounded-md bg-rose-950/90 backdrop-blur-xs text-[10px] font-black text-white tracking-widest uppercase border border-rose-500/80 shadow-md">
+              SOLD OUT
             </span>
           ) : car.availabilityStatus === 'Reserved' ? (
             <span className="px-2.5 py-1 rounded-md bg-amber-600/90 backdrop-blur-xs text-[10px] font-extrabold text-white tracking-wide uppercase border border-amber-400 shadow-sm">
@@ -42,6 +42,9 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
             </span>
           )}
         </div>
+        {car.availabilityStatus === 'Sold Out' && (
+          <div className="absolute inset-0 bg-slate-950/30 backdrop-grayscale-25 pointer-events-none" />
+        )}
 
         {/* Wishlist Button */}
         <button
@@ -140,13 +143,23 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
             )}
           </div>
 
-          <Link
-            href={`/cars/${car.id}`}
-            className="text-xs font-semibold text-[#E5325C] hover:text-[#D4264E] group-hover:translate-x-0.5 transition-all inline-flex items-center gap-0.5 font-heading"
-          >
-            <span>Interested</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          {car.availabilityStatus === 'Sold Out' ? (
+            <Link
+              href={`/cars/${car.id}`}
+              className="text-xs font-semibold text-gray-500 hover:text-gray-900 group-hover:translate-x-0.5 transition-all inline-flex items-center gap-0.5 font-heading"
+            >
+              <span>View Details</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          ) : (
+            <Link
+              href={`/cars/${car.id}`}
+              className="text-xs font-semibold text-[#E5325C] hover:text-[#D4264E] group-hover:translate-x-0.5 transition-all inline-flex items-center gap-0.5 font-heading"
+            >
+              <span>Interested</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          )}
         </div>
       </div>
     </div>

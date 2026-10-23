@@ -69,6 +69,7 @@ export default function Footer() {
             </h5>
             <ul className="space-y-2.5 text-xs text-gray-600">
               <li><Link href="/pdi" className="hover:text-[#E5325C] text-[#E5325C] font-semibold transition-colors">Pre-Delivery Inspection (PDI) 🚗</Link></li>
+              <li><Link href="/car-care" className="hover:text-[#E5325C] text-emerald-700 font-semibold transition-colors">Car Care & PPF Detailing ✨</Link></li>
               <li><Link href="/sell" className="hover:text-[#E5325C] transition-colors">Sell Your Car</Link></li>
               <li><Link href="/sell" className="hover:text-[#E5325C] transition-colors">Doorstep Inspection (₹999)</Link></li>
               <li><Link href="/why-recars#inspection" className="hover:text-[#E5325C] transition-colors">28+ Point Inspection</Link></li>

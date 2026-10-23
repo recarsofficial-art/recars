@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { dbGetCars, dbInsertCar, dbDeleteCar, dbGetCarById } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+import { dbGetCars, dbInsertCar, dbDeleteCar, dbGetCarById, dbGetTrendingCars } from '@/lib/db';
 import { Car } from '@/lib/types';
 
 /**
@@ -20,8 +20,9 @@ function sanitizeCarForCustomer(car: Car): Partial<Car> {
   return publicCar;
 }
 
-function checkIsAdmin(request: Request, searchParams: URLSearchParams): boolean {
-  if (searchParams.get('admin') === 'true' || searchParams.get('source') === 'admin') {
+function checkIsAdmin(request: Request | NextRequest, searchParams?: URLSearchParams): boolean {
+  const params = searchParams || ('nextUrl' in request ? (request as NextRequest).nextUrl.searchParams : new URL(request.url).searchParams);
+  if (params.get('admin') === 'true' || params.get('source') === 'admin') {
     return true;
   }
   const roleHeader = request.headers.get('x-recars-role');
@@ -35,9 +36,9 @@ function checkIsAdmin(request: Request, searchParams: URLSearchParams): boolean 
   return false;
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
     const make = searchParams.get('make') || undefined;
     const type = searchParams.get('type') || undefined;
     const city = searchParams.get('city') || undefined;
@@ -48,7 +49,18 @@ export async function GET(request: Request) {
     const dealerIdFilter = searchParams.get('dealerId');
     const dealerNameFilter = searchParams.get('dealerName');
 
-    const isAdmin = checkIsAdmin(request, searchParams);
+    const isAdmin = checkIsAdmin(request);
+
+    if (searchParams.get('trending') === 'true') {
+      const limit = Number(searchParams.get('limit')) || 8;
+      const trending = await dbGetTrendingCars(limit);
+      const outputCars = isAdmin ? trending : trending.map((c) => sanitizeCarForCustomer(c));
+      return NextResponse.json({
+        success: true,
+        total: outputCars.length,
+        cars: outputCars,
+      });
+    }
 
     let cars = (await dbGetCars({ make, bodyType: type, city, minPrice, maxPrice })) || [];
 

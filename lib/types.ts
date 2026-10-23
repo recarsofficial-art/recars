@@ -65,6 +65,8 @@ export interface Car {
 
   // New fields for Recars enhanced system
   availabilityStatus?: VehicleAvailability;
+  statusUpdatedAt?: string;
+  soldAt?: string;
   manufacturingYear?: number;
   registrationYear?: number;
   insuranceStatus?: InsuranceStatus;
@@ -257,6 +259,93 @@ export interface AuthUser {
   phone: string;
   email: string;
   city: string;
+}
+
+// ========================================================
+// CAR CARE & PPF ENQUIRIES TYPES
+// ========================================================
+export type CarCareServiceType =
+  | 'Paint Protection Film (PPF)'
+  | 'Ceramic Coating'
+  | 'Teflon Coating'
+  | 'Anti-Rust Treatment';
+
+export type CarCareStatus =
+  | 'New'
+  | 'Contacted'
+  | 'Quotation Sent'
+  | 'Confirmed'
+  | 'Completed'
+  | 'Cancelled';
+
+export interface CarCareEnquiry {
+  id: string;
+  customerName: string;
+  fullName: string;
+  customerPhone: string;
+  mobileNumber: string;
+  customerEmail?: string;
+  carMake: string;
+  vehicleBrand: string;
+  carModel: string;
+  vehicleModel: string;
+  carYear?: number | string;
+  vehicleYear?: number | string;
+  services: string[];
+  preferredLocation: string;
+  preferredDate?: string;
+  additionalRequirements?: string;
+  status: CarCareStatus;
+  internalNotes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// ========================================================
+// VEHICLE ANALYTICS & VIEW TRACKING TYPES
+// ========================================================
+export interface VehicleAnalyticsItem {
+  id: string;
+  make: string;
+  model: string;
+  variant: string;
+  year: number;
+  manufacturingYear?: number;
+  price: number;
+  image: string;
+  city: string;
+  availabilityStatus: VehicleAvailability;
+  statusUpdatedAt?: string;
+  soldAt?: string;
+  dealerName?: string;
+  vehicleSource?: string;
+  viewsCount: number;
+  viewCount?: number;
+  inquiriesCount: number;
+  enquiryCount?: number;
+  negotiationsCount: number;
+  totalInteractions: number;
+  createdAt: string;
+}
+
+export interface AdminAnalyticsSummary {
+  totalActiveListings: number;
+  totalSoldVehicles: number;
+  totalReservedVehicles: number;
+  totalDetailViews: number;
+  totalEnquiries: number;
+  mostViewedBrand?: string;
+  mostViewedModel?: string;
+  mostViewedBudget?: string;
+  mostViewedVehicles: VehicleAnalyticsItem[];
+  mostEnquiredVehicles: VehicleAnalyticsItem[];
+  recentEnquiries: CarInquiry[];
+  insights: {
+    mostViewedBrand: string;
+    mostViewedModel: string;
+    mostViewedBudget: string;
+    conversionRate: string;
+  };
 }
 
 

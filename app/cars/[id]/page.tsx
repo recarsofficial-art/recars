@@ -75,6 +75,17 @@ function CarDetailInner({ params }: PageProps) {
     return () => window.removeEventListener('focus', fetchCars);
   }, []);
 
+  // Track genuine vehicle view (deduplicated by IP & car in backend)
+  useEffect(() => {
+    if (unwrappedParams?.id) {
+      fetch('/api/views', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ carId: unwrappedParams.id }),
+      }).catch(() => {});
+    }
+  }, [unwrappedParams?.id]);
+
   const cars = liveCars !== null ? liveCars : storeCars;
   const car = cars.find((c) => c.id === unwrappedParams.id) || (cars.length > 0 ? cars[0] : null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -184,7 +195,9 @@ function CarDetailInner({ params }: PageProps) {
   );
 
   const images = car.galleryImages && car.galleryImages.length > 0 ? car.galleryImages : [car.image];
-  const similarCars = cars.filter((c) => c.id !== car.id && (c.bodyType === car.bodyType || c.make === car.make)).slice(0, 3);
+  const similarCars = cars
+    .filter((c) => c.id !== car.id && c.availabilityStatus !== 'Sold Out' && (c.bodyType === car.bodyType || c.make === car.make))
+    .slice(0, 3);
 
   // Dynamic Vehicle Age Calculation
   const currentYear = new Date().getFullYear();
@@ -863,9 +876,20 @@ function CarDetailInner({ params }: PageProps) {
 
               {/* Availability Notice */}
               {isSoldOut ? (
-                <div className="p-3.5 rounded-2xl bg-slate-900 text-white flex items-center gap-2.5 text-xs font-bold shadow-sm">
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>This vehicle is Sold Out. Enquiries are currently closed.</span>
+                <div className="p-4 rounded-2xl bg-rose-950/90 text-white border border-rose-500/40 shadow-sm space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-black text-rose-400 uppercase tracking-widest">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>VEHICLE SOLD OUT</span>
+                  </div>
+                  <p className="text-xs text-rose-100/90 leading-relaxed font-body">
+                    This vehicle has been sold to a proud new owner. Enquiries and bookings are closed for this listing.
+                  </p>
+                  <a
+                    href="#similar-cars"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 hover:text-white underline pt-1 font-heading"
+                  >
+                    <span>View Similar Available Cars →</span>
+                  </a>
                 </div>
               ) : isReserved ? (
                 <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-2.5 text-xs font-medium">
@@ -911,61 +935,71 @@ function CarDetailInner({ params }: PageProps) {
 
               {/* Action Buttons */}
               <div className="space-y-2.5">
-                {/* 1. Interested Button */}
-                <button
-                  onClick={() => setIsInterestedModalOpen(true)}
-                  disabled={isSoldOut}
-                  className={`w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-semibold font-btn tracking-rounded text-sm shadow-md transition-all active:scale-98 cursor-pointer ${
-                    isSoldOut
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'text-white bg-[#E5325C] hover:bg-[#D4264E]'
-                  }`}
-                >
-                  <Heart className="w-4 h-4 fill-current" />
-                  <span>{isSoldOut ? 'Vehicle Sold Out' : 'Interested'}</span>
-                </button>
+                {isSoldOut ? (
+                  <div className="space-y-2.5">
+                    <a
+                      href="#similar-cars"
+                      className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold font-btn tracking-rounded text-sm text-white bg-[#101216] hover:bg-[#E5325C] shadow-md transition-all cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>View Similar Available Cars</span>
+                    </a>
+                    <Link
+                      href={`/buy?brand=${encodeURIComponent(car.make)}`}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold font-btn tracking-rounded text-xs text-gray-700 bg-white border border-gray-300 hover:border-[#E5325C] hover:text-[#E5325C] transition-all"
+                    >
+                      <span>Explore All {car.make} Inventory</span>
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    {/* 1. Interested Button */}
+                    <button
+                      onClick={() => setIsInterestedModalOpen(true)}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-semibold font-btn tracking-rounded text-sm shadow-md transition-all active:scale-98 cursor-pointer text-white bg-[#E5325C] hover:bg-[#D4264E]"
+                    >
+                      <Heart className="w-4 h-4 fill-current" />
+                      <span>Interested</span>
+                    </button>
 
-                {/* 2. Make an Offer / Negotiate Price Button */}
-                <button
-                  onClick={() => setIsNegotiateModalOpen(true)}
-                  disabled={isSoldOut}
-                  className={`w-full flex items-center justify-center gap-2 py-3 px-6 rounded-2xl font-semibold font-btn tracking-rounded text-sm transition-all border cursor-pointer ${
-                    isSoldOut
-                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                      : 'text-[#101216] bg-white border-gray-300 hover:border-[#E5325C] hover:text-[#E5325C] hover:bg-[#FFF0F3]/40'
-                  }`}
-                >
-                  <Tag className="w-4 h-4 text-[#E5325C]" />
-                  <span>Make an Offer / Negotiate Price</span>
-                </button>
+                    {/* 2. Make an Offer / Negotiate Price Button */}
+                    <button
+                      onClick={() => setIsNegotiateModalOpen(true)}
+                      className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-2xl font-semibold font-btn tracking-rounded text-sm transition-all border cursor-pointer text-[#101216] bg-white border-gray-300 hover:border-[#E5325C] hover:text-[#E5325C] hover:bg-[#FFF0F3]/40"
+                    >
+                      <Tag className="w-4 h-4 text-[#E5325C]" />
+                      <span>Make an Offer / Negotiate Price</span>
+                    </button>
 
-                {/* 3. Request Callback Button */}
-                <button
-                  onClick={() => setIsCallbackModalOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold font-btn tracking-rounded text-xs text-[#101216] bg-white border border-[#E5E7EB] hover:bg-gray-50 transition-all cursor-pointer"
-                >
-                  <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
-                  <span>Request Instant Callback</span>
-                </button>
+                    {/* 3. Request Callback Button */}
+                    <button
+                      onClick={() => setIsCallbackModalOpen(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold font-btn tracking-rounded text-xs text-[#101216] bg-white border border-[#E5E7EB] hover:bg-gray-50 transition-all cursor-pointer"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
+                      <span>Request Instant Callback</span>
+                    </button>
 
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <a
-                    href="tel:+919908796677"
-                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold font-btn tracking-rounded text-xs text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-[#E5325C] transition-all"
-                  >
-                    <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
-                    <span>Call 9908796677</span>
-                  </a>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <a
+                        href="tel:+919908796677"
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold font-btn tracking-rounded text-xs text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-[#E5325C] transition-all"
+                      >
+                        <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
+                        <span>Call 9908796677</span>
+                      </a>
 
-                  <a
-                    href={`https://wa.me/919908796677?text=Hello%20Recars%2C%20I%20am%20interested%20in%20the%20${encodeURIComponent(car.year + ' ' + car.make + ' ' + car.model)}%20(${encodeURIComponent(car.id)})%20listed%20at%20${encodeURIComponent(formatINR(car.price))}.`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold font-btn tracking-rounded text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all"
-                  >
-                    <span>Chat on WhatsApp</span>
-                  </a>
-                </div>
+                      <a
+                        href={`https://wa.me/919908796677?text=Hello%20Recars%2C%20I%20am%20interested%20in%20the%20${encodeURIComponent(car.year + ' ' + car.make + ' ' + car.model)}%20(${encodeURIComponent(car.id)})%20listed%20at%20${encodeURIComponent(formatINR(car.price))}.`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold font-btn tracking-rounded text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all"
+                      >
+                        <span>Chat on WhatsApp</span>
+                      </a>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Recars Assured Pillars (Genuine, transparent guarantees) */}
@@ -1041,7 +1075,7 @@ function CarDetailInner({ params }: PageProps) {
 
         {/* Similar Cars Section */}
         {similarCars.length > 0 && (
-          <div className="pt-10 border-t border-[#E5E7EB]">
+          <div id="similar-cars" className="pt-10 border-t border-[#E5E7EB] scroll-mt-28">
             <h2 className="text-2xl font-black text-[#101216] mb-6">Similar Verified Cars</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {similarCars.map((c) => (

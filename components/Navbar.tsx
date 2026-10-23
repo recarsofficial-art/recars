@@ -18,6 +18,7 @@ import {
   HelpCircle,
   LogOut,
   Phone,
+  Sparkles,
 } from 'lucide-react';
 import Logo from './Logo';
 import CitySelectorModal from './CitySelectorModal';
@@ -49,6 +50,7 @@ export default function Navbar({
   const navLinks = [
     { label: 'Buy', href: '/buy' },
     { label: 'Sell', href: '/sell' },
+    { label: 'Car Care', href: '/car-care' },
     { label: 'Why Recars', href: '/why-recars' },
   ];
 
@@ -116,6 +118,16 @@ export default function Navbar({
                         <span>New Car PDI (Showroom Check)</span>
                       </div>
                       <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-[#E5325C] text-white">New</span>
+                    </Link>
+                    <Link
+                      href="/car-care"
+                      className="flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-[#24262A] hover:bg-[#FFF0F3] hover:text-[#E5325C]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="w-4 h-4 text-[#E5325C]" />
+                        <span>Car Care & PPF Detailing</span>
+                      </div>
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-600 text-white">Popular</span>
                     </Link>
                     <Link
                       href="/why-recars#inspection"
@@ -320,6 +332,14 @@ export default function Navbar({
             >
               <span>New Car Pre-Delivery Inspection (PDI)</span>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FFF0F3] text-[#E5325C]">Showroom Check</span>
+            </Link>
+            <Link
+              href="/car-care"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center justify-between px-3 py-2 text-sm font-semibold text-[#24262A] hover:text-[#E5325C]"
+            >
+              <span>Car Care & PPF Detailing</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">Services</span>
             </Link>
             <Link
               href="/sell"

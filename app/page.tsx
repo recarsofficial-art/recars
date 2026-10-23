@@ -33,6 +33,7 @@ import {
   CheckCircle2,
   Tag,
   Filter,
+  Flame,
 } from 'lucide-react';
 import { MAKES, MODELS_BY_MAKE, CITIES } from '@/lib/data';
 import SimpleHeader from '@/components/SimpleHeader';
@@ -122,6 +123,7 @@ function HomePageContent() {
   } = useRecarsState();
 
   const [liveCars, setLiveCars] = useState<any[] | null>(null);
+  const [trendingCars, setTrendingCars] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchFreshCars = () => {
@@ -134,6 +136,15 @@ function HomePageContent() {
     };
     fetchFreshCars();
     window.addEventListener('focus', fetchFreshCars);
+
+    // Fetch actual trending / most-viewed cars from backend views
+    fetch('/api/cars?trending=true&limit=4')
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d?.cars)) setTrendingCars(d.cars);
+      })
+      .catch(() => {});
+
     return () => window.removeEventListener('focus', fetchFreshCars);
   }, []);
 
@@ -247,6 +258,9 @@ function HomePageContent() {
           if (c.price < bracket.min || c.price > bracket.max) return false;
         }
       }
+
+      // Hide sold-out vehicles from available cars on homepage
+      if (c.availabilityStatus === 'Sold Out') return false;
 
       return true;
     });
@@ -402,6 +416,50 @@ function HomePageContent() {
                 })}
               </div>
             </div>
+
+            {/* Optional Trending Cars / Most-Viewed Section */}
+            {trendingCars.length > 0 && (
+              <div className="bg-gradient-to-r from-rose-50/80 via-amber-50/60 to-white rounded-3xl p-5 sm:p-6 border border-rose-200/80 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#E5325C] text-white flex items-center justify-center shadow-sm shrink-0">
+                      <Flame className="w-5 h-5 fill-current" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-base sm:text-lg font-black text-[#101216]">
+                          Most-Viewed & Trending Cars
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#E5325C] text-white">
+                          Trending
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Cars attracting the highest genuine customer views and interest across Recars
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/buy"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[#E5325C] hover:underline"
+                  >
+                    <span>Explore All Inventory</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                  {trendingCars.map((car) => (
+                    <CarCard
+                      key={`trending-${car.id}`}
+                      car={car}
+                      isWishlisted={isWishlisted(car.id)}
+                      onToggleWishlist={toggleWishlist}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Results Header: Available Count, Body Style Pills, View All Link */}
             <div className="space-y-4">

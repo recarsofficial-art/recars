@@ -48,12 +48,28 @@ import {
   User,
   Info,
   CheckCircle,
+  Flame,
+  BarChart3,
+  Droplets,
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
 import { useRecarsState } from '@/lib/store';
 import { formatINR, formatKM, formatDateWithDay, formatTime, formatRelativeTime, formatDateTimeWithDay } from '@/lib/formatters';
-import { Car as CarType, CarInquiry, SellRequest, TestDriveBooking, Negotiation, InspectionConfig, VehicleAvailability, PDIBooking, RegisteredDealer } from '@/lib/types';
+import {
+  Car as CarType,
+  CarInquiry,
+  SellRequest,
+  TestDriveBooking,
+  Negotiation,
+  InspectionConfig,
+  VehicleAvailability,
+  PDIBooking,
+  RegisteredDealer,
+  CarCareEnquiry,
+  VehicleAnalyticsItem,
+  AdminAnalyticsSummary,
+} from '@/lib/types';
 import { MAKES, CITIES } from '@/lib/data';
 
 const AVAILABLE_IMAGES = [
@@ -83,7 +99,7 @@ export default function AdminDashboardPage() {
     updateInquiryStatus,
   } = useRecarsState();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'pdi' | 'negotiations' | 'inquiries' | 'leads' | 'testdrives' | 'customers' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'pdi' | 'carcare' | 'negotiations' | 'inquiries' | 'leads' | 'testdrives' | 'customers' | 'settings'>('overview');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -108,6 +124,23 @@ export default function AdminDashboardPage() {
   const [liveTestDrives, setLiveTestDrives] = useState<TestDriveBooking[]>([]);
   const [liveNegotiations, setLiveNegotiations] = useState<Negotiation[]>([]);
   const [livePDIBookings, setLivePDIBookings] = useState<PDIBooking[]>([]);
+  const [liveCarCareList, setLiveCarCareList] = useState<CarCareEnquiry[]>([]);
+  const [carCareStatusFilter, setCarCareStatusFilter] = useState<string>('All');
+  const [carCareSearch, setCarCareSearch] = useState<string>('');
+  const [carCareEditingNotes, setCarCareEditingNotes] = useState<{ id: string; notes: string } | null>(null);
+
+  // Smart Analytics State
+  const [analyticsData, setAnalyticsData] = useState<{
+    summary: AdminAnalyticsSummary;
+    vehicles: VehicleAnalyticsItem[];
+    recentEnquiries: any[];
+  } | null>(null);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<string>('all');
+  const [analyticsBudget, setAnalyticsBudget] = useState<string>('all');
+  const [analyticsBrand, setAnalyticsBrand] = useState<string>('all');
+  const [analyticsModel, setAnalyticsModel] = useState<string>('all');
+  const [analyticsSort, setAnalyticsSort] = useState<string>('views');
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
   const [inspectionConfig, setInspectionConfig] = useState<InspectionConfig>({
     sellerInspectionFee: 999,
     sellerReportFee: 1199,
@@ -208,7 +241,7 @@ export default function AdminDashboardPage() {
   const syncAllFromSupabase = async () => {
     setIsSyncing(true);
     try {
-      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes, notifRes, dealersRes] = await Promise.all([
+      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes, notifRes, dealersRes, carCareRes] = await Promise.all([
         fetch('/api/cars?admin=true').then((r) => r.json()).catch(() => null),
         fetch('/api/sell').then((r) => r.json()).catch(() => null),
         fetch('/api/inquiries').then((r) => r.json()).catch(() => null),
@@ -219,6 +252,7 @@ export default function AdminDashboardPage() {
         fetch('/api/pdi').then((r) => r.json()).catch(() => null),
         fetch('/api/admin/notifications').then((r) => r.json()).catch(() => null),
         fetch('/api/dealers').then((r) => r.json()).catch(() => null),
+        fetch('/api/car-care?admin=true').then((r) => r.json()).catch(() => null),
       ]);
 
       if (carsRes?.cars) setLiveCars(carsRes.cars);
@@ -230,6 +264,7 @@ export default function AdminDashboardPage() {
       if (negRes?.negotiations) setLiveNegotiations(negRes.negotiations);
       if (setRes?.config) setInspectionConfig(setRes.config);
       if (pdiRes?.bookings) setLivePDIBookings(pdiRes.bookings);
+      if (carCareRes?.enquiries && Array.isArray(carCareRes.enquiries)) setLiveCarCareList(carCareRes.enquiries);
       if (notifRes?.notifications) {
         const map: Record<string, any> = {};
         notifRes.notifications.forEach((n: any) => {
@@ -242,6 +277,58 @@ export default function AdminDashboardPage() {
       console.error('Error syncing admin with Supabase:', e);
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const fetchAnalytics = useCallback(async () => {
+    setIsAnalyticsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (analyticsPeriod && analyticsPeriod !== 'all') params.set('period', analyticsPeriod);
+      if (analyticsBudget && analyticsBudget !== 'all') params.set('budget', analyticsBudget);
+      if (analyticsBrand && analyticsBrand !== 'all') params.set('brand', analyticsBrand);
+      if (analyticsModel && analyticsModel !== 'all') params.set('model', analyticsModel);
+      if (analyticsSort) params.set('sort', analyticsSort);
+
+      const res = await fetch(`/api/admin/analytics?${params.toString()}`);
+      const data = await res.json();
+      if (data.success) {
+        setAnalyticsData({
+          summary: data.summary,
+          vehicles: data.vehicles || [],
+          recentEnquiries: data.recentEnquiries || [],
+        });
+      }
+    } catch (e) {
+      console.error('Error fetching admin analytics:', e);
+    } finally {
+      setIsAnalyticsLoading(false);
+    }
+  }, [analyticsPeriod, analyticsBudget, analyticsBrand, analyticsModel, analyticsSort]);
+
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      fetchAnalytics();
+    }
+  }, [isAdminAuthenticated, fetchAnalytics]);
+
+  const handleUpdateCarCareStatus = async (id: string, status: string, internalNotes?: string) => {
+    try {
+      const res = await fetch('/api/car-care', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status, internalNotes }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Car Care enquiry updated to "${status}"`);
+        const refresh = await fetch('/api/car-care?admin=true').then((r) => r.json()).catch(() => null);
+        if (refresh?.enquiries) setLiveCarCareList(refresh.enquiries);
+      } else {
+        showToast('Failed to update status');
+      }
+    } catch {
+      showToast('Error updating Car Care enquiry');
     }
   };
 
@@ -680,6 +767,35 @@ export default function AdminDashboardPage() {
     unreadPDICount +
     unreadNegotiationsCount;
 
+  const activeCarsCount = useMemo(() => cars.filter((c) => c.availabilityStatus !== 'Sold Out').length, [cars]);
+  const soldCarsCount = useMemo(() => cars.filter((c) => c.availabilityStatus === 'Sold Out').length, [cars]);
+  const totalViewsCount = analyticsData?.summary?.totalDetailViews || 0;
+  const topViewedCar = analyticsData?.vehicles && analyticsData.vehicles.length > 0 ? analyticsData.vehicles[0] : null;
+  const topEnquiredCar = useMemo(() => {
+    if (!analyticsData?.vehicles) return null;
+    const sorted = [...analyticsData.vehicles].sort(
+      (a, b) => (b.inquiriesCount ?? b.enquiryCount ?? 0) - (a.inquiriesCount ?? a.enquiryCount ?? 0)
+    );
+    const top = sorted[0];
+    return top && (top.inquiriesCount ?? top.enquiryCount ?? 0) > 0 ? top : null;
+  }, [analyticsData]);
+
+  const availableBrands = useMemo(() => {
+    return Array.from(new Set(cars.map((c) => c.make).filter(Boolean))).sort();
+  }, [cars]);
+
+  const availableModels = useMemo(() => {
+    if (!analyticsBrand || analyticsBrand === 'all') return [];
+    return Array.from(
+      new Set(
+        cars
+          .filter((c) => c.make.toLowerCase() === analyticsBrand.toLowerCase())
+          .map((c) => c.model)
+          .filter(Boolean)
+      )
+    ).sort();
+  }, [cars, analyticsBrand]);
+
   const handleUpdatePDIStatus = async (
     bookingId: string,
     newStatus: string,
@@ -714,6 +830,7 @@ export default function AdminDashboardPage() {
       if (data.success) {
         showToast(`Vehicle availability updated to "${availabilityStatus}"`);
         await syncAllFromSupabase();
+        fetchAnalytics();
       } else {
         showToast('Failed to update availability');
       }
@@ -1575,6 +1692,39 @@ export default function AdminDashboardPage() {
                 )}
               </button>
 
+              {/* Dedicated Section: Car Care & PPF Enquiries */}
+              <button
+                onClick={() => {
+                  setActiveTab('carcare');
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left cursor-pointer ${
+                  activeTab === 'carcare'
+                    ? 'bg-[#FFF0F3] text-[#E5325C] shadow-xs ring-1 ring-[#FFD6DF]'
+                    : 'text-gray-700 hover:text-black hover:bg-gray-100/70'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                    activeTab === 'carcare' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="block">Car Care & PPF</span>
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">PPF</span>
+                    </div>
+                    <span className="text-[10px] font-normal text-gray-400 block">Detailing enquiries</span>
+                  </div>
+                </div>
+                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
+                  activeTab === 'carcare' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {liveCarCareList.length}
+                </span>
+              </button>
+
               {/* Dedicated Section: Negotiations */}
               <button
                 onClick={() => {
@@ -1898,6 +2048,7 @@ export default function AdminDashboardPage() {
                   {activeTab === 'overview' && 'Dashboard Overview (All Dedicated Sections)'}
                   {activeTab === 'cars' && 'Vehicle Inventory Workspace'}
                   {activeTab === 'pdi' && 'Pre-Delivery Inspection (PDI) Workspace'}
+                  {activeTab === 'carcare' && 'Car Care & PPF Detailing Services Workspace'}
                   {activeTab === 'negotiations' && 'Customer Price Negotiations Workspace'}
                   {activeTab === 'inquiries' && 'Customer Car Inquiries Workspace'}
                   {activeTab === 'leads' && 'Customer Sell Requests Workspace'}
@@ -1974,169 +2125,415 @@ export default function AdminDashboardPage() {
         {/* Main Content Body */}
         <main className="p-4 sm:p-8 flex-1 space-y-8 max-w-7xl w-full">
           {/* Metric Cards Row (Clickable to jump directly to dedicated sections) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Metric Cards Row: 6 Core Metrics */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
+          {/* 1. Total Active Listings */}
           <div
             onClick={() => setActiveTab('cars')}
-            className={`bg-white rounded-2xl border p-5 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
+            className={`bg-white rounded-2xl border p-4 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
               activeTab === 'cars' ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]' : 'border-[#E5E7EB]'
             }`}
           >
-            <div className="flex items-center justify-between text-gray-500 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Active Inventory</span>
-              <div className="w-8 h-8 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
-                <Car className="w-4 h-4" />
+            <div className="flex items-center justify-between text-gray-500 mb-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600">Active Listings</span>
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Car className="w-3.5 h-3.5" />
               </div>
             </div>
-            <div className="text-3xl font-black text-[#101216]">{cars.length}</div>
-            <p className="text-[11px] text-[#237A52] font-semibold mt-1">Verified vehicles live →</p>
+            <div className="text-2xl font-black text-[#101216]">{activeCarsCount}</div>
+            <p className="text-[10px] text-emerald-700 font-bold mt-1">Available to buy →</p>
           </div>
 
-          <div
-            onClick={() => setActiveTab('inquiries')}
-            className={`bg-white rounded-2xl border p-5 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
-              activeTab === 'inquiries'
-                ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]'
-                : unreadInquiriesCount > 0
-                ? 'border-[#FFD6DF] ring-1 ring-[#FFD6DF]'
-                : 'border-[#E5E7EB]'
-            }`}
-          >
-            <div className="flex items-center justify-between text-gray-500 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <span>Car Inquiries</span>
-                {unreadInquiriesCount > 0 && <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" />}
-              </span>
-              <div className="w-8 h-8 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
-                <MessageSquare className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="flex items-baseline justify-between">
-              <div className="text-3xl font-black text-[#101216]">{inquiries.length}</div>
-              {unreadInquiriesCount > 0 && (
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#E5325C] text-white animate-pulse">
-                  {unreadInquiriesCount} UNREAD
-                </span>
-              )}
-            </div>
-            {unreadInquiriesCount > 0 ? (
-              <p className="text-[11px] text-[#E5325C] font-extrabold mt-1 flex items-center gap-1">
-                <span>{unreadInquiriesCount} unread inquiry reminder(s) →</span>
-              </p>
-            ) : (
-              <p className="text-[11px] text-[#237A52] font-semibold mt-1">All inquiries reviewed ✓</p>
-            )}
-          </div>
-
-          <div
-            onClick={() => setActiveTab('leads')}
-            className={`bg-white rounded-2xl border p-5 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
-              activeTab === 'leads'
-                ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]'
-                : unreadSellRequestsCount > 0
-                ? 'border-[#FFD6DF] ring-1 ring-[#FFD6DF]'
-                : 'border-[#E5E7EB]'
-            }`}
-          >
-            <div className="flex items-center justify-between text-gray-500 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <span>Sell Requests</span>
-                {unreadSellRequestsCount > 0 && <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" />}
-              </span>
-              <div className="w-8 h-8 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
-                <Sparkles className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="flex items-baseline justify-between">
-              <div className="text-3xl font-black text-[#101216]">{sellRequests.length}</div>
-              {unreadSellRequestsCount > 0 && (
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#E5325C] text-white animate-pulse">
-                  {unreadSellRequestsCount} UNREAD
-                </span>
-              )}
-            </div>
-            {unreadSellRequestsCount > 0 ? (
-              <p className="text-[11px] text-[#E5325C] font-extrabold mt-1 flex items-center gap-1">
-                <span>{unreadSellRequestsCount} unread sell submission(s) →</span>
-              </p>
-            ) : (
-              <p className="text-[11px] text-gray-500 font-semibold mt-1">All sell requests reviewed ✓</p>
-            )}
-          </div>
-
-          <div
-            onClick={() => setActiveTab('customers')}
-            className={`bg-white rounded-2xl border p-5 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
-              activeTab === 'customers' ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]' : 'border-[#E5E7EB]'
-            }`}
-          >
-            <div className="flex items-center justify-between text-gray-500 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Customers</span>
-              <div className="w-8 h-8 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
-                <Users className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-3xl font-black text-[#101216]">{customers.length}</div>
-            <p className="text-[11px] text-[#237A52] font-semibold mt-1">Supabase synchronized →</p>
-          </div>
-
-          <div
-            onClick={() => setActiveTab('pdi')}
-            className={`bg-white rounded-2xl border p-5 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
-              activeTab === 'pdi'
-                ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]'
-                : unreadPDICount > 0
-                ? 'border-[#FFD6DF] ring-1 ring-[#FFD6DF]'
-                : 'border-[#E5E7EB]'
-            }`}
-          >
-            <div className="flex items-center justify-between text-gray-500 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <span>PDI Bookings</span>
-                {unreadPDICount > 0 && <span className="w-2 h-2 rounded-full bg-[#E5325C] animate-ping" />}
-              </span>
-              <div className="w-8 h-8 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="flex items-baseline justify-between">
-              <div className="text-3xl font-black text-[#101216]">{pdiList.length}</div>
-              {unreadPDICount > 0 && (
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#E5325C] text-white animate-pulse">
-                  {unreadPDICount} UNREAD
-                </span>
-              )}
-            </div>
-            {unreadPDICount > 0 ? (
-              <p className="text-[11px] text-[#E5325C] font-extrabold mt-1 flex items-center gap-1">
-                <span>{unreadPDICount} unread inspection visit(s) →</span>
-              </p>
-            ) : (
-              <p className="text-[11px] text-gray-500 font-semibold mt-1">All PDI requests reviewed ✓</p>
-            )}
-          </div>
-
+          {/* 2. Total Sold Vehicles */}
           <div
             onClick={() => setActiveTab('cars')}
-            className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-2xs sm:col-span-2 lg:col-span-1 cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all"
+            className="bg-white rounded-2xl border border-[#E5E7EB] p-4 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all"
           >
-            <div className="flex items-center justify-between text-gray-500 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider">Inventory Value</span>
-              <div className="w-8 h-8 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
-                <IndianRupee className="w-4 h-4" />
+            <div className="flex items-center justify-between text-gray-500 mb-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600">Sold Vehicles</span>
+              <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-[#101216]">{soldCarsCount}</div>
+            <p className="text-[10px] text-rose-600 font-bold mt-1">Historical delivered →</p>
+          </div>
+
+          {/* 3. Total Vehicle Views */}
+          <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 shadow-2xs">
+            <div className="flex items-center justify-between text-gray-500 mb-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600">Vehicle Views</span>
+              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Eye className="w-3.5 h-3.5" />
               </div>
             </div>
             <div className="text-2xl font-black text-[#101216]">
-              {formatINR(cars.reduce((acc, curr) => acc + curr.price, 0))}
+              {totalViewsCount.toLocaleString()}
             </div>
-            <p className="text-[11px] text-gray-500 font-semibold mt-1">Gross live catalog →</p>
+            <p className="text-[10px] text-blue-600 font-bold mt-1">Detail page traffic</p>
+          </div>
+
+          {/* 4. Most-Viewed Vehicle */}
+          <div
+            onClick={() => {
+              if (topViewedCar) {
+                const el = document.getElementById('most-viewed-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="bg-white rounded-2xl border border-[#E5E7EB] p-4 shadow-2xs cursor-pointer hover:border-[#E5325C] transition-all"
+          >
+            <div className="flex items-center justify-between text-gray-500 mb-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600">Top Viewed Car</span>
+              <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Flame className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-sm font-black text-[#101216] truncate" title={topViewedCar ? `${topViewedCar.make} ${topViewedCar.model}` : 'None'}>
+              {topViewedCar ? `${topViewedCar.make} ${topViewedCar.model}` : 'No views yet'}
+            </div>
+            <p className="text-[10px] text-amber-700 font-bold mt-1">
+              {topViewedCar ? `${topViewedCar.viewCount} views` : 'Waiting for traffic'}
+            </p>
+          </div>
+
+          {/* 5. Most-Enquired Vehicle */}
+          <div
+            onClick={() => setActiveTab('inquiries')}
+            className="bg-white rounded-2xl border border-[#E5E7EB] p-4 shadow-2xs cursor-pointer hover:border-[#E5325C] transition-all"
+          >
+            <div className="flex items-center justify-between text-gray-500 mb-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600">Top Enquired Car</span>
+              <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                <MessageSquare className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-sm font-black text-[#101216] truncate" title={topEnquiredCar ? `${topEnquiredCar.make} ${topEnquiredCar.model}` : 'None'}>
+              {topEnquiredCar ? `${topEnquiredCar.make} ${topEnquiredCar.model}` : 'None'}
+            </div>
+            <p className="text-[10px] text-purple-700 font-bold mt-1">
+              {topEnquiredCar ? `${topEnquiredCar.enquiryCount} enquiries` : `${inquiries.length} total enquiries`}
+            </p>
+          </div>
+
+          {/* 6. Car Care & PPF Enquiries */}
+          <div
+            onClick={() => setActiveTab('carcare')}
+            className={`bg-white rounded-2xl border p-4 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
+              activeTab === 'carcare' ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]' : 'border-[#E5E7EB]'
+            }`}
+          >
+            <div className="flex items-center justify-between text-gray-500 mb-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-600">Car Care & PPF</span>
+              <div className="w-7 h-7 rounded-lg bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
+                <Sparkles className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-[#101216]">{liveCarCareList.length}</div>
+            <p className="text-[10px] text-[#E5325C] font-bold mt-1">Service quotes →</p>
           </div>
         </div>
 
-                {/* ========================================================
+        {/* ========================================================
             TAB 1: DEDICATED SECTIONS FOR EACH ENTITY
         ========================================================= */}
         {activeTab === 'overview' && (
           <div className="space-y-8">
+            {/* SMART ADMIN DASHBOARD: MOST-VIEWED CARS & REAL-TIME ANALYTICS */}
+            <section id="most-viewed-section" className="bg-white rounded-3xl border border-[#E5E7EB] p-6 space-y-6 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E5E7EB]">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#E5325C] to-rose-700 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <BarChart3 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-[#FFF0F3] text-[#E5325C] text-[10px] font-extrabold uppercase tracking-wider border border-[#FFD6DF]">
+                        Customer Attention Analytics
+                      </span>
+                      <span className="text-xs font-bold text-gray-400">
+                        • {analyticsData?.vehicles?.length || 0} Ranked Vehicles
+                      </span>
+                    </div>
+                    <h3 className="font-extrabold text-xl text-[#101216] mt-0.5">
+                      Most-Viewed & Trending Inventory
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={fetchAnalytics}
+                    disabled={isAnalyticsLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 hover:border-[#E5325C] bg-[#F8F9FA] text-xs font-bold text-gray-700 hover:text-[#E5325C] transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isAnalyticsLoading ? 'animate-spin text-[#E5325C]' : ''}`} />
+                    <span>{isAnalyticsLoading ? 'Analyzing...' : 'Refresh Analytics'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Useful Insights Strip */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Most-Viewed Brand</p>
+                    <p className="text-sm font-black text-[#101216] mt-0.5">{analyticsData?.summary?.mostViewedBrand || 'N/A'}</p>
+                  </div>
+                  <span className="text-xl">🏆</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Most-Viewed Model</p>
+                    <p className="text-sm font-black text-[#101216] mt-0.5">{analyticsData?.summary?.mostViewedModel || 'N/A'}</p>
+                  </div>
+                  <span className="text-xl">🏎️</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Top Budget Category</p>
+                    <p className="text-sm font-black text-[#101216] mt-0.5">{analyticsData?.summary?.mostViewedBudget || '₹5–8 Lakh'}</p>
+                  </div>
+                  <span className="text-xl">💰</span>
+                </div>
+              </div>
+
+              {/* Filters & Sorting Bar */}
+              <div className="bg-[#F8F9FA] rounded-2xl p-4 border border-[#E5E7EB] space-y-3">
+                {/* Time Period Filter */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mr-1">Period:</span>
+                    {[
+                      { id: 'all', label: 'All Time' },
+                      { id: 'today', label: 'Today' },
+                      { id: '7d', label: 'Last 7 Days' },
+                      { id: '30d', label: 'Last 30 Days' },
+                    ].map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setAnalyticsPeriod(p.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          analyticsPeriod === p.id
+                            ? 'bg-[#E5325C] text-white shadow-xs'
+                            : 'bg-white text-gray-700 hover:text-black border border-gray-200'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Sort By Dropdown */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Sort:</span>
+                    <select
+                      value={analyticsSort}
+                      onChange={(e) => setAnalyticsSort(e.target.value)}
+                      className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                    >
+                      <option value="views">🔥 Highest Views</option>
+                      <option value="enquiries">💬 Most Enquiries</option>
+                      <option value="price-desc">💰 Price: High to Low</option>
+                      <option value="price-asc">🏷️ Price: Low to High</option>
+                      <option value="newest">✨ Newest Listings</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Secondary Filters: Budget, Brand, Model */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-200">
+                  {/* Budget Bracket Filter */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Budget Bracket</label>
+                    <select
+                      value={analyticsBudget}
+                      onChange={(e) => setAnalyticsBudget(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                    >
+                      <option value="all">All Budgets</option>
+                      <option value="under-3">Under ₹3 Lakh</option>
+                      <option value="3-5">₹3–5 Lakh</option>
+                      <option value="5-8">₹5–8 Lakh</option>
+                      <option value="8-12">₹8–12 Lakh</option>
+                      <option value="12-20">₹12–20 Lakh</option>
+                      <option value="above-20">Above ₹20 Lakh</option>
+                    </select>
+                  </div>
+
+                  {/* Brand Filter */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Brand</label>
+                    <select
+                      value={analyticsBrand}
+                      onChange={(e) => {
+                        setAnalyticsBrand(e.target.value);
+                        setAnalyticsModel('all');
+                      }}
+                      className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                    >
+                      <option value="all">All Brands ({availableBrands.length})</option>
+                      {availableBrands.map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Model Filter */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Model</label>
+                    <select
+                      value={analyticsModel}
+                      onChange={(e) => setAnalyticsModel(e.target.value)}
+                      disabled={analyticsBrand === 'all' || availableModels.length === 0}
+                      className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C] disabled:bg-gray-100 disabled:text-gray-400"
+                    >
+                      <option value="all">
+                        {analyticsBrand === 'all' ? 'Select brand first' : `All Models (${availableModels.length})`}
+                      </option>
+                      {availableModels.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ranked Most-Viewed Cars Table */}
+              <div className="overflow-x-auto rounded-2xl border border-gray-200">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-extrabold border-b border-gray-200">
+                    <tr>
+                      <th className="p-3.5 w-12 text-center">Rank</th>
+                      <th className="p-3.5">Vehicle Details</th>
+                      <th className="p-3.5">Mfg Year</th>
+                      <th className="p-3.5">Price</th>
+                      <th className="p-3.5 text-center">Detail Views</th>
+                      <th className="p-3.5 text-center">Enquiries</th>
+                      <th className="p-3.5">Availability</th>
+                      <th className="p-3.5">Dealer / Source</th>
+                      <th className="p-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {analyticsData?.vehicles && analyticsData.vehicles.length > 0 ? (
+                      analyticsData.vehicles.map((v, idx) => (
+                        <tr key={v.id} className="hover:bg-gray-50/70 transition-colors">
+                          <td className="p-3.5 text-center font-black">
+                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${
+                              idx === 0
+                                ? 'bg-amber-100 text-amber-800 font-extrabold ring-2 ring-amber-300'
+                                : idx === 1
+                                ? 'bg-gray-200 text-gray-800 font-bold'
+                                : idx === 2
+                                ? 'bg-orange-100 text-orange-800 font-bold'
+                                : 'text-gray-400'
+                            }`}>
+                              #{idx + 1}
+                            </span>
+                          </td>
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-14 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                                <img src={v.image} alt={v.model} className="w-full h-full object-cover" />
+                              </div>
+                              <div>
+                                <span className="font-extrabold text-gray-900 block truncate max-w-[180px]">
+                                  {v.make} {v.model}
+                                </span>
+                                <span className="text-[11px] text-gray-500 truncate block max-w-[180px]">
+                                  {v.variant || v.city}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-3.5 font-bold text-gray-700">
+                            {v.manufacturingYear || v.year}
+                          </td>
+                          <td className="p-3.5 font-black text-gray-900">
+                            {formatINR(v.price)}
+                          </td>
+                          <td className="p-3.5 text-center">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-700 border border-blue-200">
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>{v.viewCount}</span>
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-purple-50 text-purple-700 border border-purple-200">
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>{v.enquiryCount}</span>
+                            </span>
+                          </td>
+                          <td className="p-3.5">
+                            <div className="space-y-1">
+                              <select
+                                value={v.availabilityStatus || 'Available'}
+                                onChange={(e) => handleUpdateCarAvailability(v.id, e.target.value)}
+                                className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                                  v.availabilityStatus === 'Sold Out'
+                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                    : v.availabilityStatus === 'Reserved'
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                }`}
+                              >
+                                <option value="Available">🟢 Available</option>
+                                <option value="Reserved">🟡 Reserved</option>
+                                <option value="Sold Out">🔴 Sold Out</option>
+                              </select>
+
+                              {v.availabilityStatus === 'Sold Out' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateCarAvailability(v.id, 'Available')}
+                                  className="block text-[9px] font-bold text-emerald-700 hover:underline cursor-pointer"
+                                >
+                                  ↺ Restore to Available
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateCarAvailability(v.id, 'Sold Out')}
+                                  className="block text-[9px] font-bold text-rose-600 hover:underline cursor-pointer"
+                                >
+                                  ✓ Mark Sold Out
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3.5">
+                            <span className="text-xs font-bold text-gray-800 block truncate max-w-[140px]">
+                              {v.dealerName || (v.vehicleSource === 'Dealer' ? 'Dealer Hub' : 'Individual Seller')}
+                            </span>
+                            <span className="text-[10px] text-gray-400 block">{v.city}</span>
+                          </td>
+                          <td className="p-3.5 text-right">
+                            <Link
+                              href={`/cars/${v.id}`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-gray-700 hover:text-[#E5325C] hover:bg-[#FFF0F3] border border-gray-200 transition-colors"
+                            >
+                              <span>View</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={9} className="p-8 text-center text-gray-500">
+                          No vehicle analytics records match this criteria.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
             {/* DEDICATED SECTION 1: VEHICLES IN INVENTORY */}
             <section id="sec-inventory" className="bg-white rounded-3xl border border-[#E5E7EB] p-6 space-y-5 shadow-2xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E5E7EB]">
@@ -2787,6 +3184,293 @@ export default function AdminDashboardPage() {
         )}
 
         {/* ========================================================
+            TAB: CAR CARE & PPF SERVICE ENQUIRIES
+        ========================================================= */}
+        {activeTab === 'carcare' && (
+          <div className="space-y-4">
+            {/* Header & Filter Bar */}
+            <div className="bg-white rounded-3xl border border-[#E5E7EB] p-5 shadow-2xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E5E7EB]">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full bg-[#FFF0F3] text-[#E5325C] text-[10px] font-extrabold uppercase tracking-wider border border-[#FFD6DF]">
+                      Vehicle Detailing & Protection
+                    </span>
+                    <span className="text-xs font-bold text-gray-400">
+                      • PPF, Ceramic, Teflon & Rust
+                    </span>
+                  </div>
+                  <h3 className="font-extrabold text-xl text-[#101216] mt-0.5">
+                    Car Care & PPF Service Enquiries ({liveCarCareList.length})
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Link
+                    href="/car-care"
+                    target="_blank"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FFF0F3] text-[#E5325C] text-xs font-bold border border-[#FFD6DF] hover:bg-[#FFE0E6] transition-colors"
+                  >
+                    <span>Customer Car Care Page</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className="text-xs font-bold text-[#E5325C] hover:underline self-start sm:self-center"
+                  >
+                    ← Back to Overview
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="relative w-full sm:w-80">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search customer, phone, car make/model, location..."
+                    value={carCareSearch}
+                    onChange={(e) => setCarCareSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+                  {['All', 'New', 'Contacted', 'Quotation Sent', 'Confirmed', 'Completed', 'Cancelled'].map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => setCarCareStatusFilter(st)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        carCareStatusFilter === st
+                          ? 'bg-[#E5325C] text-white shadow-2xs'
+                          : 'bg-[#F8F9FA] text-gray-600 hover:text-black border border-[#E5E7EB]'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Car Care Enquiries Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {liveCarCareList
+                .filter((enq) => {
+                  const matchStatus = carCareStatusFilter === 'All' || enq.status === carCareStatusFilter;
+                  const query = carCareSearch.toLowerCase().trim();
+                  const matchSearch =
+                    !query ||
+                    enq.fullName.toLowerCase().includes(query) ||
+                    enq.mobileNumber.includes(query) ||
+                    enq.vehicleBrand.toLowerCase().includes(query) ||
+                    enq.vehicleModel.toLowerCase().includes(query) ||
+                    (enq.preferredLocation && enq.preferredLocation.toLowerCase().includes(query));
+                  return matchStatus && matchSearch;
+                })
+                .map((enq) => (
+                  <div
+                    key={enq.id}
+                    className="bg-white rounded-3xl border border-[#E5E7EB] p-5 shadow-2xs hover:border-[#E5325C]/40 transition-all flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-3">
+                      {/* Top Bar: Reference ID & Status Dropdown */}
+                      <div className="flex items-start justify-between gap-2 border-b border-gray-100 pb-3">
+                        <div>
+                          <span className="font-mono text-[10px] font-bold text-gray-400 block">
+                            #{enq.id.slice(0, 8).toUpperCase()}
+                          </span>
+                          <span className="text-xs font-bold text-gray-500 block">
+                            {formatDateTimeWithDay(enq.createdAt)}
+                          </span>
+                        </div>
+
+                        <select
+                          value={enq.status}
+                          onChange={(e) => handleUpdateCarCareStatus(enq.id, e.target.value, enq.internalNotes)}
+                          className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
+                            enq.status === 'New'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : enq.status === 'Contacted'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : enq.status === 'Quotation Sent'
+                              ? 'bg-purple-50 text-purple-700 border-purple-200'
+                              : enq.status === 'Confirmed'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : enq.status === 'Completed'
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : 'bg-gray-100 text-gray-600 border-gray-200'
+                          }`}
+                        >
+                          <option value="New">🔵 New</option>
+                          <option value="Contacted">🟡 Contacted</option>
+                          <option value="Quotation Sent">🟣 Quotation Sent</option>
+                          <option value="Confirmed">🟢 Confirmed</option>
+                          <option value="Completed">✅ Completed</option>
+                          <option value="Cancelled">⚪ Cancelled</option>
+                        </select>
+                      </div>
+
+                      {/* Customer Info */}
+                      <div>
+                        <h4 className="font-extrabold text-base text-[#101216]">{enq.fullName}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <a
+                            href={`tel:+91${enq.mobileNumber}`}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-gray-700 hover:text-[#E5325C]"
+                          >
+                            <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
+                            <span>+91 {enq.mobileNumber}</span>
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Vehicle Details */}
+                      <div className="p-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] space-y-1">
+                        <div className="flex items-center justify-between text-xs font-bold text-gray-900">
+                          <span>{enq.vehicleBrand} {enq.vehicleModel}</span>
+                          {enq.vehicleYear && <span className="text-gray-500">{enq.vehicleYear}</span>}
+                        </div>
+                        {enq.preferredLocation && (
+                          <div className="flex items-center gap-1 text-[11px] text-gray-600">
+                            <MapPin className="w-3 h-3 text-gray-400" />
+                            <span>{enq.preferredLocation}</span>
+                          </div>
+                        )}
+                        {enq.preferredDate && (
+                          <div className="flex items-center gap-1 text-[11px] text-gray-600">
+                            <Calendar className="w-3 h-3 text-gray-400" />
+                            <span>Pref Date: {enq.preferredDate}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Services Requested */}
+                      <div>
+                        <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wider mb-1.5">
+                          Services Requested:
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {enq.services.map((svc) => (
+                            <span
+                              key={svc}
+                              className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-[#FFF0F3] text-[#E5325C] border border-[#FFD6DF]"
+                            >
+                              {svc}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Additional Requirements */}
+                      {enq.additionalRequirements && (
+                        <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-700">
+                          <p className="text-[10px] font-bold uppercase text-gray-400 mb-0.5">Notes from Customer:</p>
+                          <p className="italic font-normal">"{enq.additionalRequirements}"</p>
+                        </div>
+                      )}
+
+                      {/* Internal Notes */}
+                      <div className="pt-1">
+                        <div className="flex items-center justify-between text-[10px] font-bold uppercase text-gray-400 mb-1">
+                          <span>Internal Admin Notes</span>
+                          {carCareEditingNotes?.id !== enq.id && (
+                            <button
+                              type="button"
+                              onClick={() => setCarCareEditingNotes({ id: enq.id, notes: enq.internalNotes || '' })}
+                              className="text-[#E5325C] hover:underline cursor-pointer"
+                            >
+                              Edit Note
+                            </button>
+                          )}
+                        </div>
+
+                        {carCareEditingNotes?.id === enq.id ? (
+                          <div className="space-y-1.5">
+                            <textarea
+                              rows={2}
+                              value={carCareEditingNotes.notes}
+                              onChange={(e) =>
+                                setCarCareEditingNotes({ id: enq.id, notes: e.target.value })
+                              }
+                              placeholder="Add internal followup notes..."
+                              className="w-full p-2 bg-white border border-gray-300 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                            />
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setCarCareEditingNotes(null)}
+                                className="px-2 py-0.5 rounded text-[10px] text-gray-600 hover:bg-gray-100"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleUpdateCarCareStatus(enq.id, enq.status, carCareEditingNotes.notes);
+                                  setCarCareEditingNotes(null);
+                                }}
+                                className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-[#101216] text-white hover:bg-black"
+                              >
+                                Save Note
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded-xl border border-gray-100 italic min-h-[32px]">
+                            {enq.internalNotes || 'No internal notes added yet.'}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Email notification status */}
+                      <div className="flex items-center gap-1.5 text-[10px] text-gray-500 pt-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Email alert sent to recars.in@gmail.com</span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Quick Contact Action Buttons */}
+                    <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
+                      <a
+                        href={`tel:+91${enq.mobileNumber}`}
+                        className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-bold text-xs bg-gray-100 hover:bg-gray-200 text-gray-900 transition-colors"
+                      >
+                        <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
+                        <span>Call Customer</span>
+                      </a>
+                      <a
+                        href={`https://wa.me/91${enq.mobileNumber}?text=Hi%20${encodeURIComponent(
+                          enq.fullName
+                        )},%20this%20is%20Recars%20Pro%20Studio%20regarding%20your%20Car%20Care%20enquiry%20for%20your%20${encodeURIComponent(
+                          enq.vehicleBrand + ' ' + enq.vehicleModel
+                        )}.`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl font-bold text-xs bg-emerald-500 hover:bg-emerald-600 text-white transition-colors"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>WhatsApp</span>
+                      </a>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {liveCarCareList.length === 0 && (
+              <div className="bg-white rounded-3xl border border-[#E5E7EB] p-12 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center mx-auto">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <h4 className="font-bold text-base text-[#101216]">No Car Care Enquiries Yet</h4>
+                <p className="text-xs text-gray-400">
+                  When customers submit enquiries from the Car Care & PPF page, they will appear here in real time.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================
             TAB 2: CARS INVENTORY (ADD & REMOVE CARS)
         ========================================================= */}
         {activeTab === 'cars' && (
@@ -3020,21 +3704,52 @@ export default function AdminDashboardPage() {
                           )}
                         </td>
                         <td className="p-4">
-                          <select
-                            value={car.availabilityStatus || 'Available'}
-                            onChange={(e) => handleUpdateCarAvailability(car.id, e.target.value)}
-                            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
-                              car.availabilityStatus === 'Sold Out'
-                                ? 'bg-red-50 text-red-700 border-red-200'
-                                : car.availabilityStatus === 'Reserved'
-                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            }`}
-                          >
-                            <option value="Available">🟢 Available</option>
-                            <option value="Reserved">🟡 Reserved</option>
-                            <option value="Sold Out">🔴 Sold Out</option>
-                          </select>
+                          <div className="space-y-1.5">
+                            <select
+                              value={car.availabilityStatus || 'Available'}
+                              onChange={(e) => handleUpdateCarAvailability(car.id, e.target.value)}
+                              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
+                                car.availabilityStatus === 'Sold Out'
+                                  ? 'bg-red-50 text-red-700 border-red-200'
+                                  : car.availabilityStatus === 'Reserved'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}
+                            >
+                              <option value="Available">🟢 Available</option>
+                              <option value="Reserved">🟡 Reserved</option>
+                              <option value="Sold Out">🔴 Sold Out</option>
+                            </select>
+
+                            {/* One-action toggle button for Sold Out / Restore */}
+                            {car.availabilityStatus === 'Sold Out' ? (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateCarAvailability(car.id, 'Available')}
+                                className="w-full text-center px-2 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer shadow-2xs"
+                                title="Restore sold vehicle to Available"
+                              >
+                                ↺ Restore to Available
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateCarAvailability(car.id, 'Sold Out')}
+                                className="w-full text-center px-2 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer shadow-2xs"
+                                title="Mark car as Sold Out with one action"
+                              >
+                                ✓ Mark as Sold Out
+                              </button>
+                            )}
+
+                            {(car.soldAt || car.statusUpdatedAt) && (
+                              <span className="block text-[9px] text-gray-400 font-medium leading-tight">
+                                {car.availabilityStatus === 'Sold Out' && car.soldAt
+                                  ? `Sold: ${formatDateWithDay(car.soldAt)}`
+                                  : `Updated: ${formatRelativeTime(car.statusUpdatedAt || '')}`}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="p-4">
                           <div className="space-y-1">

@@ -1,6 +1,19 @@
 import { Pool, QueryResult } from 'pg';
 import { createClient } from '@supabase/supabase-js';
-import { Car, SellRequest, TestDriveBooking, CarInquiry, Negotiation, InspectionConfig, PDIBooking, RegisteredDealer } from './types';
+import {
+  Car,
+  SellRequest,
+  TestDriveBooking,
+  CarInquiry,
+  Negotiation,
+  InspectionConfig,
+  PDIBooking,
+  RegisteredDealer,
+  CarCareEnquiry,
+  CarCareStatus,
+  VehicleAnalyticsItem,
+  AdminAnalyticsSummary,
+} from './types';
 
 function getDatabaseConnectionString(): string {
   let envUrl = (process.env.DATABASE_URL || '').trim();
@@ -166,9 +179,42 @@ export async function ensureDealerAndCarsSchema(): Promise<void> {
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS uploaded_by_role TEXT;
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS listing_status TEXT DEFAULT 'Published';
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS registration_number TEXT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS status_updated_at TIMESTAMPTZ DEFAULT now();
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS sold_at TIMESTAMPTZ;
 
           CREATE INDEX IF NOT EXISTS idx_cars_vehicle_source ON public.cars(vehicle_source);
           CREATE INDEX IF NOT EXISTS idx_cars_dealer_id ON public.cars(dealer_id);
+          CREATE INDEX IF NOT EXISTS idx_cars_avail_status ON public.cars(availability_status);
+
+          CREATE TABLE IF NOT EXISTS public.vehicle_views (
+            id BIGSERIAL PRIMARY KEY,
+            car_id TEXT NOT NULL,
+            session_id TEXT,
+            ip_hash TEXT,
+            created_at TIMESTAMPTZ DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS idx_vehicle_views_car_id ON public.vehicle_views(car_id);
+          CREATE INDEX IF NOT EXISTS idx_vehicle_views_created_at ON public.vehicle_views(created_at);
+
+          CREATE TABLE IF NOT EXISTS public.car_care_enquiries (
+            id TEXT PRIMARY KEY,
+            customer_name TEXT NOT NULL,
+            customer_phone TEXT NOT NULL,
+            customer_email TEXT,
+            car_make TEXT NOT NULL,
+            car_model TEXT NOT NULL,
+            car_year INT,
+            services JSONB NOT NULL DEFAULT '[]'::jsonb,
+            preferred_location TEXT NOT NULL,
+            preferred_date DATE,
+            additional_requirements TEXT,
+            status TEXT NOT NULL DEFAULT 'New',
+            internal_notes TEXT DEFAULT '',
+            created_at TIMESTAMPTZ DEFAULT now(),
+            updated_at TIMESTAMPTZ DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS idx_car_care_enquiries_status ON public.car_care_enquiries(status);
+          CREATE INDEX IF NOT EXISTS idx_car_care_enquiries_created_at ON public.car_care_enquiries(created_at DESC);
         `);
       } catch (err: any) {
         console.warn('[DB_INIT] ensureDealerAndCarsSchema warning:', err?.message);
@@ -260,6 +306,8 @@ export async function dbGetCars(filter?: {
     description: r.description || `${r.year} ${r.make} ${r.model} verified by Recars engineers.`,
     createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
     availabilityStatus: (r.availability_status as any) || 'Available',
+    statusUpdatedAt: r.status_updated_at ? new Date(r.status_updated_at).toISOString() : (r.created_at ? new Date(r.created_at).toISOString() : undefined),
+    soldAt: r.sold_at ? new Date(r.sold_at).toISOString() : undefined,
     manufacturingYear: r.manufacturing_year || r.year,
     registrationYear: r.registration_year || r.year,
     insuranceStatus: (r.insurance_status as any) || 'Valid',
@@ -331,6 +379,8 @@ export async function dbGetCarById(id: string): Promise<Car | null> {
     description: r.description || `${r.year} ${r.make} ${r.model} verified by Recars engineers.`,
     createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
     availabilityStatus: (r.availability_status as any) || 'Available',
+    statusUpdatedAt: r.status_updated_at ? new Date(r.status_updated_at).toISOString() : (r.created_at ? new Date(r.created_at).toISOString() : undefined),
+    soldAt: r.sold_at ? new Date(r.sold_at).toISOString() : undefined,
     manufacturingYear: r.manufacturing_year || r.year,
     registrationYear: r.registration_year || r.year,
     insuranceStatus: (r.insurance_status as any) || 'Valid',
@@ -533,10 +583,22 @@ export async function dbInsertDealer(dealer: RegisteredDealer): Promise<Register
 }
 
 export async function dbUpdateCarAvailability(id: string, status: string): Promise<boolean> {
-  const res = await pool.query(
-    'UPDATE public.cars SET availability_status = $1, updated_at = now() WHERE id = $2',
-    [status, id]
-  );
+  await ensureDealerAndCarsSchema();
+  let sql: string;
+  let params: any[];
+
+  if (status === 'Sold Out') {
+    sql = 'UPDATE public.cars SET availability_status = $1, sold_at = now(), status_updated_at = now(), updated_at = now() WHERE id = $2';
+    params = [status, id];
+  } else if (status === 'Available') {
+    sql = 'UPDATE public.cars SET availability_status = $1, sold_at = NULL, status_updated_at = now(), updated_at = now() WHERE id = $2';
+    params = [status, id];
+  } else {
+    sql = 'UPDATE public.cars SET availability_status = $1, status_updated_at = now(), updated_at = now() WHERE id = $2';
+    params = [status, id];
+  }
+
+  const res = await pool.query(sql, params);
   return (res.rowCount || 0) > 0;
 }
 
@@ -1696,4 +1758,436 @@ export async function dbGetUploadedImage(
     data: rows[0].data,
     mimeType: rows[0].mime_type,
   };
+}
+
+// ========================================================
+// 9. VEHICLE VIEW TRACKING & ANALYTICS OPERATIONS
+// ========================================================
+
+export async function dbRecordVehicleView(
+  carId: string,
+  sessionId?: string,
+  ipHash?: string
+): Promise<boolean> {
+  await ensureDealerAndCarsSchema();
+  try {
+    if (sessionId || ipHash) {
+      const checkSql = `
+        SELECT id FROM public.vehicle_views
+        WHERE car_id = $1
+          AND (
+            ($2::text IS NOT NULL AND session_id = $2)
+            OR ($3::text IS NOT NULL AND ip_hash = $3)
+          )
+          AND created_at > now() - INTERVAL '15 minutes'
+        LIMIT 1;
+      `;
+      const existing = await pool.query(checkSql, [carId, sessionId || null, ipHash || null]);
+      if (existing.rows.length > 0) {
+        return false; // Deduplicated
+      }
+    }
+
+    await pool.query(
+      `INSERT INTO public.vehicle_views (car_id, session_id, ip_hash, created_at) VALUES ($1, $2, $3, now())`,
+      [carId, sessionId || null, ipHash || null]
+    );
+    return true;
+  } catch (err: any) {
+    console.error('[DB_RECORD_VIEW_ERROR]', err?.message);
+    return false;
+  }
+}
+
+export async function dbGetAdminAnalytics(filters?: {
+  timePeriod?: 'today' | '7d' | '30d' | 'all' | string;
+  budgetRange?: string;
+  make?: string;
+  model?: string;
+  sortBy?: 'views' | 'enquiries' | 'price_desc' | 'price_asc' | 'newest' | string;
+}): Promise<AdminAnalyticsSummary> {
+  await ensureDealerAndCarsSchema();
+
+  let timeCondition = '';
+  if (filters?.timePeriod === 'today') {
+    timeCondition = "WHERE created_at >= now() - INTERVAL '24 hours'";
+  } else if (filters?.timePeriod === '7d') {
+    timeCondition = "WHERE created_at >= now() - INTERVAL '7 days'";
+  } else if (filters?.timePeriod === '30d') {
+    timeCondition = "WHERE created_at >= now() - INTERVAL '30 days'";
+  }
+
+  // 1. Overview counts
+  const [activeRes, soldRes, resRes, viewsRes, inqRes] = await Promise.all([
+    pool.query("SELECT COUNT(*)::int as count FROM public.cars WHERE availability_status != 'Sold Out'"),
+    pool.query("SELECT COUNT(*)::int as count FROM public.cars WHERE availability_status = 'Sold Out'"),
+    pool.query("SELECT COUNT(*)::int as count FROM public.cars WHERE availability_status = 'Reserved'"),
+    pool.query(`SELECT COUNT(*)::int as count FROM public.vehicle_views ${timeCondition}`),
+    pool.query("SELECT COUNT(*)::int as count FROM public.car_inquiries"),
+  ]);
+
+  const totalActiveListings = activeRes.rows[0]?.count || 0;
+  const totalSoldVehicles = soldRes.rows[0]?.count || 0;
+  const totalReservedVehicles = resRes.rows[0]?.count || 0;
+  const totalDetailViews = viewsRes.rows[0]?.count || 0;
+  const totalEnquiries = inqRes.rows[0]?.count || 0;
+
+  // 2. Ranked vehicles query with views in period and inquiries
+  let carFilterSql = 'WHERE 1=1';
+  const carFilterParams: any[] = [];
+  let paramIdx = 1;
+
+  if (filters?.budgetRange && filters.budgetRange !== 'all') {
+    switch (filters.budgetRange) {
+      case 'under_3l':
+        carFilterSql += ' AND c.price < 300000';
+        break;
+      case '3l_5l':
+        carFilterSql += ' AND c.price >= 300000 AND c.price <= 500000';
+        break;
+      case '5l_8l':
+        carFilterSql += ' AND c.price > 500000 AND c.price <= 800000';
+        break;
+      case '8l_12l':
+        carFilterSql += ' AND c.price > 800000 AND c.price <= 1200000';
+        break;
+      case '12l_20l':
+        carFilterSql += ' AND c.price > 1200000 AND c.price <= 2000000';
+        break;
+      case 'above_20l':
+        carFilterSql += ' AND c.price > 2000000';
+        break;
+    }
+  }
+
+  if (filters?.make && filters.make !== 'all') {
+    carFilterSql += ` AND c.make = $${paramIdx++}`;
+    carFilterParams.push(filters.make);
+  }
+
+  if (filters?.model && filters.model !== 'all') {
+    carFilterSql += ` AND c.model = $${paramIdx++}`;
+    carFilterParams.push(filters.model);
+  }
+
+  let orderBySql = 'ORDER BY views_count DESC, inq_count DESC, c.created_at DESC';
+  if (filters?.sortBy === 'enquiries') {
+    orderBySql = 'ORDER BY (inq_count + neg_count) DESC, views_count DESC, c.created_at DESC';
+  } else if (filters?.sortBy === 'price_desc') {
+    orderBySql = 'ORDER BY c.price DESC';
+  } else if (filters?.sortBy === 'price_asc') {
+    orderBySql = 'ORDER BY c.price ASC';
+  } else if (filters?.sortBy === 'newest') {
+    orderBySql = 'ORDER BY c.created_at DESC';
+  }
+
+  const query = `
+    SELECT 
+      c.id, c.make, c.model, c.variant, c.year, c.price, c.image, c.city,
+      c.availability_status, c.status_updated_at, c.sold_at, c.dealer_name, c.vehicle_source, c.created_at,
+      COALESCE(v.views_count, 0)::int as views_count,
+      COALESCE(i.inq_count, 0)::int as inq_count,
+      COALESCE(n.neg_count, 0)::int as neg_count
+    FROM public.cars c
+    LEFT JOIN (
+      SELECT car_id, COUNT(*)::int as views_count 
+      FROM public.vehicle_views
+      ${timeCondition}
+      GROUP BY car_id
+    ) v ON v.car_id = c.id
+    LEFT JOIN (
+      SELECT car_id, COUNT(*)::int as inq_count
+      FROM public.car_inquiries
+      GROUP BY car_id
+    ) i ON i.car_id = c.id
+    LEFT JOIN (
+      SELECT car_id, COUNT(*)::int as neg_count
+      FROM public.negotiations
+      GROUP BY car_id
+    ) n ON n.car_id = c.id
+    ${carFilterSql}
+    ${orderBySql}
+  `;
+
+  const { rows } = await pool.query(query, carFilterParams);
+
+  const mostViewedVehicles: VehicleAnalyticsItem[] = rows.map((r: any) => ({
+    id: r.id,
+    make: r.make,
+    model: r.model,
+    variant: r.variant,
+    year: r.year,
+    price: Number(r.price),
+    image: r.image,
+    city: r.city,
+    availabilityStatus: r.availability_status || 'Available',
+    statusUpdatedAt: r.status_updated_at ? new Date(r.status_updated_at).toISOString() : undefined,
+    soldAt: r.sold_at ? new Date(r.sold_at).toISOString() : undefined,
+    dealerName: r.dealer_name || undefined,
+    vehicleSource: r.vehicle_source || 'Individual Seller',
+    viewsCount: Number(r.views_count || 0),
+    inquiriesCount: Number(r.inq_count || 0),
+    negotiationsCount: Number(r.neg_count || 0),
+    totalInteractions: Number(r.views_count || 0) + Number(r.inq_count || 0) + Number(r.neg_count || 0),
+    createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+  }));
+
+  const mostEnquiredVehicles = [...mostViewedVehicles].sort(
+    (a, b) => (b.inquiriesCount + b.negotiationsCount) - (a.inquiriesCount + a.negotiationsCount)
+  );
+
+  // 3. Compute Insights
+  const brandViews: Record<string, number> = {};
+  const modelViews: Record<string, number> = {};
+  const budgetViews = {
+    'Under ₹3 Lakh': 0,
+    '₹3–5 Lakh': 0,
+    '₹5–8 Lakh': 0,
+    '₹8–12 Lakh': 0,
+    '₹12–20 Lakh': 0,
+    'Above ₹20 Lakh': 0,
+  };
+
+  for (const v of mostViewedVehicles) {
+    brandViews[v.make] = (brandViews[v.make] || 0) + v.viewsCount;
+    const modelKey = `${v.make} ${v.model}`;
+    modelViews[modelKey] = (modelViews[modelKey] || 0) + v.viewsCount;
+
+    if (v.price < 300000) budgetViews['Under ₹3 Lakh'] += v.viewsCount;
+    else if (v.price <= 500000) budgetViews['₹3–5 Lakh'] += v.viewsCount;
+    else if (v.price <= 800000) budgetViews['₹5–8 Lakh'] += v.viewsCount;
+    else if (v.price <= 1200000) budgetViews['₹8–12 Lakh'] += v.viewsCount;
+    else if (v.price <= 2000000) budgetViews['₹12–20 Lakh'] += v.viewsCount;
+    else budgetViews['Above ₹20 Lakh'] += v.viewsCount;
+  }
+
+  const topBrand = Object.entries(brandViews).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Hyundai';
+  const topModel = Object.entries(modelViews).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Hyundai Creta';
+  const topBudget = Object.entries(budgetViews).sort((a, b) => b[1] - a[1])[0]?.[0] || '₹8–12 Lakh';
+  const convRate = totalDetailViews > 0 ? ((totalEnquiries / totalDetailViews) * 100).toFixed(1) + '%' : '0.0%';
+
+  // 4. Fetch recent inquiries for dashboard overview
+  const recentInqRes = await pool.query(
+    'SELECT * FROM public.car_inquiries ORDER BY created_at DESC LIMIT 6'
+  );
+  const recentEnquiries = recentInqRes.rows.map((r: any) => ({
+    id: r.id,
+    carId: r.car_id,
+    carTitle: r.car_title,
+    carImage: r.car_image,
+    carPrice: Number(r.car_price || 0),
+    userName: r.user_name,
+    userPhone: r.user_phone,
+    userEmail: r.user_email,
+    city: r.city,
+    inquiryType: r.inquiry_type,
+    message: r.message,
+    status: r.status,
+    createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+  }));
+
+  return {
+    totalActiveListings,
+    totalSoldVehicles,
+    totalReservedVehicles,
+    totalDetailViews,
+    totalEnquiries,
+    mostViewedVehicles,
+    mostEnquiredVehicles,
+    recentEnquiries,
+    insights: {
+      mostViewedBrand: topBrand,
+      mostViewedModel: topModel,
+      mostViewedBudget: topBudget,
+      conversionRate: convRate,
+    },
+  };
+}
+
+export async function dbGetTrendingCars(limit = 6): Promise<Car[]> {
+  await ensureDealerAndCarsSchema();
+  const query = `
+    SELECT c.*, COALESCE(v.views_count, 0)::int as views_count
+    FROM public.cars c
+    LEFT JOIN (
+      SELECT car_id, COUNT(*)::int as views_count
+      FROM public.vehicle_views
+      WHERE created_at >= now() - INTERVAL '30 days'
+      GROUP BY car_id
+    ) v ON v.car_id = c.id
+    WHERE c.availability_status != 'Sold Out'
+    ORDER BY views_count DESC, c.score DESC, c.created_at DESC
+    LIMIT $1;
+  `;
+  const { rows } = await pool.query(query, [limit]);
+  return rows.map((r: any) => ({
+    id: r.id,
+    make: r.make,
+    model: r.model,
+    variant: r.variant,
+    year: r.year,
+    price: Number(r.price),
+    originalPrice: r.original_price ? Number(r.original_price) : undefined,
+    emiPerMonth: r.emi_per_month || Math.round((Number(r.price) * 0.8 * 0.09) / 12),
+    kilometers: r.kilometers,
+    fuelType: r.fuel_type,
+    transmission: r.transmission,
+    bodyType: r.body_type,
+    ownership: r.ownership,
+    city: r.city,
+    locationArea: r.location_area || `${r.city} Recars Hub`,
+    image: r.image,
+    galleryImages: typeof r.gallery_images === 'string' ? JSON.parse(r.gallery_images) : r.gallery_images || [r.image],
+    isVerified: r.is_verified,
+    isRecarsSelect: r.is_select,
+    featured: r.is_select,
+    inspectionScore: r.score || 95,
+    specifications: {
+      engine: '1498 cc, 4 Cylinders Inline',
+      maxPower: '115 bhp @ 6000 rpm',
+      torque: '144 Nm @ 4500 rpm',
+      mileage: '17.5 kmpl',
+      seatingCapacity: 5,
+      bootSpace: '430 Litres',
+      fuelTankCapacity: '45 Litres',
+      groundClearance: '180 mm',
+      rto: `${r.city || 'Warangal'} RTO`,
+      regYear: r.year,
+      insuranceValidTill: 'Comprehensive Valid',
+      color: 'Pearl White',
+    },
+    features: ['Automatic Climate Control', 'Touchscreen Infotainment System', 'Rear Parking Camera & Sensors'],
+    description: r.description || `${r.year} ${r.make} ${r.model}`,
+    createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    availabilityStatus: r.availability_status || 'Available',
+    statusUpdatedAt: r.status_updated_at ? new Date(r.status_updated_at).toISOString() : undefined,
+    soldAt: r.sold_at ? new Date(r.sold_at).toISOString() : undefined,
+    vehicleSource: r.vehicle_source || 'Individual Seller',
+    dealerId: r.dealer_id || undefined,
+    dealerName: r.dealer_name || undefined,
+    dealerContact: r.dealer_contact || undefined,
+  }));
+}
+
+// ========================================================
+// 10. CAR CARE & PPF ENQUIRIES OPERATIONS
+// ========================================================
+
+export async function dbInsertCarCareEnquiry(
+  enquiry: CarCareEnquiry
+): Promise<{ success: boolean; duplicate?: boolean; id: string }> {
+  await ensureDealerAndCarsSchema();
+
+  // Deduplication check: same phone + same make + model within 5 minutes
+  const dupCheckSql = `
+    SELECT id FROM public.car_care_enquiries
+    WHERE customer_phone = $1
+      AND car_make = $2
+      AND car_model = $3
+      AND created_at > now() - INTERVAL '5 minutes'
+    LIMIT 1;
+  `;
+  const dupRes = await pool.query(dupCheckSql, [enquiry.customerPhone, enquiry.carMake, enquiry.carModel]);
+  if (dupRes.rows.length > 0) {
+    return { success: true, duplicate: true, id: dupRes.rows[0].id };
+  }
+
+  const sql = `
+    INSERT INTO public.car_care_enquiries (
+      id, customer_name, customer_phone, customer_email,
+      car_make, car_model, car_year, services, preferred_location,
+      preferred_date, additional_requirements, status, internal_notes, created_at, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), now())
+  `;
+
+  await safeDbQuery(
+    sql,
+    [
+      enquiry.id,
+      enquiry.customerName,
+      enquiry.customerPhone,
+      enquiry.customerEmail || null,
+      enquiry.carMake,
+      enquiry.carModel,
+      enquiry.carYear ? Number(enquiry.carYear) : null,
+      JSON.stringify(enquiry.services || []),
+      enquiry.preferredLocation,
+      enquiry.preferredDate || null,
+      enquiry.additionalRequirements || null,
+      enquiry.status || 'New',
+      enquiry.internalNotes || '',
+    ],
+    'dbInsertCarCareEnquiry'
+  );
+
+  return { success: true, duplicate: false, id: enquiry.id };
+}
+
+export async function dbGetCarCareEnquiries(
+  statusFilter?: string,
+  search?: string
+): Promise<CarCareEnquiry[]> {
+  await ensureDealerAndCarsSchema();
+  let sql = 'SELECT * FROM public.car_care_enquiries WHERE 1=1';
+  const params: any[] = [];
+  let idx = 1;
+
+  if (statusFilter && statusFilter !== 'All') {
+    sql += ` AND status = $${idx++}`;
+    params.push(statusFilter);
+  }
+
+  if (search && search.trim()) {
+    const q = `%${search.trim().toLowerCase()}%`;
+    sql += ` AND (LOWER(customer_name) LIKE $${idx} OR customer_phone LIKE $${idx} OR LOWER(car_make) LIKE $${idx} OR LOWER(car_model) LIKE $${idx} OR LOWER(id) LIKE $${idx})`;
+    params.push(q);
+    idx++;
+  }
+
+  sql += ' ORDER BY created_at DESC';
+  const { rows } = await pool.query(sql, params);
+
+  return rows.map((r: any) => ({
+    id: r.id,
+    customerName: r.customer_name,
+    fullName: r.customer_name,
+    customerPhone: r.customer_phone,
+    mobileNumber: r.customer_phone,
+    customerEmail: r.customer_email || undefined,
+    carMake: r.car_make,
+    vehicleBrand: r.car_make,
+    carModel: r.car_model,
+    vehicleModel: r.car_model,
+    carYear: r.car_year || undefined,
+    vehicleYear: r.car_year || undefined,
+    services: Array.isArray(r.services) ? r.services : (typeof r.services === 'string' ? JSON.parse(r.services) : []),
+    preferredLocation: r.preferred_location,
+    preferredDate: r.preferred_date ? new Date(r.preferred_date).toISOString().split('T')[0] : undefined,
+    additionalRequirements: r.additional_requirements || undefined,
+    status: (r.status as CarCareStatus) || 'New',
+    internalNotes: r.internal_notes || '',
+    createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+  }));
+}
+
+export async function dbUpdateCarCareEnquiryStatus(
+  id: string,
+  status: CarCareStatus | string,
+  internalNotes?: string
+): Promise<boolean> {
+  await ensureDealerAndCarsSchema();
+  let sql: string;
+  let params: any[];
+
+  if (internalNotes !== undefined) {
+    sql = 'UPDATE public.car_care_enquiries SET status = $1, internal_notes = $2, updated_at = now() WHERE id = $3';
+    params = [status, internalNotes, id];
+  } else {
+    sql = 'UPDATE public.car_care_enquiries SET status = $1, updated_at = now() WHERE id = $2';
+    params = [status, id];
+  }
+
+  const res = await pool.query(sql, params);
+  return (res.rowCount || 0) > 0;
 }
