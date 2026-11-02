@@ -31,6 +31,8 @@ import {
   Banknote,
   Send,
   CheckCircle,
+  User,
+  Maximize2,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -90,6 +92,7 @@ function CarDetailInner({ params }: PageProps) {
   const cars = liveCars !== null ? liveCars : storeCars;
   const car = cars.find((c) => c.id === unwrappedParams.id) || (cars.length > 0 ? cars[0] : null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   // Interested Modal State
   const [isInterestedModalOpen, setIsInterestedModalOpen] = useState(false);
@@ -151,6 +154,29 @@ function CarDetailInner({ params }: PageProps) {
       }
     }
   }, [user]);
+
+  const galleryImagesList = car?.galleryImages && car.galleryImages.length > 0 ? car.galleryImages : (car?.image ? [car.image] : []);
+
+  // Full-screen Lightbox keyboard shortcuts & body scroll lock
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    document.body.style.overflow = 'hidden';
+    const total = galleryImagesList.length;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsLightboxOpen(false);
+      if (e.key === 'ArrowLeft') {
+        setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : total - 1));
+      }
+      if (e.key === 'ArrowRight') {
+        setActiveImageIndex((prev) => (prev < total - 1 ? prev + 1 : 0));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isLightboxOpen, galleryImagesList.length]);
 
   if (liveCars === null) {
     return (
@@ -382,90 +408,60 @@ function CarDetailInner({ params }: PageProps) {
           <div className="lg:col-span-8 space-y-8">
             {/* 1. Large Photo Gallery */}
             <div className="bg-white rounded-3xl border border-[#E5E7EB] overflow-hidden shadow-xs p-4 sm:p-6 space-y-4">
-              <div className="relative aspect-[16/10] bg-[#F8F9FA] rounded-2xl overflow-hidden group">
+              <div
+                onClick={() => setIsLightboxOpen(true)}
+                className="relative aspect-[16/10] bg-[#0F1115] rounded-2xl overflow-hidden group cursor-zoom-in"
+                title="Click to view full image"
+              >
                 <img
                   src={images[activeImageIndex]}
                   alt={`${car.make} ${car.model}`}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
+                  className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-102"
                 />
-
-                {/* Diagonal SOLD OUT Ribbon */}
-                {isSoldOut && (
-                  <div className="absolute -top-1 -right-1 z-30 overflow-hidden w-36 h-36 pointer-events-none">
-                    <div className="absolute transform rotate-45 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white font-black text-xs tracking-widest py-2 right-[-42px] top-[28px] w-[165px] text-center shadow-xl uppercase border-y border-red-300/60 drop-shadow-md">
-                      SOLD OUT
-                    </div>
-                  </div>
-                )}
 
                 {/* Left / Right Nav Arrows */}
                 {images.length > 1 && (
                   <>
                     <button
-                      onClick={() =>
-                        setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
-                      }
-                      className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/80 backdrop-blur-md text-[#101216] hover:bg-white shadow-md transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+                      }}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/80 backdrop-blur-md text-[#101216] hover:bg-white shadow-md transition-all cursor-pointer z-10"
+                      aria-label="Previous photo"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <button
-                      onClick={() =>
-                        setActiveImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
-                      }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/80 backdrop-blur-md text-[#101216] hover:bg-white shadow-md transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-white/80 backdrop-blur-md text-[#101216] hover:bg-white shadow-md transition-all cursor-pointer z-10"
+                      aria-label="Next photo"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
                   </>
                 )}
 
+                {/* View Full Image Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsLightboxOpen(true);
+                  }}
+                  className="absolute top-3 right-3 px-2.5 py-1.5 rounded-xl bg-black/65 hover:bg-black/85 backdrop-blur-md text-white text-xs font-semibold flex items-center gap-1.5 shadow-md transition-all z-10 cursor-pointer"
+                  title="View full image"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Full Image</span>
+                </button>
+
                 {/* Image counter indicator */}
-                <div className="absolute bottom-3 right-3 px-3 py-1 rounded-full bg-black/70 backdrop-blur-xs text-white text-xs font-semibold">
+                <div className="absolute bottom-3 right-3 px-3 py-1 rounded-full bg-black/70 backdrop-blur-xs text-white text-xs font-semibold z-10">
                   {activeImageIndex + 1} / {images.length} Photos
-                </div>
-
-                {/* Badges on Gallery */}
-                <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-                  {/* Active Ribbons (Max 2 with priority) */}
-                  {activeRibbons.length > 0 ? (
-                    activeRibbons.map((ribbon, idx) => {
-                      const styles = getRibbonColorStyles(ribbon.color);
-                      return (
-                        <span
-                          key={`${ribbon.text}-${idx}`}
-                          className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-lg border flex items-center gap-1.5 ${styles.bg} ${styles.text} ${styles.border}`}
-                        >
-                          {ribbon.isStatus && <span className={`w-2 h-2 rounded-full ${styles.dot} animate-pulse`} />}
-                          <span>{ribbon.text}</span>
-                        </span>
-                      );
-                    })
-                  ) : (
-                    <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-emerald-600/90 text-white border border-emerald-400 flex items-center gap-1 shadow-md">
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      <span>Available</span>
-                    </span>
-                  )}
-
-                  {/* Ownership Count */}
-                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/90 backdrop-blur-xs text-[#101216] border border-gray-200 flex items-center gap-1 shadow-xs">
-                    <Award className="w-3.5 h-3.5 text-[#E5325C]" />
-                    <span>{car.ownership || '1st Owner'}</span>
-                  </span>
-
-                  {car.isVerified && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#F0F9F4] text-[#237A52] border border-[#D1EAD9] flex items-center gap-1 shadow-xs">
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                      <span>Verified Vehicle</span>
-                    </span>
-                  )}
-                  {car.isRecarsSelect && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#FFF0F3] text-[#E5325C] border border-[#FFD6DF] flex items-center gap-1 shadow-xs">
-                      <ShieldCheck className="w-3.5 h-3.5 stroke-[2.5]" />
-                      <span>Recars Select</span>
-                    </span>
-                  )}
                 </div>
               </div>
 
@@ -485,9 +481,101 @@ function CarDetailInner({ params }: PageProps) {
                   </button>
                 ))}
               </div>
+
+              {/* Badges & Status Specified Section */}
+              <div className="pt-3.5 border-t border-[#E5E7EB]">
+                <div className="flex items-center gap-1.5 mb-2.5 text-[11px] font-extrabold uppercase tracking-wider text-[#6B7078]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#E5325C]" />
+                  <span>Highlights & Verification</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Active Ribbons (Max 2 with priority) */}
+                  {activeRibbons.length > 0 ? (
+                    activeRibbons.map((ribbon, idx) => {
+                      const styles = getRibbonColorStyles(ribbon.color);
+                      return (
+                        <span
+                          key={`${ribbon.text}-${idx}`}
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-2xs border flex items-center gap-1.5 ${styles.bg} ${styles.text} ${styles.border}`}
+                        >
+                          {ribbon.isStatus && <span className={`w-2 h-2 rounded-full ${styles.dot} animate-pulse`} />}
+                          <span>{ribbon.text}</span>
+                        </span>
+                      );
+                    })
+                  ) : (
+                    <span className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#F0F9F4] text-[#237A52] border border-[#D1EAD9] flex items-center gap-1 shadow-2xs">
+                      <CheckCircle className="w-3.5 h-3.5 text-[#237A52]" />
+                      <span>Available</span>
+                    </span>
+                  )}
+
+                  {/* Ownership Count */}
+                  <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-white text-[#101216] border border-gray-200 flex items-center gap-1.5 shadow-2xs">
+                    <Award className="w-3.5 h-3.5 text-[#E5325C]" />
+                    <span>{car.ownership || '1st Owner'}</span>
+                  </span>
+
+                  {car.isVerified && (
+                    <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-[#F0F9F4] text-[#237A52] border border-[#D1EAD9] flex items-center gap-1.5 shadow-2xs">
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Verified Vehicle</span>
+                    </span>
+                  )}
+                  {car.isRecarsSelect && (
+                    <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-[#FFF0F3] text-[#E5325C] border border-[#FFD6DF] flex items-center gap-1.5 shadow-2xs">
+                      <ShieldCheck className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Recars Select</span>
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* 2. Key Highlights Strip */}
+            {/* 2. Key Highlights Card */}
+            <div className="bg-white rounded-3xl border border-[#E5E7EB] p-5 sm:p-6 shadow-xs">
+              <h2 className="text-lg font-bold text-[#101216] mb-3.5">Key Highlights</h2>
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
+                {/* Fuel */}
+                <div className="flex items-center justify-between px-3.5 py-3 sm:px-4 sm:py-3.5 rounded-xl bg-[#F0F6F9] border border-[#E0EEF5]">
+                  <span className="font-bold text-sm sm:text-base text-[#101216]">{car.fuelType}</span>
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#E2EDF3] border border-[#CFE1EB] flex items-center justify-center text-[#4B7C8E] flex-shrink-0">
+                    <Fuel className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                  </div>
+                </div>
+
+                {/* Kilometers */}
+                <div className="flex items-center justify-between px-3.5 py-3 sm:px-4 sm:py-3.5 rounded-xl bg-[#F0F6F9] border border-[#E0EEF5]">
+                  <span className="font-bold text-sm sm:text-base text-[#101216]">{formatKM(car.kilometers)}</span>
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#E2EDF3] border border-[#CFE1EB] flex items-center justify-center text-[#4B7C8E] flex-shrink-0">
+                    <Gauge className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                  </div>
+                </div>
+
+                {/* Transmission */}
+                <div className="flex items-center justify-between px-3.5 py-3 sm:px-4 sm:py-3.5 rounded-xl bg-[#F0F6F9] border border-[#E0EEF5]">
+                  <span className="font-bold text-sm sm:text-base text-[#101216]">{car.transmission}</span>
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#E2EDF3] border border-[#CFE1EB] flex items-center justify-center text-[#4B7C8E] flex-shrink-0">
+                    <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 5v14" />
+                      <path d="M12 5v14" />
+                      <path d="M18 5v14" />
+                      <path d="M6 12h12" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Ownership */}
+                <div className="flex items-center justify-between px-3.5 py-3 sm:px-4 sm:py-3.5 rounded-xl bg-[#F0F6F9] border border-[#E0EEF5]">
+                  <span className="font-bold text-sm sm:text-base text-[#101216]">{car.ownership || '1st Owner'}</span>
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#E2EDF3] border border-[#CFE1EB] flex items-center justify-center text-[#4B7C8E] flex-shrink-0">
+                    <User className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Vehicle Overview & History */}
             <div className="bg-white rounded-3xl border border-[#E5E7EB] p-6 shadow-xs">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-[#101216]">Vehicle Overview & History</h2>
@@ -1469,6 +1557,100 @@ function CarDetailInner({ params }: PageProps) {
           </button>
         </div>
       </div>
+
+      {/* Full-Screen Lightbox Modal for Customers */}
+      {isLightboxOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-3 sm:p-6 transition-all animate-in fade-in duration-200 select-none"
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          {/* Header */}
+          <div
+            className="flex items-center justify-between text-white z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="min-w-0 pr-4">
+              <h3 className="font-bold text-base sm:text-lg truncate text-white">
+                {car.year} {car.make} {car.model} {car.variant}
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-400">
+                Photo {activeImageIndex + 1} of {images.length} • Click anywhere outside or press Esc to close
+              </p>
+            </div>
+            <button
+              onClick={() => setIsLightboxOpen(false)}
+              className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer flex-shrink-0"
+              title="Close (Esc)"
+              aria-label="Close"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Main Full-Size Image Container */}
+          <div
+            className="relative flex-1 flex items-center justify-center my-2 sm:my-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {images.length > 1 && (
+              <button
+                onClick={() =>
+                  setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
+                }
+                className="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 p-2.5 sm:p-3.5 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 transition-all z-20 cursor-pointer shadow-xl"
+                title="Previous photo (Left Arrow)"
+                aria-label="Previous photo"
+              >
+                <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7" />
+              </button>
+            )}
+
+            <img
+              src={images[activeImageIndex]}
+              alt={`${car.make} ${car.model} Full Image`}
+              className="max-h-[72vh] sm:max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl transition-all"
+            />
+
+            {images.length > 1 && (
+              <button
+                onClick={() =>
+                  setActiveImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
+                }
+                className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 p-2.5 sm:p-3.5 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 transition-all z-20 cursor-pointer shadow-xl"
+                title="Next photo (Right Arrow)"
+                aria-label="Next photo"
+              >
+                <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7" />
+              </button>
+            )}
+          </div>
+
+          {/* Bottom Thumbnails Strip */}
+          {images.length > 1 && (
+            <div
+              className="flex items-center justify-center gap-2 sm:gap-3 overflow-x-auto py-2 z-10 max-w-4xl mx-auto px-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveImageIndex(idx)}
+                  className={`relative w-14 h-10 sm:w-20 sm:h-14 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all cursor-pointer ${
+                    activeImageIndex === idx
+                      ? 'border-[#E5325C] ring-2 ring-[#E5325C]/50 scale-105'
+                      : 'border-white/20 opacity-50 hover:opacity-100'
+                  }`}
+                  aria-label={`View photo ${idx + 1}`}
+                >
+                  <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <Footer />
     </div>

@@ -6694,7 +6694,7 @@ export default function AdminDashboardPage() {
                   </div>
 
                   {newGalleryImages.length > 1 && (
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap pt-1">
                       <span className="text-[10px] font-bold text-gray-500 mr-1">Gallery ({newGalleryImages.length}):</span>
                       {newGalleryImages.map((imgUrl, i) => (
                         <div key={i} className="relative group/thumb">
@@ -6702,7 +6702,7 @@ export default function AdminDashboardPage() {
                             src={imgUrl}
                             alt={`gallery-${i}`}
                             onClick={() => setNewImage(imgUrl)}
-                            className={`w-9 h-7 rounded-md object-cover border cursor-pointer transition-all ${
+                            className={`w-11 h-8 rounded-lg object-cover border cursor-pointer transition-all ${
                               newImage === imgUrl ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]' : 'border-gray-200 opacity-75 hover:opacity-100'
                             }`}
                             title="Click to set as primary image"
@@ -6713,10 +6713,11 @@ export default function AdminDashboardPage() {
                               e.stopPropagation();
                               removeGalleryImage(imgUrl);
                             }}
-                            className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-red-600 text-white flex items-center justify-center text-[9px] font-bold opacity-0 group-hover/thumb:opacity-100 transition-opacity cursor-pointer shadow-xs"
+                            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center opacity-80 sm:opacity-0 sm:group-hover/thumb:opacity-100 transition-all cursor-pointer shadow-md hover:scale-115 active:scale-95 z-10"
                             title="Remove image"
+                            aria-label="Remove image"
                           >
-                            ×
+                            <X className="w-3 h-3 stroke-[2.5]" />
                           </button>
                         </div>
                       ))}
