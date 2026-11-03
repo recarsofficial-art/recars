@@ -54,6 +54,7 @@ import {
   Star,
   Percent,
   Zap,
+  AlertTriangle,
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
@@ -78,7 +79,7 @@ import {
   RibbonColor,
   PPFSpecificationPackage,
 } from '@/lib/types';
-import { computeCarRibbons, getRibbonColorStyles, PRESET_RIBBONS } from '@/lib/ribbons';
+import { computeCarRibbons, getRibbonColorStyles, PRESET_RIBBONS, calculateSoldDuration } from '@/lib/ribbons';
 import { MAKES, CITIES } from '@/lib/data';
 
 const AVAILABLE_IMAGES = [
@@ -146,7 +147,7 @@ export default function AdminDashboardPage() {
 
   // PPF Specifications & Packages State
   const [ppfPackages, setPpfPackages] = useState<PPFSpecificationPackage[]>([]);
-  const [carCareSubTab, setCarCareSubTab] = useState<'enquiries' | 'ppf-packages'>('enquiries');
+  const [carCareSubTab, setCarCareSubTab] = useState<'photos-pricing' | 'enquiries'>('photos-pricing');
   const [isPPFModalOpen, setIsPPFModalOpen] = useState(false);
   const [editingPPFPackage, setEditingPPFPackage] = useState<PPFSpecificationPackage | null>(null);
   const [ppfFormTitle, setPpfFormTitle] = useState('');
@@ -154,9 +155,9 @@ export default function AdminDashboardPage() {
   const [ppfFormMicrons, setPpfFormMicrons] = useState('200 Micron Self-Healing TPU');
   const [ppfFormFinishType, setPpfFormFinishType] = useState('Gloss PPF');
   const [ppfFormWarranty, setPpfFormWarranty] = useState('5 Year Warranty');
-  const [ppfFormMrp, setPpfFormMrp] = useState<number>(100000);
-  const [ppfFormDiscount, setPpfFormDiscount] = useState<number>(25);
-  const [ppfFormOfferPrice, setPpfFormOfferPrice] = useState<number>(75000);
+  const [ppfFormMrp, setPpfFormMrp] = useState<number | ''>(100000);
+  const [ppfFormDiscount, setPpfFormDiscount] = useState<number | ''>(25);
+  const [ppfFormOfferPrice, setPpfFormOfferPrice] = useState<number | ''>(75000);
   const [ppfFormValidityDate, setPpfFormValidityDate] = useState('Pre-Bookings Open • Flat 25% OFF');
   const [ppfFormLocation, setPpfFormLocation] = useState('Tellapur - Osman Nagar Road');
   const [ppfFormPhones, setPpfFormPhones] = useState('9032172211, 7780267514');
@@ -211,7 +212,7 @@ export default function AdminDashboardPage() {
   // Counter Offer Modal state
   const [isCounterModalOpen, setIsCounterModalOpen] = useState(false);
   const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
-  const [counterOfferAmount, setCounterOfferAmount] = useState<number>(0);
+  const [counterOfferAmount, setCounterOfferAmount] = useState<number | ''>(0);
   const [counterOfferNotes, setCounterOfferNotes] = useState<string>('');
 
   // Negotiations filter state
@@ -220,9 +221,9 @@ export default function AdminDashboardPage() {
 
   // Customer Car Sell Approval Modal State
   const [approvingSellReq, setApprovingSellReq] = useState<SellRequest | null>(null);
-  const [approveListingPrice, setApproveListingPrice] = useState<number>(750000);
+  const [approveListingPrice, setApproveListingPrice] = useState<number | ''>(750000);
   const [approveImage, setApproveImage] = useState<string>('/car-creta-real.jpg');
-  const [approveInspectionScore, setApproveInspectionScore] = useState<number>(96);
+  const [approveInspectionScore, setApproveInspectionScore] = useState<number | ''>(96);
   const [approveCity, setApproveCity] = useState<string>('Warangal');
   const [approveDescription, setApproveDescription] = useState<string>('');
   const [approveIsSelect, setApproveIsSelect] = useState<boolean>(true);
@@ -820,22 +821,24 @@ export default function AdminDashboardPage() {
   const [customMakeName, setCustomMakeName] = useState('');
   const [newModel, setNewModel] = useState('Venue');
   const [newVariant, setNewVariant] = useState('SX 1.0 Turbo DCT');
-  const [newYear, setNewYear] = useState(2023);
-  const [newMfgYear, setNewMfgYear] = useState(2022);
-  const [newRegYear, setNewRegYear] = useState(2023);
-  const [newPrice, setNewPrice] = useState(1050000);
-  const [newKm, setNewKm] = useState(22000);
+  const [newYear, setNewYear] = useState<number | ''>(2023);
+  const [newMfgYear, setNewMfgYear] = useState<number | ''>(2022);
+  const [newRegYear, setNewRegYear] = useState<number | ''>(2023);
+  const [newPrice, setNewPrice] = useState<number | ''>(1050000);
+  const [newKm, setNewKm] = useState<number | ''>(22000);
   const [newFuel, setNewFuel] = useState<'Petrol' | 'Diesel' | 'Electric' | 'Hybrid' | 'CNG'>('Petrol');
   const [newTransmission, setNewTransmission] = useState<'Manual' | 'Automatic'>('Automatic');
   const [newBodyType, setNewBodyType] = useState<'SUV' | 'Sedan' | 'Hatchback' | 'Luxury' | 'MUV' | 'Electric'>('SUV');
   const [newOwnership, setNewOwnership] = useState<'1st Owner' | '2nd Owner' | '3rd Owner'>('1st Owner');
   const [newAvailability, setNewAvailability] = useState<VehicleAvailability>('Available');
+  const [newSoldInDuration, setNewSoldInDuration] = useState<string>('');
   const [newInsuranceStatus, setNewInsuranceStatus] = useState<'Valid' | 'Expired' | 'Unavailable'>('Valid');
   const [newInsuranceExpiry, setNewInsuranceExpiry] = useState('Nov 2026');
   const [newInsuranceType, setNewInsuranceType] = useState<'Comprehensive' | 'Zero Depreciation' | 'Third Party'>('Comprehensive');
   const [newFinanceAvailable, setNewFinanceAvailable] = useState<'Available' | 'Not Available' | 'Subject to Approval'>('Available');
-  const [newSuggestedMin, setNewSuggestedMin] = useState(980000);
-  const [newSuggestedMax, setNewSuggestedMax] = useState(1080000);
+  const [newFitnessValidUntil, setNewFitnessValidUntil] = useState<string>('');
+  const [newSuggestedMin, setNewSuggestedMin] = useState<number | ''>(980000);
+  const [newSuggestedMax, setNewSuggestedMax] = useState<number | ''>(1080000);
   const [newCity, setNewCity] = useState('Warangal');
   const [newLocationArea, setNewLocationArea] = useState('Hanamkonda Recars Hub');
   const [newImage, setNewImage] = useState('/car-creta-hd.jpg');
@@ -845,7 +848,7 @@ export default function AdminDashboardPage() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [newScore, setNewScore] = useState(97);
+  const [newScore, setNewScore] = useState<number | ''>(97);
   const [newIsVerified, setNewIsVerified] = useState(true);
   const [newIsSelect, setNewIsSelect] = useState(true);
   const [newIsFeatured, setNewIsFeatured] = useState(false);
@@ -875,10 +878,18 @@ export default function AdminDashboardPage() {
     setNewBodyType(car.bodyType || 'SUV');
     setNewOwnership((car.ownership as any) || '1st Owner');
     setNewAvailability((car.availabilityStatus as any) || 'Available');
+    setNewSoldInDuration(car.soldInDuration || '');
     setNewInsuranceStatus((car.insuranceStatus as any) || 'Valid');
     setNewInsuranceExpiry(car.insuranceExpiry || 'Active');
     setNewInsuranceType((car.insuranceType as any) || 'Comprehensive');
     setNewFinanceAvailable((car.financeAvailable as any) || 'Available');
+    setNewFitnessValidUntil(
+      car.fitnessValidUntil
+        ? String(car.fitnessValidUntil)
+        : car.specifications?.fitnessValidTill
+        ? String(car.specifications.fitnessValidTill)
+        : ''
+    );
     setNewSuggestedMin(car.suggestedPriceMin || Math.round((car.price || 1000000) * 0.93));
     setNewSuggestedMax(car.suggestedPriceMax || Math.round((car.price || 1000000) * 1.05));
     setNewCity(car.city || 'Warangal');
@@ -924,10 +935,12 @@ export default function AdminDashboardPage() {
     setNewBodyType('SUV');
     setNewOwnership('1st Owner');
     setNewAvailability('Available');
+    setNewSoldInDuration('');
     setNewInsuranceStatus('Valid');
     setNewInsuranceExpiry('Nov 2026');
     setNewInsuranceType('Comprehensive');
     setNewFinanceAvailable('Available');
+    setNewFitnessValidUntil('');
     setNewSuggestedMin(980000);
     setNewSuggestedMax(1080000);
     setNewCity('Warangal');
@@ -1155,16 +1168,20 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleUpdateCarAvailability = async (carId: string, availabilityStatus: string) => {
+  const handleUpdateCarAvailability = async (carId: string, availabilityStatus: string, soldInDuration?: string | null) => {
     try {
       const res = await fetch('/api/cars', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: carId, availabilityStatus }),
+        body: JSON.stringify({ id: carId, availabilityStatus, soldInDuration }),
       });
       const data = await res.json();
       if (data.success) {
-        showToast(`Vehicle availability updated to "${availabilityStatus}"`);
+        showToast(
+          soldInDuration
+            ? `Vehicle marked Sold Out with highlight: "${soldInDuration}"!`
+            : `Vehicle availability updated to "${availabilityStatus}"`
+        );
         await syncAllFromSupabase();
         fetchAnalytics();
       } else {
@@ -1172,6 +1189,25 @@ export default function AdminDashboardPage() {
       }
     } catch {
       showToast('Error updating vehicle availability');
+    }
+  };
+
+  const handleSetSoldDuration = async (carId: string, duration: string | null) => {
+    try {
+      const res = await fetch('/api/cars', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: carId, soldInDuration: duration }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(duration ? `⚡ Highlighted: "${duration}"!` : 'Sold highlight removed');
+        await syncAllFromSupabase();
+      } else {
+        showToast('Failed to update sold highlight');
+      }
+    } catch {
+      showToast('Error updating sold highlight');
     }
   };
 
@@ -1422,7 +1458,7 @@ export default function AdminDashboardPage() {
       make: resolvedMake,
       model: newModel,
       variant: newVariant,
-      year: newYear,
+      year: Number(newYear) || 2023,
       price: Number(newPrice),
       emiPerMonth: Math.round(Number(newPrice) * 0.021),
       kilometers: Number(newKm),
@@ -1454,6 +1490,8 @@ export default function AdminDashboardPage() {
       uploadedBy: newUploadedBy,
       listingStatus: newListingStatus,
       registrationNumber: newRegistrationNumber.trim() ? newRegistrationNumber.trim().toUpperCase() : undefined,
+      fitnessValidUntil: newFitnessValidUntil.trim() ? newFitnessValidUntil.trim() : undefined,
+      soldInDuration: newAvailability === 'Sold Out' && newSoldInDuration.trim() ? newSoldInDuration.trim() : (newAvailability === 'Available' ? undefined : (newSoldInDuration.trim() || undefined)),
       specifications: {
         engine: existingCar?.specifications?.engine || '1.2L Turbo Dual VVT',
         maxPower: existingCar?.specifications?.maxPower || '118 bhp',
@@ -1464,7 +1502,8 @@ export default function AdminDashboardPage() {
         fuelTankCapacity: existingCar?.specifications?.fuelTankCapacity || '45 Litres',
         groundClearance: existingCar?.specifications?.groundClearance || '195 mm',
         rto: `${newCity.slice(0, 2).toUpperCase()}-09`,
-        regYear: newRegYear,
+        regYear: Number(newRegYear) || Number(newYear) || 2023,
+        fitnessValidTill: newFitnessValidUntil.trim() ? newFitnessValidUntil.trim() : undefined,
         insuranceValidTill: newInsuranceExpiry,
         color: existingCar?.specifications?.color || 'Polar White',
       },
@@ -2102,9 +2141,11 @@ export default function AdminDashboardPage() {
               </button>
 
               {/* Dedicated Section: Car Care & PPF Enquiries */}
+              {/* Dedicated Section: Car Care & PPF */}
               <button
                 onClick={() => {
                   setActiveTab('carcare');
+                  setCarCareSubTab('photos-pricing');
                   setIsSidebarOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left cursor-pointer ${
@@ -2122,16 +2163,18 @@ export default function AdminDashboardPage() {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="block">Car Care & PPF</span>
-                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">PPF</span>
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-rose-100 text-[#E5325C]">Photos & Pricing</span>
                     </div>
-                    <span className="text-[10px] font-normal text-gray-400 block">Detailing enquiries</span>
+                    <span className="text-[10px] font-normal text-gray-400 block">Photos, discounts & pricing</span>
                   </div>
                 </div>
-                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold ${
-                  activeTab === 'carcare' ? 'bg-[#E5325C] text-white' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {liveCarCareList.length}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${
+                    activeTab === 'carcare' ? 'bg-[#E5325C] text-white' : 'bg-[#FFF0F3] text-[#E5325C]'
+                  }`} title="Active Car Care Offers">
+                    {ppfPackages.length} deals
+                  </span>
+                </div>
               </button>
 
               {/* Dedicated Section: Negotiations */}
@@ -2637,9 +2680,12 @@ export default function AdminDashboardPage() {
             </p>
           </div>
 
-          {/* 6. Car Care & PPF Enquiries */}
+          {/* 6. Car Care & PPF Photos, Discounts & Pricing */}
           <div
-            onClick={() => setActiveTab('carcare')}
+            onClick={() => {
+              setActiveTab('carcare');
+              setCarCareSubTab('photos-pricing');
+            }}
             className={`bg-white rounded-2xl border p-4 shadow-2xs cursor-pointer hover:border-[#E5325C] hover:shadow-xs transition-all ${
               activeTab === 'carcare' ? 'border-[#E5325C] ring-2 ring-[#FFF0F3]' : 'border-[#E5E7EB]'
             }`}
@@ -2650,8 +2696,13 @@ export default function AdminDashboardPage() {
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
             </div>
-            <div className="text-2xl font-black text-[#101216]">{liveCarCareList.length}</div>
-            <p className="text-[10px] text-[#E5325C] font-bold mt-1">Service quotes →</p>
+            <div className="flex items-baseline justify-between">
+              <div className="text-2xl font-black text-[#101216]">
+                {ppfPackages.length} <span className="text-xs font-semibold text-gray-400">offers</span>
+              </div>
+              <span className="text-xs font-bold text-gray-500">{liveCarCareList.length} quotes</span>
+            </div>
+            <p className="text-[10px] text-[#E5325C] font-bold mt-1">Manage Photos, Discounts & Pricing →</p>
           </div>
 
           {/* 7. Car Finder Requests */}
@@ -2937,11 +2988,33 @@ export default function AdminDashboardPage() {
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => handleUpdateCarAvailability(v.id, 'Sold Out')}
+                                  onClick={() => {
+                                    const autoDur = calculateSoldDuration(v.createdAt, new Date().toISOString());
+                                    handleUpdateCarAvailability(v.id, 'Sold Out', autoDur);
+                                  }}
                                   className="block text-[9px] font-bold text-rose-600 hover:underline cursor-pointer"
                                 >
                                   ✓ Mark Sold Out
                                 </button>
+                              )}
+
+                              {v.availabilityStatus === 'Sold Out' && (
+                                <div className="pt-1 border-t border-rose-100 flex items-center gap-1 flex-wrap">
+                                  {['4 Hours', '24 Hours', '2 Days', '3 Days'].map((preset) => (
+                                    <button
+                                      key={preset}
+                                      type="button"
+                                      onClick={() => handleSetSoldDuration(v.id, v.soldInDuration === preset ? null : preset)}
+                                      className={`px-1.5 py-0.2 rounded text-[8px] font-bold border transition-all cursor-pointer ${
+                                        v.soldInDuration === preset
+                                          ? 'bg-[#E5325C] text-white border-[#E5325C]'
+                                          : 'bg-white hover:bg-rose-50 text-gray-700 border-gray-200'
+                                      }`}
+                                    >
+                                      {preset}
+                                    </button>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           </td>
@@ -3704,6 +3777,28 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-2 bg-[#F8F9FA] p-1.5 rounded-2xl border border-[#E5E7EB]">
                   <button
                     type="button"
+                    onClick={() => setCarCareSubTab('photos-pricing')}
+                    className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
+                      carCareSubTab === 'photos-pricing'
+                        ? 'bg-[#E5325C] text-white shadow-2xs'
+                        : 'text-gray-600 hover:text-black'
+                    }`}
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Photos, Discounts & Pricing</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        carCareSubTab === 'photos-pricing'
+                          ? 'bg-white/20 text-white'
+                          : 'bg-[#FFF0F3] text-[#E5325C]'
+                      }`}
+                    >
+                      {ppfPackages.length} Offers
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setCarCareSubTab('enquiries')}
                     className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
                       carCareSubTab === 'enquiries'
@@ -3723,40 +3818,16 @@ export default function AdminDashboardPage() {
                       {liveCarCareList.length}
                     </span>
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCarCareSubTab('ppf-packages')}
-                    className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
-                      carCareSubTab === 'ppf-packages'
-                        ? 'bg-[#E5325C] text-white shadow-2xs'
-                        : 'text-gray-600 hover:text-black'
-                    }`}
-                  >
-                    <Shield className="w-4 h-4" />
-                    <span>PPF Specifications & Offers</span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                        carCareSubTab === 'ppf-packages'
-                          ? 'bg-white/20 text-white'
-                          : 'bg-[#FFF0F3] text-[#E5325C]'
-                      }`}
-                    >
-                      {ppfPackages.length}
-                    </span>
-                  </button>
                 </div>
 
-                {carCareSubTab === 'ppf-packages' && (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenPPFModal()}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#E5325C] to-[#D4264E] text-white text-xs font-black shadow-md hover:shadow-lg transition-all cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add PPF Specification / Deal</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => handleOpenPPFModal()}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#E5325C] to-[#D4264E] text-white text-xs font-black shadow-md hover:shadow-lg transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Car Care Photos, Discount & Pricing</span>
+                </button>
               </div>
             </div>
 
@@ -4010,22 +4081,21 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-            {/* SUBTAB 2: PPF SPECIFICATIONS, MICRONS & STUDIO OFFERS */}
-            {carCareSubTab === 'ppf-packages' && (
+            {/* SUBTAB 1: CAR CARE PHOTOS, DISCOUNTS & PRICING */}
+            {carCareSubTab === 'photos-pricing' && (
               <div className="space-y-4">
                 {/* Information Card */}
                 <div className="bg-gradient-to-r from-[#101216] to-[#1A1D24] text-white rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="space-y-1.5 max-w-2xl">
                     <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 text-rose-400 text-[10px] font-black uppercase tracking-wider">
-                      <Shield className="w-3 h-3" />
-                      PPF Film Catalog & Promotional Flyers
+                      <Camera className="w-3 h-3" />
+                      Car Care Photos, Discounts & Pricing Workspace
                     </div>
                     <h3 className="text-lg md:text-xl font-black">
-                      Paint Protection Film (PPF) Specifications & Live Flyers
+                      Car Care & PPF Photos, Discounts & Pricing Catalog
                     </h3>
                     <p className="text-xs text-gray-300 leading-relaxed">
-                      Configure PPF film thickness (Microns), brand, finish, warranty, discount percentages, and validity dates.
-                      Upload promotional studio flyers and photos for customers to inspect in full resolution and directly avail.
+                      Upload promotional photos and studio flyers, configure standard MRP pricing, discount percentages, savings, film microns (150–220 Micron TPU), and studio packages for customers.
                     </p>
                   </div>
                   <button
@@ -4034,7 +4104,7 @@ export default function AdminDashboardPage() {
                     className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-black shadow-lg transition-transform active:scale-95 cursor-pointer whitespace-nowrap self-start md:self-center"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Create New PPF Package</span>
+                    <span>Add Photos, Discount & Pricing</span>
                   </button>
                 </div>
 
@@ -4877,6 +4947,7 @@ export default function AdminDashboardPage() {
                       <th className="p-4">Price & Suggested</th>
                       <th className="p-4">Availability Status</th>
                       <th className="p-4">Insurance & Finance</th>
+                      <th className="p-4">Fitness / Valid Till</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -5031,12 +5102,84 @@ export default function AdminDashboardPage() {
                             ) : (
                               <button
                                 type="button"
-                                onClick={() => handleUpdateCarAvailability(car.id, 'Sold Out')}
+                                onClick={() => {
+                                  const autoDur = calculateSoldDuration(car.createdAt, new Date().toISOString());
+                                  handleUpdateCarAvailability(car.id, 'Sold Out', autoDur);
+                                }}
                                 className="w-full text-center px-2 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer shadow-2xs"
                                 title="Mark car as Sold Out with one action"
                               >
                                 ✓ Mark as Sold Out
                               </button>
+                            )}
+
+                            {/* Highlight Car Sold Speed in Hours or Days */}
+                            {car.availabilityStatus === 'Sold Out' && (
+                              <div className="pt-1.5 border-t border-rose-100 space-y-1">
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="font-extrabold text-[#E5325C] flex items-center gap-0.5">
+                                    <Zap className="w-2.5 h-2.5 text-amber-500 fill-amber-400" />
+                                    <span>Sold Speed:</span>
+                                  </span>
+                                  {car.soldInDuration ? (
+                                    <span className="px-1.5 py-0.2 rounded font-black text-[9px] bg-[#E5325C] text-white shadow-2xs">
+                                      ⚡ {car.soldInDuration}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 text-[9px] italic">Not set</span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {['4 Hours', '12 Hours', '24 Hours', '2 Days', '3 Days', '5 Days'].map((preset) => {
+                                    const isSelected = car.soldInDuration === preset;
+                                    return (
+                                      <button
+                                        key={preset}
+                                        type="button"
+                                        onClick={() => handleSetSoldDuration(car.id, isSelected ? null : preset)}
+                                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all cursor-pointer ${
+                                          isSelected
+                                            ? 'bg-[#E5325C] text-white border-[#E5325C] shadow-2xs'
+                                            : 'bg-white hover:bg-rose-50 text-gray-700 border-gray-200 hover:border-rose-300'
+                                        }`}
+                                        title={`Highlight: Sold in ${preset}`}
+                                      >
+                                        {preset}
+                                      </button>
+                                    );
+                                  })}
+                                  {(() => {
+                                    const autoDur = calculateSoldDuration(car.createdAt, car.soldAt);
+                                    const isAuto = car.soldInDuration === autoDur;
+                                    return (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSetSoldDuration(car.id, isAuto ? null : autoDur)}
+                                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all cursor-pointer inline-flex items-center gap-0.5 ${
+                                          isAuto
+                                            ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
+                                            : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                                        }`}
+                                        title={`Auto-calculated: ${autoDur}`}
+                                      >
+                                        <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                                        <span>Auto ({autoDur})</span>
+                                      </button>
+                                    );
+                                  })()}
+                                  {car.soldInDuration && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSetSoldDuration(car.id, null)}
+                                      className="px-1 py-0.5 text-[9px] text-gray-400 hover:text-rose-600 cursor-pointer"
+                                      title="Clear sold speed highlight"
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
                             )}
 
                             {(car.soldAt || car.statusUpdatedAt) && (
@@ -5067,6 +5210,54 @@ export default function AdminDashboardPage() {
                               </span>
                             </div>
                           </div>
+                        </td>
+                        <td className="p-4">
+                          {(() => {
+                            const carRegYear = Number(car.registrationYear) || Number(car.year) || 2023;
+                            const initialRcTill = carRegYear + 15;
+                            const currentYear = new Date().getFullYear();
+                            const isLifeExpired = currentYear >= initialRcTill;
+                            const explicitFitness = car.fitnessValidUntil || car.specifications?.fitnessValidTill;
+
+                            if (explicitFitness) {
+                              return (
+                                <div className="space-y-1">
+                                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                                    <span>Valid till {explicitFitness}</span>
+                                  </div>
+                                  <div className="text-[10px] text-emerald-700 font-semibold">
+                                    FC Renewed ({carRegYear})
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            if (isLifeExpired) {
+                              return (
+                                <div className="space-y-1">
+                                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-300">
+                                    <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                    <span>Life Expired ({initialRcTill})</span>
+                                  </div>
+                                  <div className="text-[10px] text-rose-600 font-bold">
+                                    Fitness Renewal Due
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div className="space-y-1">
+                                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                                  <span>Valid till {initialRcTill}</span>
+                                </div>
+                                <div className="text-[10px] text-gray-400 font-medium">
+                                  15-Yr Initial RC
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="p-4 text-right">
                           <div className="inline-flex items-center gap-1.5 justify-end">
@@ -6240,13 +6431,15 @@ export default function AdminDashboardPage() {
                     type="number"
                     min={0}
                     step={100}
-                    value={inspectionConfig.sellerInspectionFee}
-                    onChange={(e) =>
+                    value={inspectionConfig.sellerInspectionFee === 0 ? 0 : (inspectionConfig.sellerInspectionFee || '')}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
                       setInspectionConfig((prev) => ({
                         ...prev,
-                        sellerInspectionFee: Number(e.target.value),
-                      }))
-                    }
+                        sellerInspectionFee: v === '' ? ('' as any) : Number(v),
+                      }));
+                    }}
                     className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                   <p className="text-[10px] text-gray-400 mt-1">
@@ -6262,13 +6455,15 @@ export default function AdminDashboardPage() {
                     type="number"
                     min={0}
                     step={100}
-                    value={inspectionConfig.buyerInspectionFee}
-                    onChange={(e) =>
+                    value={inspectionConfig.buyerInspectionFee === 0 ? 0 : (inspectionConfig.buyerInspectionFee || '')}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
                       setInspectionConfig((prev) => ({
                         ...prev,
-                        buyerInspectionFee: Number(e.target.value),
-                      }))
-                    }
+                        buyerInspectionFee: v === '' ? ('' as any) : Number(v),
+                      }));
+                    }}
                     className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                   <p className="text-[10px] text-gray-400 mt-1">
@@ -6284,13 +6479,15 @@ export default function AdminDashboardPage() {
                     type="number"
                     min={0}
                     step={100}
-                    value={inspectionConfig.sellerReportFee ?? 1199}
-                    onChange={(e) =>
+                    value={inspectionConfig.sellerReportFee === 0 ? 0 : (inspectionConfig.sellerReportFee ?? 1199)}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
                       setInspectionConfig((prev) => ({
                         ...prev,
-                        sellerReportFee: Number(e.target.value),
-                      }))
-                    }
+                        sellerReportFee: v === '' ? ('' as any) : Number(v),
+                      }));
+                    }}
                     className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                   <p className="text-[10px] text-gray-400 mt-1">
@@ -6306,13 +6503,15 @@ export default function AdminDashboardPage() {
                     type="number"
                     min={0}
                     step={100}
-                    value={inspectionConfig.pdiInspectionFee ?? 2500}
-                    onChange={(e) =>
+                    value={inspectionConfig.pdiInspectionFee === 0 ? 0 : (inspectionConfig.pdiInspectionFee ?? 2500)}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
                       setInspectionConfig((prev) => ({
                         ...prev,
-                        pdiInspectionFee: Number(e.target.value),
-                      }))
-                    }
+                        pdiInspectionFee: v === '' ? ('' as any) : Number(v),
+                      }));
+                    }}
                     className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                   <p className="text-[10px] text-gray-400 mt-1">
@@ -6328,13 +6527,15 @@ export default function AdminDashboardPage() {
                     type="number"
                     min={0}
                     step={100}
-                    value={inspectionConfig.pdiReportFee ?? 2499}
-                    onChange={(e) =>
+                    value={inspectionConfig.pdiReportFee === 0 ? 0 : (inspectionConfig.pdiReportFee ?? 2499)}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
                       setInspectionConfig((prev) => ({
                         ...prev,
-                        pdiReportFee: Number(e.target.value),
-                      }))
-                    }
+                        pdiReportFee: v === '' ? ('' as any) : Number(v),
+                      }));
+                    }}
                     className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                   <p className="text-[10px] text-gray-400 mt-1">
@@ -6765,10 +6966,21 @@ export default function AdminDashboardPage() {
                   <label className="block font-bold text-[#101216] mb-1">Registration Year</label>
                   <input
                     type="number"
-                    min={2014}
-                    max={2026}
+                    min={1970}
+                    max={2035}
                     value={newYear}
-                    onChange={(e) => setNewYear(Number(e.target.value))}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const val = v === '' ? '' : Number(v);
+                      setNewYear(val);
+                      if (val !== '') {
+                        setNewRegYear(val);
+                        if (!newMfgYear || newMfgYear === newYear || newMfgYear === (Number(newYear) - 1)) {
+                          setNewMfgYear(val);
+                        }
+                      }
+                    }}
                     className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                 </div>
@@ -6779,7 +6991,11 @@ export default function AdminDashboardPage() {
                     type="number"
                     step={10000}
                     value={newPrice}
-                    onChange={(e) => setNewPrice(Number(e.target.value))}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNewPrice(v === '' ? '' : Number(v));
+                    }}
                     className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                 </div>
@@ -6789,7 +7005,11 @@ export default function AdminDashboardPage() {
                   <input
                     type="number"
                     value={newKm}
-                    onChange={(e) => setNewKm(Number(e.target.value))}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNewKm(v === '' ? '' : Number(v));
+                    }}
                     className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                 </div>
@@ -6905,6 +7125,57 @@ export default function AdminDashboardPage() {
                       </button>
                     )}
                   </div>
+
+                  {newAvailability === 'Sold Out' && (
+                    <div className="mt-2 p-3 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="block font-bold text-rose-950 text-xs flex items-center gap-1">
+                          <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                          <span>Highlight Sold Speed (Hours / Days)</span>
+                        </label>
+                        {newSoldInDuration && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#E5325C] text-white shadow-2xs">
+                            ⚡ {newSoldInDuration}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-600">
+                        Highlight vehicle turnover velocity on the marketplace (e.g. &ldquo;Sold in 4 Hours&rdquo; or &ldquo;Sold in 2 Days&rdquo;).
+                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {['4 Hours', '12 Hours', '24 Hours', '2 Days', '3 Days', '5 Days'].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setNewSoldInDuration(newSoldInDuration === preset ? '' : preset)}
+                            className={`px-2 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                              newSoldInDuration === preset
+                                ? 'bg-[#E5325C] text-white border-[#E5325C] shadow-2xs'
+                                : 'bg-white hover:bg-rose-100 text-gray-700 border-gray-300'
+                            }`}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                        {newSoldInDuration && (
+                          <button
+                            type="button"
+                            onClick={() => setNewSoldInDuration('')}
+                            className="px-2 py-1 rounded-lg text-xs font-bold text-rose-700 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Or type custom speed, e.g. 6 Hours, 36 Hours, 4 Days"
+                        value={newSoldInDuration}
+                        onChange={(e) => setNewSoldInDuration(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-rose-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:border-[#E5325C]"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -6913,10 +7184,14 @@ export default function AdminDashboardPage() {
                   <label className="block font-bold text-[#101216] mb-1">Mfg Year</label>
                   <input
                     type="number"
-                    min={2010}
-                    max={2026}
+                    min={1970}
+                    max={2035}
                     value={newMfgYear}
-                    onChange={(e) => setNewMfgYear(Number(e.target.value))}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNewMfgYear(v === '' ? '' : Number(v));
+                    }}
                     className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                 </div>
@@ -6925,10 +7200,14 @@ export default function AdminDashboardPage() {
                   <label className="block font-bold text-[#101216] mb-1">Reg Year</label>
                   <input
                     type="number"
-                    min={2010}
-                    max={2026}
+                    min={1970}
+                    max={2035}
                     value={newRegYear}
-                    onChange={(e) => setNewRegYear(Number(e.target.value))}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNewRegYear(v === '' ? '' : Number(v));
+                    }}
                     className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                 </div>
@@ -6939,7 +7218,11 @@ export default function AdminDashboardPage() {
                     type="number"
                     step={10000}
                     value={newSuggestedMin}
-                    onChange={(e) => setNewSuggestedMin(Number(e.target.value))}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNewSuggestedMin(v === '' ? '' : Number(v));
+                    }}
                     className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                 </div>
@@ -6950,7 +7233,11 @@ export default function AdminDashboardPage() {
                     type="number"
                     step={10000}
                     value={newSuggestedMax}
-                    onChange={(e) => setNewSuggestedMax(Number(e.target.value))}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNewSuggestedMax(v === '' ? '' : Number(v));
+                    }}
                     className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                 </div>
@@ -7005,6 +7292,102 @@ export default function AdminDashboardPage() {
                     <option value="Subject to Approval">Subject to Approval</option>
                     <option value="Not Available">Not Available</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Vehicle Life & Fitness Certificate (FC) Validity */}
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-600" />
+                    <label className="font-bold text-[#101216] text-xs">
+                      Vehicle Life & Fitness Certificate (FC) Validity
+                    </label>
+                  </div>
+                  {(() => {
+                    const effReg = Number(newRegYear) || Number(newYear) || 2023;
+                    const statutoryExp = effReg + 15;
+                    const isExp = new Date().getFullYear() >= statutoryExp;
+                    return isExp ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1 shadow-2xs">
+                        <AlertTriangle className="w-3 h-3 text-rose-600" />
+                        <span>15-Yr Statutory Life Expired ({statutoryExp})</span>
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1 shadow-2xs">
+                        <CheckCircle className="w-3 h-3 text-emerald-600" />
+                        <span>Initial RC Valid till {statutoryExp}</span>
+                      </span>
+                    );
+                  })()}
+                </div>
+
+                <p className="text-[11px] text-gray-600 leading-relaxed">
+                  In India, private vehicles have a statutory 15-year RC lifespan. Vehicles registered in{' '}
+                  <strong className="text-gray-900">{Number(newRegYear) || Number(newYear) || 2023}</strong> have their initial RC valid till{' '}
+                  <strong className="text-gray-900">{(Number(newRegYear) || Number(newYear) || 2023) + 15}</strong>. If renewed through RTO Fitness Certificate (FC) & Green Tax, specify the extended validity year below.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-800 mb-1">
+                      Fitness Valid Till Year (FC Validity)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={`e.g. ${(Number(newRegYear) || Number(newYear) || 2023) + 20}`}
+                      value={newFitnessValidUntil}
+                      onChange={(e) => setNewFitnessValidUntil(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C] text-xs"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold text-gray-500 mr-1">Quick Select:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const eff = Number(newRegYear) || Number(newYear) || 2023;
+                        setNewFitnessValidUntil(String(eff + 20));
+                      }}
+                      className="px-2 py-1 bg-white hover:bg-amber-100/60 border border-amber-300 rounded-lg text-[10px] font-bold text-amber-900 transition-colors cursor-pointer"
+                    >
+                      +5 Yrs ({(Number(newRegYear) || Number(newYear) || 2023) + 20})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const eff = Number(newRegYear) || Number(newYear) || 2023;
+                        setNewFitnessValidUntil(String(eff + 25));
+                      }}
+                      className="px-2 py-1 bg-white hover:bg-amber-100/60 border border-amber-300 rounded-lg text-[10px] font-bold text-amber-900 transition-colors cursor-pointer"
+                    >
+                      +10 Yrs ({(Number(newRegYear) || Number(newYear) || 2023) + 25})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewFitnessValidUntil('2029')}
+                      className="px-2 py-1 bg-white hover:bg-amber-100/60 border border-amber-300 rounded-lg text-[10px] font-bold text-amber-900 transition-colors cursor-pointer"
+                    >
+                      2029
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewFitnessValidUntil('2034')}
+                      className="px-2 py-1 bg-white hover:bg-amber-100/60 border border-amber-300 rounded-lg text-[10px] font-bold text-amber-900 transition-colors cursor-pointer"
+                    >
+                      2034
+                    </button>
+                    {newFitnessValidUntil && (
+                      <button
+                        type="button"
+                        onClick={() => setNewFitnessValidUntil('')}
+                        className="px-2 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-[10px] font-bold text-rose-700 transition-colors cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -7232,10 +7615,14 @@ export default function AdminDashboardPage() {
                 <label className="block font-bold text-[#101216] mb-1">Inspection Score (out of 100)</label>
                 <input
                   type="number"
-                  min={80}
+                  min={0}
                   max={100}
                   value={newScore}
-                  onChange={(e) => setNewScore(Number(e.target.value))}
+                  onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setNewScore(v === '' ? '' : Number(v));
+                  }}
                   className="w-32 px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                 />
               </div>
@@ -7472,7 +7859,11 @@ export default function AdminDashboardPage() {
                   required
                   step={5000}
                   value={counterOfferAmount}
-                  onChange={(e) => setCounterOfferAmount(Number(e.target.value))}
+                  onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCounterOfferAmount(v === '' ? '' : Number(v));
+                  }}
                   className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-bold text-sm text-purple-700 focus:outline-none focus:border-purple-600"
                 />
               </div>
@@ -7588,7 +7979,11 @@ export default function AdminDashboardPage() {
                   required
                   step={5000}
                   value={approveListingPrice}
-                  onChange={(e) => setApproveListingPrice(Number(e.target.value))}
+                  onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setApproveListingPrice(v === '' ? '' : Number(v));
+                  }}
                   className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-black text-sm text-[#E5325C] focus:outline-none focus:border-[#E5325C]"
                 />
                 <p className="text-[10px] text-gray-400 mt-1">This will be the public selling price shown on the website.</p>
@@ -7601,10 +7996,14 @@ export default function AdminDashboardPage() {
                   </label>
                   <input
                     type="number"
-                    min={70}
+                    min={0}
                     max={100}
                     value={approveInspectionScore}
-                    onChange={(e) => setApproveInspectionScore(Number(e.target.value))}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setApproveInspectionScore(v === '' ? '' : Number(v));
+                    }}
                     className="w-full px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-bold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
                 </div>
@@ -7953,14 +8352,14 @@ export default function AdminDashboardPage() {
             <div className="flex items-start justify-between pb-4 border-b border-[#E5E7EB]">
               <div>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FFF0F3] text-[#E5325C] text-[10px] font-black uppercase tracking-wider mb-1">
-                  <Shield className="w-3.5 h-3.5" />
-                  PPF Specification & Deal Management
+                  <Camera className="w-3.5 h-3.5" />
+                  Car Care & PPF Detailing Management
                 </div>
                 <h3 className="font-extrabold text-xl text-[#101216]">
-                  {editingPPFPackage ? 'Edit PPF Specification Package' : 'Add New PPF Specification Package'}
+                  {editingPPFPackage ? 'Edit Car Care Photos, Discount & Pricing' : 'Add Car Care Photos, Discount & Pricing'}
                 </h3>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Set brand, film microns thickness, discount %, booking validity date, and upload studio promotional pictures.
+                  Upload photos and studio flyers, configure standard MRP pricing, discount %, offer price, and film specifications.
                 </p>
               </div>
               <button
@@ -8118,8 +8517,8 @@ export default function AdminDashboardPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (ppfFormMrp > 0 && ppfFormDiscount > 0) {
-                        const calculated = Math.round(ppfFormMrp * (1 - ppfFormDiscount / 100));
+                      if (Number(ppfFormMrp) > 0 && Number(ppfFormDiscount) > 0) {
+                        const calculated = Math.round(Number(ppfFormMrp) * (1 - Number(ppfFormDiscount) / 100));
                         setPpfFormOfferPrice(calculated);
                         showToast(`Recalculated offer price: ₹${calculated.toLocaleString('en-IN')}`);
                       }
@@ -8139,11 +8538,13 @@ export default function AdminDashboardPage() {
                       type="number"
                       min={0}
                       value={ppfFormMrp}
+                      onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                       onChange={(e) => {
-                        const mrp = Number(e.target.value);
+                        const v = e.target.value;
+                        const mrp = v === '' ? '' : Number(v);
                         setPpfFormMrp(mrp);
-                        if (mrp > 0 && ppfFormDiscount > 0) {
-                          setPpfFormOfferPrice(Math.round(mrp * (1 - ppfFormDiscount / 100)));
+                        if (mrp !== '' && ppfFormDiscount !== '' && Number(mrp) > 0) {
+                          setPpfFormOfferPrice(Math.round(Number(mrp) * (1 - Number(ppfFormDiscount) / 100)));
                         }
                       }}
                       className="w-full px-3.5 py-2 bg-white border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
@@ -8159,11 +8560,13 @@ export default function AdminDashboardPage() {
                       min={0}
                       max={100}
                       value={ppfFormDiscount}
+                      onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                       onChange={(e) => {
-                        const disc = Number(e.target.value);
+                        const v = e.target.value;
+                        const disc = v === '' ? '' : Number(v);
                         setPpfFormDiscount(disc);
-                        if (ppfFormMrp > 0) {
-                          setPpfFormOfferPrice(Math.round(ppfFormMrp * (1 - disc / 100)));
+                        if (ppfFormMrp !== '' && disc !== '' && Number(ppfFormMrp) > 0) {
+                          setPpfFormOfferPrice(Math.round(Number(ppfFormMrp) * (1 - Number(disc) / 100)));
                         }
                       }}
                       className="w-full px-3.5 py-2 bg-white border border-[#E5E7EB] rounded-xl text-xs font-extrabold text-[#E5325C] focus:outline-none focus:border-[#E5325C]"
@@ -8178,7 +8581,11 @@ export default function AdminDashboardPage() {
                       type="number"
                       min={0}
                       value={ppfFormOfferPrice}
-                      onChange={(e) => setPpfFormOfferPrice(Number(e.target.value))}
+                      onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setPpfFormOfferPrice(v === '' ? '' : Number(v));
+                      }}
                       className="w-full px-3.5 py-2 bg-white border border-emerald-300 rounded-xl text-xs font-black text-emerald-800 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -8187,7 +8594,12 @@ export default function AdminDashboardPage() {
                 <div className="text-[11px] text-gray-500 flex items-center justify-between pt-1">
                   <span>Customer Savings:</span>
                   <span className="font-extrabold text-emerald-700">
-                    ₹{(ppfFormMrp - ppfFormOfferPrice > 0 ? ppfFormMrp - ppfFormOfferPrice : 0).toLocaleString('en-IN')} ({ppfFormDiscount}% OFF)
+                    ₹{(
+                      Number(ppfFormMrp) - Number(ppfFormOfferPrice) > 0
+                        ? Number(ppfFormMrp) - Number(ppfFormOfferPrice)
+                        : 0
+                    ).toLocaleString('en-IN')}{' '}
+                    ({ppfFormDiscount || 0}% OFF)
                   </span>
                 </div>
               </div>

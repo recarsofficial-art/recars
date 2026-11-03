@@ -16,9 +16,33 @@ export const PRESET_RIBBONS = [
   { text: 'Best Value', color: 'emerald' as RibbonColor, description: 'Admin-verified value proposition' },
   { text: 'Low KM Driven', color: 'blue' as RibbonColor, description: 'Verified low mileage odometer' },
   { text: 'Single Owner', color: 'emerald' as RibbonColor, description: 'First owner vehicle with clear title' },
+  { text: 'Sold in 4 Hours', color: 'rose' as RibbonColor, description: 'Fast sale highlight: sold in 4 hours' },
+  { text: 'Sold in 24 Hours', color: 'amber' as RibbonColor, description: 'Fast sale highlight: sold in 1 day' },
+  { text: 'Sold in 2 Days', color: 'emerald' as RibbonColor, description: 'Fast sale highlight: sold in 2 days' },
+  { text: 'Sold in 3 Days', color: 'purple' as RibbonColor, description: 'Fast sale highlight: sold in 3 days' },
   { text: 'Sold Out', color: 'red' as RibbonColor, description: 'Sold vehicle' },
   { text: 'Reserved', color: 'amber' as RibbonColor, description: 'Temporarily reserved' },
 ];
+
+/**
+ * Calculates human-readable elapsed duration between listing and sale (hours or days).
+ */
+export function calculateSoldDuration(createdAt?: string, soldAt?: string): string {
+  if (!createdAt) return '24 Hours';
+  try {
+    const created = new Date(createdAt).getTime();
+    const sold = soldAt ? new Date(soldAt).getTime() : Date.now();
+    const diffMs = Math.max(0, sold - created);
+    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+    if (diffHours < 1) return '1 Hour';
+    if (diffHours < 24) return `${diffHours} Hours`;
+    const diffDays = Math.round(diffHours / 24);
+    if (diffDays === 1) return '24 Hours';
+    return `${diffDays} Days`;
+  } catch {
+    return '24 Hours';
+  }
+}
 
 /**
  * Computes up to 2 active ribbons for any vehicle.
@@ -29,12 +53,23 @@ export function computeCarRibbons(car: Partial<Car>, viewsCount?: number): Compu
 
   // 1. ABSOLUTE TOP PRIORITY: Availability Status (Sold Out / Reserved)
   if (car.availabilityStatus === 'Sold Out') {
-    ribbons.push({
-      text: 'Sold Out',
-      color: 'red',
-      priority: 1,
-      isStatus: true,
-    });
+    if (car.soldInDuration) {
+      const formatted = car.soldInDuration.trim();
+      const text = formatted.toLowerCase().startsWith('sold') ? formatted : `Sold in ${formatted}`;
+      ribbons.push({
+        text,
+        color: 'rose',
+        priority: 1,
+        isStatus: true,
+      });
+    } else {
+      ribbons.push({
+        text: 'Sold Out',
+        color: 'red',
+        priority: 1,
+        isStatus: true,
+      });
+    }
   } else if (car.availabilityStatus === 'Reserved') {
     ribbons.push({
       text: 'Reserved',

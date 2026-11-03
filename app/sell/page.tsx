@@ -518,10 +518,14 @@ function SellWorkflowContent() {
                   <label className="block text-xs font-bold text-[#101216] mb-1">Manufacturing Year</label>
                   <input
                     type="number"
-                    min={2008}
-                    max={2026}
+                    min={1970}
+                    max={2035}
                     value={year}
-                    onChange={(e) => setYear(Number(e.target.value))}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setYear(v === '' ? ('' as any) : Number(v));
+                    }}
                     className="w-full bg-[#F8F9FA] px-4 py-2.5 rounded-xl border border-[#E5E7EB] text-xs font-semibold focus:outline-none"
                   />
                 </div>
@@ -596,7 +600,11 @@ function SellWorkflowContent() {
                     type="number"
                     step={1000}
                     value={kilometers}
-                    onChange={(e) => setKilometers(Number(e.target.value))}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setKilometers(v === '' ? ('' as any) : Number(v));
+                    }}
                     className="w-full bg-[#F8F9FA] px-4 py-2.5 rounded-xl border border-[#E5E7EB] text-xs font-semibold focus:outline-none"
                   />
                 </div>

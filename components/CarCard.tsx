@@ -6,6 +6,7 @@ import { Heart, Check, ShieldCheck, ArrowRight, MapPin } from 'lucide-react';
 import { Car } from '@/lib/types';
 import { formatINR, formatKM } from '@/lib/formatters';
 import { computeCarRibbons, getRibbonColorStyles } from '@/lib/ribbons';
+import CarWatermark from '@/components/CarWatermark';
 
 interface CarCardProps {
   car: Car;
@@ -86,6 +87,9 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
         <div className="absolute bottom-2.5 left-3 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-semibold text-white tracking-wide">
           {car.city}
         </div>
+
+        {/* Recars Watermark on bottom-right of image (Just like OLX) */}
+        <CarWatermark size="sm" className="absolute bottom-2.5 right-3" />
       </div>
 
       {/* Content */}
@@ -134,6 +138,11 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
             <span className="px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 text-xs font-medium font-body">
               {car.ownership || '1st Owner'}
             </span>
+            {(car.fitnessValidUntil || car.specifications?.fitnessValidTill) && (
+              <span className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold font-body">
+                FC: {car.fitnessValidUntil || car.specifications?.fitnessValidTill}
+              </span>
+            )}
           </div>
 
           {/* 4. LOCATION PIN */}

@@ -186,8 +186,14 @@ export async function PATCH(request: Request) {
 
     if (availabilityStatus) {
       const { dbUpdateCarAvailability } = await import('@/lib/db');
-      const updated = await dbUpdateCarAvailability(id, availabilityStatus);
+      const updated = await dbUpdateCarAvailability(id, availabilityStatus, body.soldInDuration);
       return NextResponse.json({ success: updated, message: `Availability status set to ${availabilityStatus}` });
+    }
+
+    if (body.soldInDuration !== undefined) {
+      const { dbUpdateCarSoldDuration } = await import('@/lib/db');
+      const updated = await dbUpdateCarSoldDuration(id, body.soldInDuration);
+      return NextResponse.json({ success: updated, message: 'Sold speed highlight updated successfully' });
     }
 
     if (body.customRibbons !== undefined) {

@@ -37,6 +37,7 @@ import {
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CarCard from '@/components/CarCard';
+import CarWatermark from '@/components/CarWatermark';
 import { useRecarsState } from '@/lib/store';
 import { formatINR, formatKM, calculateEMI } from '@/lib/formatters';
 import { Car, CarInquiry } from '@/lib/types';
@@ -459,10 +460,13 @@ function CarDetailInner({ params }: PageProps) {
                   <span>Full Image</span>
                 </button>
 
-                {/* Image counter indicator */}
-                <div className="absolute bottom-3 right-3 px-3 py-1 rounded-full bg-black/70 backdrop-blur-xs text-white text-xs font-semibold z-10">
+                {/* Image counter indicator (bottom-left) */}
+                <div className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-black/70 backdrop-blur-xs text-white text-xs font-semibold z-10 pointer-events-none">
                   {activeImageIndex + 1} / {images.length} Photos
                 </div>
+
+                {/* Recars Watermark (bottom-right, just like OLX) */}
+                <CarWatermark size="md" className="absolute bottom-3 right-4 sm:bottom-4 sm:right-5" />
               </div>
 
               {/* Thumbnails row */}
@@ -663,6 +667,53 @@ function CarDetailInner({ params }: PageProps) {
                   <div className="font-bold text-xs text-[#101216] flex items-center justify-between">
                     <span>{insuranceType}</span>
                     <span className="text-gray-500 font-medium">Expires: {insuranceValidDateStr}</span>
+                  </div>
+                </div>
+
+                {/* 15-Year Life / Fitness Certificate Validity */}
+                <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] sm:col-span-2">
+                  <div className="flex items-center justify-between text-xs text-[#6B7078] mb-1">
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-[#E5325C]" />
+                      <span>Fitness / Life Validity</span>
+                    </span>
+                    {(() => {
+                      const effReg = Number(car.registrationYear) || Number(car.year) || 2023;
+                      const statutoryLife = effReg + 15;
+                      const isExpired = new Date().getFullYear() >= statutoryLife;
+                      const fitnessYear = car.fitnessValidUntil || car.specifications?.fitnessValidTill;
+                      if (fitnessYear) {
+                        return (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            FC Renewed (Valid till {fitnessYear})
+                          </span>
+                        );
+                      }
+                      if (isExpired) {
+                        return (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                            15-Yr Life Reached
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
+                          Valid till {statutoryLife}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <div className="font-bold text-xs text-[#101216] flex items-center justify-between">
+                    <span>
+                      {car.fitnessValidUntil || car.specifications?.fitnessValidTill
+                        ? `RTO Fitness Certificate valid till ${car.fitnessValidUntil || car.specifications?.fitnessValidTill}`
+                        : `15-Year Statutory RC Life (${(Number(car.registrationYear) || Number(car.year) || 2023) + 15})`}
+                    </span>
+                    <span className="text-gray-500 font-medium text-[11px]">
+                      {car.fitnessValidUntil || car.specifications?.fitnessValidTill
+                        ? 'Green Tax & FC Cleared'
+                        : 'Standard Private RC'}
+                    </span>
                   </div>
                 </div>
 
@@ -1403,8 +1454,12 @@ function CarDetailInner({ params }: PageProps) {
                     min={Math.round(car.price * 0.7)}
                     max={car.price}
                     step={5000}
-                    value={offerAmount}
-                    onChange={(e) => setOfferAmount(Number(e.target.value))}
+                    value={offerAmount || ''}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setOfferAmount(v === '' ? ('' as any) : Number(v));
+                    }}
                     className="w-full px-3.5 py-2.5 text-sm font-bold bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl focus:outline-none focus:border-[#E5325C]"
                   />
                   <div className="grid grid-cols-4 gap-1.5 mt-2">
@@ -1607,11 +1662,15 @@ function CarDetailInner({ params }: PageProps) {
               </button>
             )}
 
-            <img
-              src={images[activeImageIndex]}
-              alt={`${car.make} ${car.model} Full Image`}
-              className="max-h-[72vh] sm:max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl transition-all"
-            />
+            <div className="relative inline-flex items-center justify-center max-h-[72vh] sm:max-h-[80vh] max-w-full">
+              <img
+                src={images[activeImageIndex]}
+                alt={`${car.make} ${car.model} Full Image`}
+                className="max-h-[72vh] sm:max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl transition-all"
+              />
+              {/* Recars Watermark on full-size view (just like OLX) */}
+              <CarWatermark size="lg" className="absolute bottom-3 right-4 sm:bottom-5 sm:right-6" />
+            </div>
 
             {images.length > 1 && (
               <button

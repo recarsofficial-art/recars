@@ -19,6 +19,7 @@ export interface CarSpecification {
   rto: string;
   regYear: number;
   insuranceValidTill: string;
+  fitnessValidTill?: string | number;
   color: string;
 }
 
@@ -67,8 +68,10 @@ export interface Car {
   availabilityStatus?: VehicleAvailability;
   statusUpdatedAt?: string;
   soldAt?: string;
+  soldInDuration?: string; // Highlight vehicle sold speed, e.g. "4 Hours", "24 Hours", "2 Days", "3 Days"
   manufacturingYear?: number;
   registrationYear?: number;
+  fitnessValidUntil?: string | number; // Extended validity / fitness year (e.g. 2029) when 15-year life expires
   insuranceStatus?: InsuranceStatus;
   insuranceExpiry?: string;
   insuranceType?: InsuranceType;
@@ -413,6 +416,7 @@ export interface VehicleAnalyticsItem {
   availabilityStatus: VehicleAvailability;
   statusUpdatedAt?: string;
   soldAt?: string;
+  soldInDuration?: string;
   dealerName?: string;
   vehicleSource?: string;
   viewsCount: number;

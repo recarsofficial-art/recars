@@ -188,6 +188,8 @@ export async function ensureDealerAndCarsSchema(): Promise<void> {
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS sold_at TIMESTAMPTZ;
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS custom_ribbons JSONB DEFAULT '[]'::jsonb;
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS featured BOOLEAN DEFAULT false;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS fitness_valid_until TEXT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS sold_in_duration TEXT;
 
           CREATE INDEX IF NOT EXISTS idx_cars_vehicle_source ON public.cars(vehicle_source);
           CREATE INDEX IF NOT EXISTS idx_cars_dealer_id ON public.cars(dealer_id);
@@ -347,6 +349,7 @@ export async function dbGetCars(filter?: {
       groundClearance: '180 mm',
       rto: `${r.city || 'Warangal'} RTO`,
       regYear: r.year,
+      fitnessValidTill: r.fitness_valid_until || undefined,
       insuranceValidTill: 'Comprehensive Valid',
       color: 'Pearl White',
     },
@@ -379,6 +382,8 @@ export async function dbGetCars(filter?: {
     uploadedByRole: r.uploaded_by_role || undefined,
     listingStatus: (r.listing_status as any) || 'Published',
     registrationNumber: r.registration_number || undefined,
+    fitnessValidUntil: r.fitness_valid_until || undefined,
+    soldInDuration: r.sold_in_duration || undefined,
   }));
 }
 
@@ -420,6 +425,7 @@ export async function dbGetCarById(id: string): Promise<Car | null> {
       groundClearance: '180 mm',
       rto: `${r.city || 'Warangal'} RTO`,
       regYear: r.year,
+      fitnessValidTill: r.fitness_valid_until || undefined,
       insuranceValidTill: 'Comprehensive Valid',
       color: 'Pearl White',
     },
@@ -452,6 +458,8 @@ export async function dbGetCarById(id: string): Promise<Car | null> {
     uploadedByRole: r.uploaded_by_role || undefined,
     listingStatus: (r.listing_status as any) || 'Published',
     registrationNumber: r.registration_number || undefined,
+    fitnessValidUntil: r.fitness_valid_until || undefined,
+    soldInDuration: r.sold_in_duration || undefined,
     customRibbons: Array.isArray(r.custom_ribbons)
       ? r.custom_ribbons
       : typeof r.custom_ribbons === 'string'
@@ -470,11 +478,11 @@ export async function dbInsertCar(car: Car): Promise<void> {
       availability_status, manufacturing_year, registration_year, insurance_status,
       insurance_expiry, insurance_type, finance_available, suggested_price_min, suggested_price_max,
       vehicle_source, dealer_id, dealer_name, dealer_contact, uploaded_by, uploaded_by_user_id, uploaded_by_role,
-      listing_status, registration_number, custom_ribbons, featured
+      listing_status, registration_number, custom_ribbons, featured, fitness_valid_until, sold_in_duration
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
       $22, $23, $24, $25, $26, $27, $28, $29, $30,
-      $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41
+      $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43
     )
     ON CONFLICT (id) DO UPDATE SET
       make = EXCLUDED.make,
@@ -504,8 +512,8 @@ export async function dbInsertCar(car: Car): Promise<void> {
       insurance_expiry = EXCLUDED.insurance_expiry,
       insurance_type = EXCLUDED.insurance_type,
       finance_available = EXCLUDED.finance_available,
-      suggested_price_min = EXCLUDED.suggested_price_min,
-      suggested_price_max = EXCLUDED.suggested_price_max,
+      suggestedPriceMin = EXCLUDED.suggested_price_min,
+      suggestedPriceMax = EXCLUDED.suggested_price_max,
       vehicle_source = EXCLUDED.vehicle_source,
       dealer_id = EXCLUDED.dealer_id,
       dealer_name = EXCLUDED.dealer_name,
@@ -517,6 +525,8 @@ export async function dbInsertCar(car: Car): Promise<void> {
       registration_number = EXCLUDED.registration_number,
       custom_ribbons = EXCLUDED.custom_ribbons,
       featured = EXCLUDED.featured,
+      fitness_valid_until = EXCLUDED.fitness_valid_until,
+      sold_in_duration = EXCLUDED.sold_in_duration,
       updated_at = now();
   `;
   await pool.query(sql, [
@@ -561,6 +571,8 @@ export async function dbInsertCar(car: Car): Promise<void> {
     car.registrationNumber || null,
     JSON.stringify(car.customRibbons || []),
     Boolean(car.featured),
+    car.fitnessValidUntil ? String(car.fitnessValidUntil) : null,
+    car.soldInDuration ? String(car.soldInDuration) : null,
   ]);
 }
 
@@ -654,16 +666,21 @@ export async function dbInsertDealer(dealer: RegisteredDealer): Promise<Register
   };
 }
 
-export async function dbUpdateCarAvailability(id: string, status: string): Promise<boolean> {
+export async function dbUpdateCarAvailability(id: string, status: string, soldInDuration?: string | null): Promise<boolean> {
   await ensureDealerAndCarsSchema();
   let sql: string;
   let params: any[];
 
   if (status === 'Sold Out') {
-    sql = 'UPDATE public.cars SET availability_status = $1, sold_at = now(), status_updated_at = now(), updated_at = now() WHERE id = $2';
-    params = [status, id];
+    if (soldInDuration !== undefined) {
+      sql = 'UPDATE public.cars SET availability_status = $1, sold_at = now(), status_updated_at = now(), sold_in_duration = $3, updated_at = now() WHERE id = $2';
+      params = [status, id, soldInDuration || null];
+    } else {
+      sql = 'UPDATE public.cars SET availability_status = $1, sold_at = now(), status_updated_at = now(), updated_at = now() WHERE id = $2';
+      params = [status, id];
+    }
   } else if (status === 'Available') {
-    sql = 'UPDATE public.cars SET availability_status = $1, sold_at = NULL, status_updated_at = now(), updated_at = now() WHERE id = $2';
+    sql = 'UPDATE public.cars SET availability_status = $1, sold_at = NULL, sold_in_duration = NULL, status_updated_at = now(), updated_at = now() WHERE id = $2';
     params = [status, id];
   } else {
     sql = 'UPDATE public.cars SET availability_status = $1, status_updated_at = now(), updated_at = now() WHERE id = $2';
@@ -671,6 +688,15 @@ export async function dbUpdateCarAvailability(id: string, status: string): Promi
   }
 
   const res = await pool.query(sql, params);
+  return (res.rowCount || 0) > 0;
+}
+
+export async function dbUpdateCarSoldDuration(id: string, soldInDuration: string | null): Promise<boolean> {
+  await ensureDealerAndCarsSchema();
+  const res = await pool.query(
+    'UPDATE public.cars SET sold_in_duration = $1, updated_at = now() WHERE id = $2',
+    [soldInDuration ? String(soldInDuration).trim() : null, id]
+  );
   return (res.rowCount || 0) > 0;
 }
 
@@ -1996,6 +2022,7 @@ export async function dbGetAdminAnalytics(filters?: {
     availabilityStatus: r.availability_status || 'Available',
     statusUpdatedAt: r.status_updated_at ? new Date(r.status_updated_at).toISOString() : undefined,
     soldAt: r.sold_at ? new Date(r.sold_at).toISOString() : undefined,
+    soldInDuration: r.sold_in_duration || undefined,
     dealerName: r.dealer_name || undefined,
     vehicleSource: r.vehicle_source || 'Individual Seller',
     viewsCount: Number(r.views_count || 0),
@@ -2125,6 +2152,7 @@ export async function dbGetTrendingCars(limit = 6): Promise<Car[]> {
       groundClearance: '180 mm',
       rto: `${r.city || 'Warangal'} RTO`,
       regYear: r.year,
+      fitnessValidTill: r.fitness_valid_until || undefined,
       insuranceValidTill: 'Comprehensive Valid',
       color: 'Pearl White',
     },
@@ -2134,6 +2162,7 @@ export async function dbGetTrendingCars(limit = 6): Promise<Car[]> {
     availabilityStatus: r.availability_status || 'Available',
     statusUpdatedAt: r.status_updated_at ? new Date(r.status_updated_at).toISOString() : undefined,
     soldAt: r.sold_at ? new Date(r.sold_at).toISOString() : undefined,
+    soldInDuration: r.sold_in_duration || undefined,
     vehicleSource: r.vehicle_source || 'Individual Seller',
     dealerId: r.dealer_id || undefined,
     dealerName: r.dealer_name || undefined,
