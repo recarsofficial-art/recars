@@ -52,6 +52,8 @@ import {
   BarChart3,
   Droplets,
   Star,
+  Percent,
+  Zap,
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
@@ -74,6 +76,7 @@ import {
   CarFinderStatus,
   VehicleRibbon,
   RibbonColor,
+  PPFSpecificationPackage,
 } from '@/lib/types';
 import { computeCarRibbons, getRibbonColorStyles, PRESET_RIBBONS } from '@/lib/ribbons';
 import { MAKES, CITIES } from '@/lib/data';
@@ -89,6 +92,12 @@ const AVAILABLE_IMAGES = [
   { label: 'Toyota Innova Crysta (Garnet Red Luxury MUV)', url: '/car-innova-hd.jpg' },
   { label: 'Hyundai i20 (Fiery Red Studio Hatchback)', url: '/car-i20-hd.jpg' },
   { label: 'Hyundai Venue (Polar White Studio Compact SUV)', url: '/car-venue-hd.jpg' },
+];
+
+const AVAILABLE_PPF_IMAGES = [
+  { label: 'The Detailing Mafia - Royal Enfield Bike PPF (Tellapur)', url: '/ppf/ppf-bike-enfield.jpg' },
+  { label: 'The Detailing Mafia - Matty Black & Gloss PPF (Tellapur)', url: '/ppf/ppf-cars-matty-gloss.jpg' },
+  { label: 'The Detailing Mafia - Studio Launch & Pre-Bookings (Thellapur)', url: '/ppf/ppf-studio-launch.jpg' },
 ];
 
 export default function AdminDashboardPage() {
@@ -134,6 +143,28 @@ export default function AdminDashboardPage() {
   const [carCareStatusFilter, setCarCareStatusFilter] = useState<string>('All');
   const [carCareSearch, setCarCareSearch] = useState<string>('');
   const [carCareEditingNotes, setCarCareEditingNotes] = useState<{ id: string; notes: string } | null>(null);
+
+  // PPF Specifications & Packages State
+  const [ppfPackages, setPpfPackages] = useState<PPFSpecificationPackage[]>([]);
+  const [carCareSubTab, setCarCareSubTab] = useState<'enquiries' | 'ppf-packages'>('enquiries');
+  const [isPPFModalOpen, setIsPPFModalOpen] = useState(false);
+  const [editingPPFPackage, setEditingPPFPackage] = useState<PPFSpecificationPackage | null>(null);
+  const [ppfFormTitle, setPpfFormTitle] = useState('');
+  const [ppfFormBrand, setPpfFormBrand] = useState('The Detailing Mafia');
+  const [ppfFormMicrons, setPpfFormMicrons] = useState('200 Micron Self-Healing TPU');
+  const [ppfFormFinishType, setPpfFormFinishType] = useState('Gloss PPF');
+  const [ppfFormWarranty, setPpfFormWarranty] = useState('5 Year Warranty');
+  const [ppfFormMrp, setPpfFormMrp] = useState<number>(100000);
+  const [ppfFormDiscount, setPpfFormDiscount] = useState<number>(25);
+  const [ppfFormOfferPrice, setPpfFormOfferPrice] = useState<number>(75000);
+  const [ppfFormValidityDate, setPpfFormValidityDate] = useState('Pre-Bookings Open • Flat 25% OFF');
+  const [ppfFormLocation, setPpfFormLocation] = useState('Tellapur - Osman Nagar Road');
+  const [ppfFormPhones, setPpfFormPhones] = useState('9032172211, 7780267514');
+  const [ppfFormFeatures, setPpfFormFeatures] = useState('Scratch Resistant, Stone Chip Protection, UV Protection, High Gloss Finish, Water Repellent');
+  const [ppfFormImages, setPpfFormImages] = useState<string[]>([]);
+  const [isSavingPPFPackage, setIsSavingPPFPackage] = useState(false);
+  const [isDeletingPPFPackageId, setIsDeletingPPFPackageId] = useState<string | null>(null);
+  const [isUploadingPPFImage, setIsUploadingPPFImage] = useState(false);
 
   // Car Finder Requests state
   const [liveCarFinderRequests, setLiveCarFinderRequests] = useState<CarFinderRequest[]>([]);
@@ -262,7 +293,7 @@ export default function AdminDashboardPage() {
   const syncAllFromSupabase = async () => {
     setIsSyncing(true);
     try {
-      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes, notifRes, dealersRes, carCareRes, carFinderRes] = await Promise.all([
+      const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes, notifRes, dealersRes, carCareRes, carFinderRes, ppfRes] = await Promise.all([
         fetch('/api/cars?admin=true').then((r) => r.json()).catch(() => null),
         fetch('/api/sell').then((r) => r.json()).catch(() => null),
         fetch('/api/inquiries').then((r) => r.json()).catch(() => null),
@@ -275,6 +306,7 @@ export default function AdminDashboardPage() {
         fetch('/api/dealers').then((r) => r.json()).catch(() => null),
         fetch('/api/car-care?admin=true').then((r) => r.json()).catch(() => null),
         fetch('/api/car-finder?admin=true').then((r) => r.json()).catch(() => null),
+        fetch('/api/ppf-packages').then((r) => r.json()).catch(() => null),
       ]);
 
       if (carsRes?.cars) setLiveCars(carsRes.cars);
@@ -288,6 +320,7 @@ export default function AdminDashboardPage() {
       if (pdiRes?.bookings) setLivePDIBookings(pdiRes.bookings);
       if (carCareRes?.enquiries && Array.isArray(carCareRes.enquiries)) setLiveCarCareList(carCareRes.enquiries);
       if (carFinderRes?.requests && Array.isArray(carFinderRes.requests)) setLiveCarFinderRequests(carFinderRes.requests);
+      if (ppfRes?.packages && Array.isArray(ppfRes.packages)) setPpfPackages(ppfRes.packages);
       if (notifRes?.notifications) {
         const map: Record<string, any> = {};
         notifRes.notifications.forEach((n: any) => {
@@ -439,6 +472,156 @@ export default function AdminDashboardPage() {
       }
     } catch {
       showToast('Error saving ribbons');
+    }
+  };
+
+  // PPF Specifications & Package Handlers
+  const handleOpenPPFModal = (pkg?: PPFSpecificationPackage) => {
+    if (pkg) {
+      setEditingPPFPackage(pkg);
+      setPpfFormTitle(pkg.title);
+      setPpfFormBrand(pkg.brand);
+      setPpfFormMicrons(pkg.microns);
+      setPpfFormFinishType(pkg.finishType || 'Gloss PPF');
+      setPpfFormWarranty(pkg.warrantyYears || '5 Year Warranty');
+      setPpfFormMrp(pkg.mrp);
+      setPpfFormDiscount(pkg.discountPercent);
+      setPpfFormOfferPrice(pkg.offerPrice);
+      setPpfFormValidityDate(pkg.validityDate || '');
+      setPpfFormLocation(pkg.location || 'Tellapur - Osman Nagar Road');
+      setPpfFormPhones(pkg.contactPhones?.join(', ') || '9032172211, 7780267514');
+      setPpfFormFeatures(pkg.features?.join(', ') || '');
+      setPpfFormImages(pkg.images || []);
+    } else {
+      setEditingPPFPackage(null);
+      setPpfFormTitle('');
+      setPpfFormBrand('The Detailing Mafia');
+      setPpfFormMicrons('200 Micron Self-Healing TPU');
+      setPpfFormFinishType('Gloss PPF');
+      setPpfFormWarranty('5 Year Warranty');
+      setPpfFormMrp(100000);
+      setPpfFormDiscount(25);
+      setPpfFormOfferPrice(75000);
+      setPpfFormValidityDate('Pre-Bookings Open • Flat 25% OFF');
+      setPpfFormLocation('Tellapur - Osman Nagar Road');
+      setPpfFormPhones('9032172211, 7780267514');
+      setPpfFormFeatures('Scratch Resistant, Stone Chip Protection, UV Protection, High Gloss Finish, Water Repellent');
+      setPpfFormImages(['/ppf/ppf-studio-launch.jpg']);
+    }
+    setIsPPFModalOpen(true);
+  };
+
+  const handleSavePPFPackage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ppfFormTitle.trim() || !ppfFormBrand.trim() || !ppfFormMicrons.trim()) {
+      showToast('Please fill title, brand, and microns specification.');
+      return;
+    }
+    setIsSavingPPFPackage(true);
+    try {
+      const payload: Partial<PPFSpecificationPackage> = {
+        id: editingPPFPackage ? editingPPFPackage.id : `ppf-${Date.now()}`,
+        title: ppfFormTitle.trim(),
+        brand: ppfFormBrand.trim(),
+        microns: ppfFormMicrons.trim(),
+        finishType: ppfFormFinishType.trim(),
+        warrantyYears: ppfFormWarranty.trim(),
+        mrp: Number(ppfFormMrp) || 0,
+        discountPercent: Number(ppfFormDiscount) || 0,
+        offerPrice: Number(ppfFormOfferPrice) || 0,
+        validityDate: ppfFormValidityDate.trim(),
+        location: ppfFormLocation.trim(),
+        contactPhones: ppfFormPhones.split(',').map((p) => p.trim()).filter(Boolean),
+        features: ppfFormFeatures.split(',').map((f) => f.trim()).filter(Boolean),
+        images: ppfFormImages.length > 0 ? ppfFormImages : ['/ppf/ppf-studio-launch.jpg'],
+        isActive: true,
+      };
+
+      const res = await fetch('/api/ppf-packages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success && data.package) {
+        showToast(editingPPFPackage ? 'Updated PPF specification package!' : 'Created new PPF specification package!');
+        setPpfPackages((prev) => {
+          const idx = prev.findIndex((p) => p.id === data.package.id);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = data.package;
+            return next;
+          }
+          return [data.package, ...prev];
+        });
+        setIsPPFModalOpen(false);
+      } else {
+        showToast(data.error || 'Failed to save PPF package');
+      }
+    } catch (err: any) {
+      console.error('Error saving PPF package:', err);
+      showToast(err.message || 'Error saving PPF package');
+    } finally {
+      setIsSavingPPFPackage(false);
+    }
+  };
+
+  const handleDeletePPFPackage = async (packageId: string) => {
+    if (!window.confirm('Are you sure you want to delete this PPF specification package?')) return;
+    setIsDeletingPPFPackageId(packageId);
+    try {
+      const res = await fetch(`/api/ppf-packages?id=${encodeURIComponent(packageId)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPpfPackages((prev) => prev.filter((p) => p.id !== packageId));
+        showToast('Deleted PPF package successfully.');
+      } else {
+        showToast(data.error || 'Failed to delete PPF package');
+      }
+    } catch (err: any) {
+      console.error('Error deleting PPF package:', err);
+      showToast(err.message || 'Error deleting PPF package');
+    } finally {
+      setIsDeletingPPFPackageId(null);
+    }
+  };
+
+  const handleDeletePPFImage = (imgUrl: string) => {
+    setPpfFormImages((prev) => prev.filter((u) => u !== imgUrl));
+    showToast('Removed picture from package.');
+  };
+
+  const handleUploadPPFImages = async (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+    setIsUploadingPPFImage(true);
+    try {
+      const fileList = Array.from(files);
+      const uploaded: string[] = [];
+      for (const file of fileList) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.success && data.url) {
+          uploaded.push(data.url);
+        } else {
+          showToast(data.error || `Failed to upload "${file.name}"`);
+        }
+      }
+      if (uploaded.length > 0) {
+        setPpfFormImages((prev) => [...uploaded, ...prev]);
+        showToast(`Uploaded ${uploaded.length} flyer picture(s)!`);
+      }
+    } catch (err: any) {
+      console.error('PPF image upload failed:', err);
+      showToast('Image upload failed. Please try again.');
+    } finally {
+      setIsUploadingPPFImage(false);
     }
   };
 
@@ -3482,7 +3665,7 @@ export default function AdminDashboardPage() {
         ========================================================= */}
         {activeTab === 'carcare' && (
           <div className="space-y-4">
-            {/* Header & Filter Bar */}
+            {/* Header & Sub-Navigation Bar */}
             <div className="bg-white rounded-3xl border border-[#E5E7EB] p-5 shadow-2xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E5E7EB]">
                 <div>
@@ -3495,7 +3678,7 @@ export default function AdminDashboardPage() {
                     </span>
                   </div>
                   <h3 className="font-extrabold text-xl text-[#101216] mt-0.5">
-                    Car Care & PPF Service Enquiries ({liveCarCareList.length})
+                    Car Care & PPF Hub
                   </h3>
                 </div>
                 <div className="flex items-center gap-2.5">
@@ -3516,35 +3699,98 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="relative w-full sm:w-80">
-                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search customer, phone, car make/model, location..."
-                    value={carCareSearch}
-                    onChange={(e) => setCarCareSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:border-[#E5325C]"
-                  />
-                </div>
-
-                <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
-                  {['All', 'New', 'Contacted', 'Quotation Sent', 'Confirmed', 'Completed', 'Cancelled'].map((st) => (
-                    <button
-                      key={st}
-                      onClick={() => setCarCareStatusFilter(st)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                        carCareStatusFilter === st
-                          ? 'bg-[#E5325C] text-white shadow-2xs'
-                          : 'bg-[#F8F9FA] text-gray-600 hover:text-black border border-[#E5E7EB]'
+              {/* Sub-Tab Switcher */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 bg-[#F8F9FA] p-1.5 rounded-2xl border border-[#E5E7EB]">
+                  <button
+                    type="button"
+                    onClick={() => setCarCareSubTab('enquiries')}
+                    className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
+                      carCareSubTab === 'enquiries'
+                        ? 'bg-[#E5325C] text-white shadow-2xs'
+                        : 'text-gray-600 hover:text-black'
+                    }`}
+                  >
+                    <Droplets className="w-4 h-4" />
+                    <span>Customer Enquiries</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        carCareSubTab === 'enquiries'
+                          ? 'bg-white/20 text-white'
+                          : 'bg-gray-200 text-gray-700'
                       }`}
                     >
-                      {st}
-                    </button>
-                  ))}
+                      {liveCarCareList.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCarCareSubTab('ppf-packages')}
+                    className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
+                      carCareSubTab === 'ppf-packages'
+                        ? 'bg-[#E5325C] text-white shadow-2xs'
+                        : 'text-gray-600 hover:text-black'
+                    }`}
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span>PPF Specifications & Offers</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        carCareSubTab === 'ppf-packages'
+                          ? 'bg-white/20 text-white'
+                          : 'bg-[#FFF0F3] text-[#E5325C]'
+                      }`}
+                    >
+                      {ppfPackages.length}
+                    </span>
+                  </button>
                 </div>
+
+                {carCareSubTab === 'ppf-packages' && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPPFModal()}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#E5325C] to-[#D4264E] text-white text-xs font-black shadow-md hover:shadow-lg transition-all cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add PPF Specification / Deal</span>
+                  </button>
+                )}
               </div>
             </div>
+
+            {/* SUBTAB 1: CUSTOMER ENQUIRIES */}
+            {carCareSubTab === 'enquiries' && (
+              <div className="space-y-4">
+                <div className="bg-white rounded-3xl border border-[#E5E7EB] p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="relative w-full sm:w-80">
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search customer, phone, car make/model, location..."
+                      value={carCareSearch}
+                      onChange={(e) => setCarCareSearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+                    {['All', 'New', 'Contacted', 'Quotation Sent', 'Confirmed', 'Completed', 'Cancelled'].map((st) => (
+                      <button
+                        key={st}
+                        onClick={() => setCarCareStatusFilter(st)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                          carCareStatusFilter === st
+                            ? 'bg-[#E5325C] text-white shadow-2xs'
+                            : 'bg-[#F8F9FA] text-gray-600 hover:text-black border border-[#E5E7EB]'
+                        }`}
+                      >
+                        {st}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
             {/* Car Care Enquiries Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -3759,6 +4005,226 @@ export default function AdminDashboardPage() {
                 <p className="text-xs text-gray-400">
                   When customers submit enquiries from the Car Care & PPF page, they will appear here in real time.
                 </p>
+              </div>
+            )}
+              </div>
+            )}
+
+            {/* SUBTAB 2: PPF SPECIFICATIONS, MICRONS & STUDIO OFFERS */}
+            {carCareSubTab === 'ppf-packages' && (
+              <div className="space-y-4">
+                {/* Information Card */}
+                <div className="bg-gradient-to-r from-[#101216] to-[#1A1D24] text-white rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1.5 max-w-2xl">
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 text-rose-400 text-[10px] font-black uppercase tracking-wider">
+                      <Shield className="w-3 h-3" />
+                      PPF Film Catalog & Promotional Flyers
+                    </div>
+                    <h3 className="text-lg md:text-xl font-black">
+                      Paint Protection Film (PPF) Specifications & Live Flyers
+                    </h3>
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      Configure PPF film thickness (Microns), brand, finish, warranty, discount percentages, and validity dates.
+                      Upload promotional studio flyers and photos for customers to inspect in full resolution and directly avail.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPPFModal()}
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-black shadow-lg transition-transform active:scale-95 cursor-pointer whitespace-nowrap self-start md:self-center"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create New PPF Package</span>
+                  </button>
+                </div>
+
+                {/* Packages Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {ppfPackages.map((pkg) => {
+                    const primaryImg = pkg.images?.[0] || '/ppf/ppf-studio-launch.jpg';
+                    const isDeleting = isDeletingPPFPackageId === pkg.id;
+
+                    return (
+                      <div
+                        key={pkg.id}
+                        className="bg-white rounded-3xl border border-[#E5E7EB] shadow-2xs hover:shadow-md transition-all flex flex-col overflow-hidden relative group"
+                      >
+                        {/* Flyer Picture Thumbnail */}
+                        <div className="relative aspect-[4/3] bg-black/95 overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={primaryImg}
+                            alt={pkg.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
+
+                          {/* Top Badges */}
+                          <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
+                            <span className="px-2.5 py-1 rounded-xl bg-black/75 backdrop-blur-md text-white text-[11px] font-extrabold border border-white/20">
+                              {pkg.brand}
+                            </span>
+                            <span className="px-2.5 py-1 rounded-xl bg-[#E5325C] text-white text-[11px] font-black shadow-sm flex items-center gap-1">
+                              <Percent className="w-3 h-3" />
+                              {pkg.discountPercent}% OFF
+                            </span>
+                          </div>
+
+                          {/* Bottom info on Image */}
+                          <div className="absolute bottom-3 left-3 right-3 text-white">
+                            <div className="flex items-center gap-1.5 text-[11px] font-black text-rose-300 mb-1">
+                              <Calendar className="w-3.5 h-3.5" />
+                              <span>{pkg.validityDate}</span>
+                            </div>
+                            <h4 className="text-base font-black leading-tight drop-shadow-sm">
+                              {pkg.title}
+                            </h4>
+                          </div>
+
+                          {/* Photo Count Pill */}
+                          {pkg.images && pkg.images.length > 1 && (
+                            <div className="absolute top-12 right-3 px-2 py-0.5 rounded-lg bg-black/70 backdrop-blur-xs text-[10px] font-bold text-white border border-white/10 flex items-center gap-1">
+                              <ImageIcon className="w-3 h-3" />
+                              {pkg.images.length} photos
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Specifications Card Body */}
+                        <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                          {/* Key Specs Pill Grid */}
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="bg-[#FFF0F3] border border-[#FFD6DF] rounded-xl p-2.5 space-y-0.5">
+                              <span className="text-[10px] uppercase font-bold text-[#E5325C]">PPF Microns</span>
+                              <p className="font-extrabold text-[#101216] truncate" title={pkg.microns}>
+                                {pkg.microns}
+                              </p>
+                            </div>
+
+                            <div className="bg-gray-50 border border-[#E5E7EB] rounded-xl p-2.5 space-y-0.5">
+                              <span className="text-[10px] uppercase font-bold text-gray-500">Warranty</span>
+                              <p className="font-extrabold text-[#101216] truncate" title={pkg.warrantyYears}>
+                                {pkg.warrantyYears}
+                              </p>
+                            </div>
+
+                            <div className="bg-gray-50 border border-[#E5E7EB] rounded-xl p-2.5 space-y-0.5">
+                              <span className="text-[10px] uppercase font-bold text-gray-500">Finish</span>
+                              <p className="font-extrabold text-[#101216] truncate" title={pkg.finishType}>
+                                {pkg.finishType}
+                              </p>
+                            </div>
+
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 space-y-0.5">
+                              <span className="text-[10px] uppercase font-bold text-emerald-700">Offer Price</span>
+                              <div className="flex items-baseline gap-1">
+                                <span className="font-black text-emerald-900 text-sm">
+                                  ₹{pkg.offerPrice.toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Pricing details */}
+                          <div className="flex items-center justify-between text-xs pt-1 border-t border-[#E5E7EB]">
+                            <div>
+                              <span className="text-gray-400 block text-[10px] uppercase font-bold">Standard MRP</span>
+                              <span className="line-through text-gray-400 font-bold">
+                                ₹{pkg.mrp.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-emerald-600 block text-[10px] uppercase font-extrabold">You Save</span>
+                              <span className="font-extrabold text-emerald-700">
+                                ₹{(pkg.mrp - pkg.offerPrice).toLocaleString('en-IN')} ({pkg.discountPercent}% OFF)
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Features Badges */}
+                          {pkg.features && pkg.features.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {pkg.features.slice(0, 3).map((feat, i) => (
+                                <span
+                                  key={i}
+                                  className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-700"
+                                >
+                                  ✓ {feat}
+                                </span>
+                              ))}
+                              {pkg.features.length > 3 && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-500">
+                                  +{pkg.features.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Location & Contact info */}
+                          <div className="text-[11px] text-gray-500 bg-[#F8F9FA] rounded-xl p-2.5 space-y-1">
+                            <div className="flex items-center gap-1.5 truncate">
+                              <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                              <span className="truncate">{pkg.location}</span>
+                            </div>
+                            {pkg.contactPhones && pkg.contactPhones.length > 0 && (
+                              <div className="flex items-center gap-1.5">
+                                <Phone className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                <span>{pkg.contactPhones.join(' | ')}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Card Actions: Edit & DELETE OPTIONS */}
+                          <div className="pt-3 border-t border-[#E5E7EB] flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPPFModal(pkg)}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-900 font-extrabold text-xs transition-colors cursor-pointer"
+                            >
+                              <Edit className="w-3.5 h-3.5 text-gray-600" />
+                              <span>Edit Specifications</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePPFPackage(pkg.id)}
+                              disabled={isDeleting}
+                              title="Delete this PPF package and offer"
+                              className="inline-flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-extrabold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {isDeleting ? (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {ppfPackages.length === 0 && (
+                  <div className="bg-white rounded-3xl border border-[#E5E7EB] p-12 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center mx-auto">
+                      <Shield className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-bold text-base text-[#101216]">No PPF Specification Packages Added</h4>
+                    <p className="text-xs text-gray-400 max-w-md mx-auto">
+                      Add PPF film specifications (Microns, Brand, Finish, Warranty), discounts, validity dates, and promotional flyers so customers can avail them on /car-care.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenPPFModal()}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#E5325C] text-white text-xs font-bold shadow-md cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add First PPF Specification</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -7473,6 +7939,482 @@ export default function AdminDashboardPage() {
                 <span>Save Ribbons Configuration</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: PPF SPECIFICATIONS, MICRONS, DISCOUNT & FLYERS
+      ========================================================= */}
+      {isPPFModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] overflow-y-auto border border-[#E5E7EB] shadow-2xl p-6 sm:p-7 space-y-6 my-8">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-4 border-b border-[#E5E7EB]">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FFF0F3] text-[#E5325C] text-[10px] font-black uppercase tracking-wider mb-1">
+                  <Shield className="w-3.5 h-3.5" />
+                  PPF Specification & Deal Management
+                </div>
+                <h3 className="font-extrabold text-xl text-[#101216]">
+                  {editingPPFPackage ? 'Edit PPF Specification Package' : 'Add New PPF Specification Package'}
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Set brand, film microns thickness, discount %, booking validity date, and upload studio promotional pictures.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPPFModalOpen(false)}
+                className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSavePPFPackage} className="space-y-5">
+              {/* Package Title */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Package Title / Heading <span className="text-[#E5325C]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Royal Enfield Bike Gloss PPF, Matty Black PPF & Gloss PPF"
+                  value={ppfFormTitle}
+                  onChange={(e) => setPpfFormTitle(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                />
+              </div>
+
+              {/* Brand & Microns Specification Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-gray-700">
+                      Brand Name <span className="text-[#E5325C]">*</span>
+                    </label>
+                    <span className="text-[10px] text-gray-400">e.g. The Detailing Mafia</span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. The Detailing Mafia, 3M, Garware, Llumar, Stek"
+                    value={ppfFormBrand}
+                    onChange={(e) => setPpfFormBrand(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['The Detailing Mafia', '3M Car Care', 'Garware Hi-Tech', 'Llumar', 'Stek'].map((b) => (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => setPpfFormBrand(b)}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer transition-colors"
+                      >
+                        {b}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-gray-700">
+                      Film Microns Specification <span className="text-[#E5325C]">*</span>
+                    </label>
+                    <span className="text-[10px] text-[#E5325C] font-bold">Film Thickness</span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 200 Micron Self-Healing TPU, 180 Micron TPU"
+                    value={ppfFormMicrons}
+                    onChange={(e) => setPpfFormMicrons(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {[
+                      '150 Micron TPU',
+                      '180 Micron TPU',
+                      '200 Micron Self-Healing TPU',
+                      '220 Micron Heavy Duty TPU',
+                    ].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setPpfFormMicrons(m)}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-[#FFF0F3] hover:bg-[#FFE0E6] text-[#E5325C] cursor-pointer transition-colors"
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Finish Type & Warranty Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                    Finish / Film Type
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Gloss PPF, Matty Black PPF, Satin Matte PPF"
+                    value={ppfFormFinishType}
+                    onChange={(e) => setPpfFormFinishType(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['Gloss PPF', 'Matty Black PPF', 'Satin Matte PPF', 'Bike Gloss PPF', 'Color PPF'].map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setPpfFormFinishType(f)}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer transition-colors"
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                    Warranty Duration
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 5 Year Warranty, 10 Year Warranty"
+                    value={ppfFormWarranty}
+                    onChange={(e) => setPpfFormWarranty(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['3 Year Warranty', '5 Year Warranty', '7 Year Warranty', '10 Year Warranty'].map((w) => (
+                      <button
+                        key={w}
+                        type="button"
+                        onClick={() => setPpfFormWarranty(w)}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer transition-colors"
+                      >
+                        {w}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing, Discount & Offer Price */}
+              <div className="bg-[#F8F9FA] border border-[#E5E7EB] rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Percent className="w-3.5 h-3.5 text-[#E5325C]" />
+                    Pricing & Discount Calculations
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (ppfFormMrp > 0 && ppfFormDiscount > 0) {
+                        const calculated = Math.round(ppfFormMrp * (1 - ppfFormDiscount / 100));
+                        setPpfFormOfferPrice(calculated);
+                        showToast(`Recalculated offer price: ₹${calculated.toLocaleString('en-IN')}`);
+                      }
+                    }}
+                    className="text-[10px] font-bold text-[#E5325C] hover:underline cursor-pointer"
+                  >
+                    Auto-Calculate from %
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                      Standard MRP (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={ppfFormMrp}
+                      onChange={(e) => {
+                        const mrp = Number(e.target.value);
+                        setPpfFormMrp(mrp);
+                        if (mrp > 0 && ppfFormDiscount > 0) {
+                          setPpfFormOfferPrice(Math.round(mrp * (1 - ppfFormDiscount / 100)));
+                        }
+                      }}
+                      className="w-full px-3.5 py-2 bg-white border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#E5325C] mb-1">
+                      Discount Percentage (%)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={ppfFormDiscount}
+                      onChange={(e) => {
+                        const disc = Number(e.target.value);
+                        setPpfFormDiscount(disc);
+                        if (ppfFormMrp > 0) {
+                          setPpfFormOfferPrice(Math.round(ppfFormMrp * (1 - disc / 100)));
+                        }
+                      }}
+                      className="w-full px-3.5 py-2 bg-white border border-[#E5E7EB] rounded-xl text-xs font-extrabold text-[#E5325C] focus:outline-none focus:border-[#E5325C]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-emerald-700 mb-1">
+                      Offer Price (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={ppfFormOfferPrice}
+                      onChange={(e) => setPpfFormOfferPrice(Number(e.target.value))}
+                      className="w-full px-3.5 py-2 bg-white border border-emerald-300 rounded-xl text-xs font-black text-emerald-800 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-gray-500 flex items-center justify-between pt-1">
+                  <span>Customer Savings:</span>
+                  <span className="font-extrabold text-emerald-700">
+                    ₹{(ppfFormMrp - ppfFormOfferPrice > 0 ? ppfFormMrp - ppfFormOfferPrice : 0).toLocaleString('en-IN')} ({ppfFormDiscount}% OFF)
+                  </span>
+                </div>
+              </div>
+
+              {/* Offer Validity / Date Text */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                  <span>Offer Validity Date / Booking Status <span className="text-[#E5325C]">*</span></span>
+                  <span className="text-[10px] text-gray-400">e.g. Pre-Bookings Open • Flat 25% OFF</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Pre-Bookings Open • Flat 25% OFF, Valid Till 30 Nov 2026, Limited Period Offer"
+                  value={ppfFormValidityDate}
+                  onChange={(e) => setPpfFormValidityDate(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                />
+              </div>
+
+              {/* Studio Location & Contact Phones */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                    Studio Branch Location
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Thellapur – Osman Nagar Road, Hyderabad"
+                    value={ppfFormLocation}
+                    onChange={(e) => setPpfFormLocation(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                    Contact Phone Numbers (comma separated)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 9032172211, 7780267514"
+                    value={ppfFormPhones}
+                    onChange={(e) => setPpfFormPhones(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+              </div>
+
+              {/* Features / Highlights */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  Package Highlights & Features (comma separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Scratch Resistant, Stone Chip Protection, UV Protection, High Gloss Finish, Water Repellent"
+                  value={ppfFormFeatures}
+                  onChange={(e) => setPpfFormFeatures(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-[#E5325C]"
+                />
+              </div>
+
+              {/* ========================================================
+                  PROMOTIONAL PICTURES & FLYER UPLOADS + DELETE OPTIONS
+              ========================================================= */}
+              <div className="bg-[#FFF8F9] border-2 border-dashed border-[#FFD6DF] rounded-2xl p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-[#E5325C]" />
+                      <h4 className="text-xs font-black uppercase tracking-wider text-gray-900">
+                        Promotional Pictures & Studio Flyers ({ppfFormImages.length})
+                      </h4>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      Upload promotional studio flyers or photos. Customers can view them in full screen and avail deals directly.
+                    </p>
+                  </div>
+
+                  <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-black shadow-md cursor-pointer transition-all self-start sm:self-auto">
+                    {isUploadingPPFImage ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload Picture</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      disabled={isUploadingPPFImage}
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          handleUploadPPFImages(e.target.files);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {/* Preset Flyers Quick-Attach */}
+                <div className="space-y-1.5 pt-2 border-t border-[#FFD6DF]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block">
+                    Quick Preset Studio Flyers:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {AVAILABLE_PPF_IMAGES.map((preset) => {
+                      const isAdded = ppfFormImages.includes(preset.url);
+                      return (
+                        <button
+                          key={preset.url}
+                          type="button"
+                          onClick={() => {
+                            if (isAdded) {
+                              setPpfFormImages((prev) => prev.filter((u) => u !== preset.url));
+                            } else {
+                              setPpfFormImages((prev) => [...prev, preset.url]);
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                            isAdded
+                              ? 'bg-rose-100 text-[#E5325C] border border-[#E5325C]'
+                              : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span>{preset.label}</span>
+                          {isAdded ? (
+                            <span className="text-[10px] font-black text-[#E5325C]">✓ Attached</span>
+                          ) : (
+                            <Plus className="w-3 h-3 text-gray-400" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Attached Pictures Grid WITH PROMINENT DELETE BUTTONS */}
+                {ppfFormImages.length > 0 ? (
+                  <div className="space-y-2 pt-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-700 block">
+                      Uploaded Pictures (Click &quot;Delete Picture&quot; to remove):
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {ppfFormImages.map((imgUrl, index) => (
+                        <div
+                          key={imgUrl + index}
+                          className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"
+                        >
+                          <div className="relative aspect-[4/3] bg-black">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={imgUrl}
+                              alt={`PPF Flyer ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 text-white text-[10px] font-bold">
+                              {index === 0 ? 'Primary Flyer' : `Photo #${index + 1}`}
+                            </div>
+                          </div>
+
+                          <div className="p-3 bg-white space-y-2 flex-1 flex flex-col justify-between">
+                            <p className="text-[11px] font-mono text-gray-500 truncate" title={imgUrl}>
+                              {imgUrl.split('/').pop()}
+                            </p>
+
+                            {/* PROMINENT, BIG RED DELETE BUTTON */}
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePPFImage(imgUrl)}
+                              title="Delete this picture"
+                              className="w-full py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4 text-white" />
+                              <span>Delete Picture</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl p-6 text-center border border-gray-200 space-y-1">
+                    <ImageIcon className="w-8 h-8 text-gray-300 mx-auto" />
+                    <p className="text-xs font-bold text-gray-600">No flyer pictures attached yet.</p>
+                    <p className="text-[11px] text-gray-400">
+                      Upload from your device or select from the quick presets above.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Form Action Buttons */}
+              <div className="flex items-center gap-3 pt-4 border-t border-[#E5E7EB]">
+                <button
+                  type="button"
+                  onClick={() => setIsPPFModalOpen(false)}
+                  className="flex-1 py-3 rounded-xl border border-gray-300 font-extrabold text-xs text-gray-700 hover:bg-gray-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingPPFPackage}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#E5325C] to-[#D4264E] hover:from-[#D4264E] hover:to-[#B81D3E] font-black text-xs text-white shadow-md cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isSavingPPFPackage ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Saving Package...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Save PPF Specification Package</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

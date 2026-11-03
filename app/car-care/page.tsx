@@ -23,13 +23,18 @@ import {
   Check,
   Send,
   MessageCircle,
+  Maximize2,
+  X,
+  Zap,
+  Award,
+  Percent,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useRecarsState } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
 import { MAKES, CITIES } from '@/lib/data';
-import { CarCareServiceType } from '@/lib/types';
+import { CarCareServiceType, PPFSpecificationPackage, DEFAULT_PPF_PACKAGES } from '@/lib/types';
 
 interface ServiceCardInfo {
   id: CarCareServiceType;
@@ -151,6 +156,36 @@ export default function CarCarePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedRef, setSubmittedRef] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // PPF Packages & Specifications
+  const [ppfPackages, setPpfPackages] = useState<PPFSpecificationPackage[]>(DEFAULT_PPF_PACKAGES);
+  const [selectedPackage, setSelectedPackage] = useState<PPFSpecificationPackage | null>(null);
+  const [activeFlyerModal, setActiveFlyerModal] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/ppf-packages')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.packages && Array.isArray(d.packages) && d.packages.length > 0) {
+          setPpfPackages(d.packages);
+        }
+      })
+      .catch((err) => console.warn('Could not load dynamic PPF packages, using defaults:', err));
+  }, []);
+
+  const handleAvailOffer = (pkg: PPFSpecificationPackage) => {
+    setSelectedPackage(pkg);
+    if (!selectedServices.includes('Paint Protection Film (PPF)')) {
+      setSelectedServices((prev) => [...prev, 'Paint Protection Film (PPF)']);
+    }
+    setAdditionalRequirements(
+      `Availing PPF Offer: ${pkg.title} | Brand: ${pkg.brand} | Spec: ${pkg.microns} | ${pkg.discountPercent}% OFF (Offer Price: ₹${pkg.offerPrice.toLocaleString('en-IN')})`
+    );
+    const formElement = document.getElementById('enquiry-form');
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     setMinDate(new Date().toISOString().split('T')[0]);
@@ -350,6 +385,184 @@ export default function CarCarePage() {
         </div>
       </section>
 
+      {/* ========================================================
+          EXCLUSIVE PPF SPECIFICATIONS, BRANDS & STUDIO OFFERS
+      ========================================================= */}
+      <section id="ppf-offers" className="py-16 bg-[#F8F9FA] border-y border-[#E5E7EB] w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFF0F3] border border-[#FFD6DF] text-xs font-bold text-[#E5325C] mb-2">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Verified Studio Specifications & Deals</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-[#101216]">
+                PPF Specifications, Microns & Studio Offers
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1 max-w-2xl">
+                Avail certified high-micron self-healing TPU Paint Protection Film with verified thickness, manufacturer warranty, and exclusive studio discounts.
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-bold text-gray-500">Official Studio Partner:</span>
+              <span className="px-3.5 py-1.5 rounded-xl bg-black text-amber-400 font-extrabold text-xs tracking-wider border border-amber-400/40 shadow-xs">
+                THE DETAILING MAFIA
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {ppfPackages.filter((p) => p.isActive !== false).map((pkg) => (
+              <div
+                key={pkg.id}
+                className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
+              >
+                <div>
+                  {/* Flyer / Promotional Picture with Zoom & Discount Badge */}
+                  <div
+                    className="relative aspect-[4/3] bg-gray-900 overflow-hidden cursor-pointer"
+                    onClick={() => setActiveFlyerModal(pkg.images[0] || '/ppf/ppf-studio-launch.jpg')}
+                  >
+                    <img
+                      src={pkg.images[0] || '/ppf/ppf-studio-launch.jpg'}
+                      alt={pkg.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
+
+                    {/* Brand Pill in Top-Left */}
+                    <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/85 backdrop-blur-md text-amber-300 border border-amber-400/40 text-[11px] font-black uppercase tracking-wider shadow-md">
+                      {pkg.brand}
+                    </div>
+
+                    {/* Discount Badge in Top-Right */}
+                    {pkg.discountPercent > 0 && (
+                      <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs font-black uppercase tracking-wider shadow-md animate-pulse">
+                        {pkg.discountPercent}% OFF
+                      </div>
+                    )}
+
+                    {/* Click to Zoom Flyer Indicator */}
+                    <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-xs text-white text-[11px] font-semibold flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity">
+                      <Maximize2 className="w-3 h-3" />
+                      <span>View Flyer</span>
+                    </div>
+
+                    {/* Date Pill in Bottom-Left */}
+                    {pkg.validityDate && (
+                      <div className="absolute bottom-3 left-3 px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-xs text-rose-300 text-[11px] font-bold flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-[#E5325C]" />
+                        <span>{pkg.validityDate}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-5 sm:p-6 space-y-4">
+                    <div>
+                      <h3 className="text-lg font-black text-[#101216] leading-snug group-hover:text-[#E5325C] transition-colors">
+                        {pkg.title}
+                      </h3>
+                      {pkg.location && (
+                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                          <MapPin className="w-3 h-3 text-gray-400" />
+                          <span>{pkg.location}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Specifications Grid: Microns, Finish, Warranty, Discount */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-2.5 rounded-xl bg-[#F0F7FB] border border-[#D8ECF6]">
+                        <span className="text-[10px] uppercase font-bold text-gray-500 block">PPF Thickness</span>
+                        <span className="font-extrabold text-[#006699] flex items-center gap-1 mt-0.5">
+                          <Zap className="w-3 h-3 text-amber-500 fill-amber-400" />
+                          {pkg.microns}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-[#F8F9FA] border border-[#E5E7EB]">
+                        <span className="text-[10px] uppercase font-bold text-gray-500 block">Finish Type</span>
+                        <span className="font-extrabold text-[#101216] block mt-0.5">{pkg.finishType || 'Ultra Gloss'}</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-[#F0F9F4] border border-[#D1EAD9]">
+                        <span className="text-[10px] uppercase font-bold text-gray-500 block">Studio Warranty</span>
+                        <span className="font-extrabold text-[#237A52] flex items-center gap-1 mt-0.5">
+                          <Award className="w-3 h-3 text-[#237A52]" />
+                          {pkg.warrantyYears || '5 Year Warranty'}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-[#FFF0F3] border border-[#FFD6DF]">
+                        <span className="text-[10px] uppercase font-bold text-gray-500 block">Discount Rate</span>
+                        <span className="font-extrabold text-[#E5325C] flex items-center gap-1 mt-0.5">
+                          <Percent className="w-3 h-3" />
+                          {pkg.discountPercent}% OFF Deal
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Pricing Box */}
+                    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-gray-50 to-rose-50/40 border border-gray-200 flex items-center justify-between">
+                      <div>
+                        {pkg.mrp > 0 && (
+                          <div className="text-xs text-gray-400 line-through font-semibold">
+                            MRP ₹{pkg.mrp.toLocaleString('en-IN')}
+                          </div>
+                        )}
+                        <div className="text-2xl font-black text-[#101216]">
+                          ₹{pkg.offerPrice.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+                      {pkg.mrp > pkg.offerPrice && (
+                        <div className="text-right">
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
+                            Save ₹{(pkg.mrp - pkg.offerPrice).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Features List */}
+                    {pkg.features && pkg.features.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        {pkg.features.slice(0, 4).map((feat, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs text-gray-700">
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                            <span className="truncate">{feat}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card Footer Actions */}
+                <div className="p-5 sm:p-6 pt-0 space-y-2">
+                  <button
+                    onClick={() => handleAvailOffer(pkg)}
+                    className="w-full py-3 px-4 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white font-extrabold text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>Avail This PPF Offer</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+
+                  <a
+                    href={`https://wa.me/919032172211?text=${encodeURIComponent(
+                      `Hi Recars & Detailing Mafia, I want to avail the PPF offer: ${pkg.title} (${pkg.brand}, ${pkg.microns}, ${pkg.discountPercent}% OFF at ₹${pkg.offerPrice}). Please share booking slot.`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs border border-gray-300 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>WhatsApp Booking Desk</span>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Services Grid Section */}
       <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="text-center max-w-2xl mx-auto mb-12">
@@ -499,6 +712,37 @@ export default function CarCarePage() {
                   <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{submitError}</span>
+                  </div>
+                )}
+
+                {/* Active Selected Package Alert Banner */}
+                {selectedPackage && (
+                  <div className="p-4 rounded-2xl bg-[#FFF0F3] border border-[#FFD6DF] flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-[#E5325C] text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <Sparkles className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase text-[#E5325C] tracking-wider">Availing Selected Offer</span>
+                          <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[9px] font-black">{selectedPackage.discountPercent}% OFF</span>
+                        </div>
+                        <p className="text-xs font-bold text-[#101216] truncate">{selectedPackage.title}</p>
+                        <p className="text-[11px] text-gray-600">
+                          {selectedPackage.brand} • {selectedPackage.microns} • Offer Price: <strong className="text-emerald-700">₹{selectedPackage.offerPrice.toLocaleString('en-IN')}</strong> (MRP ₹{selectedPackage.mrp.toLocaleString('en-IN')})
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPackage(null);
+                        setAdditionalRequirements('');
+                      }}
+                      className="px-3 py-1.5 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-600 hover:text-red-600 hover:border-red-300 transition-colors shrink-0 cursor-pointer"
+                    >
+                      Change Offer
+                    </button>
                   </div>
                 )}
 
@@ -752,6 +996,41 @@ export default function CarCarePage() {
           </div>
         </div>
       </section>
+
+      {/* Full-Screen Flyer Lightbox Modal */}
+      {activeFlyerModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 select-none animate-in fade-in duration-200"
+          onClick={() => setActiveFlyerModal(null)}
+        >
+          <div className="flex items-center justify-between text-white z-10" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-bold text-sm text-gray-200">The Detailing Mafia • PPF Specification Flyer</span>
+            </div>
+            <button
+              onClick={() => setActiveFlyerModal(null)}
+              className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all cursor-pointer"
+              title="Close (Esc)"
+              aria-label="Close"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          <div className="flex-1 flex items-center justify-center p-2" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={activeFlyerModal}
+              alt="Full PPF Flyer"
+              className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl"
+            />
+          </div>
+          <div className="text-center text-xs text-gray-400 py-1" onClick={(e) => e.stopPropagation()}>
+            Click anywhere or press close to exit full view
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

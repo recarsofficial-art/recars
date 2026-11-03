@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { MAKES, MODELS_BY_MAKE, CITIES } from '@/lib/data';
 import SimpleHeader from '@/components/SimpleHeader';
+import SplashScreen from '@/components/SplashScreen';
 import RecarsHomeHub from '@/components/RecarsHomeHub';
 import SpinnyHero from '@/components/SpinnyHero';
 import CarCard from '@/components/CarCard';
@@ -315,6 +316,11 @@ function HomePageContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-[#101216] font-sans selection:bg-[#E5325C] selection:text-white">
+      {/* ========================================================
+          0. INTRODUCTORY BRAND SPLASH SCREEN (LOADS LOGO -> OPENS HOMEPAGE)
+      ========================================================= */}
+      <SplashScreen minDuration={1400} />
+
       {/* ========================================================
           1. SIMPLE HEADER WITH BUY CAR & SELL CAR BUTTONS
       ========================================================= */}

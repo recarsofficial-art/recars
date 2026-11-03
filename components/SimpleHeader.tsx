@@ -24,7 +24,19 @@ export default function SimpleHeader({ activeTab = 'buy', onSelectTab }: SimpleH
         </div>
 
         {/* Right: Call Support & Login/Signup */}
-        <div className="flex items-center gap-2.5 sm:gap-6">
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Car Care & PPF Detailing Button */}
+          <Link
+            href="/car-care"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-[#FFF0F3] hover:bg-[#FFE0E6] text-[#E5325C] border border-[#FFD6DF] text-xs font-black transition-all shadow-2xs group hover:scale-[1.02] cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#E5325C] group-hover:rotate-12 transition-transform" />
+            <span>Car Care & PPF</span>
+            <span className="hidden sm:inline-block px-1.5 py-0.2 rounded-full bg-[#E5325C] text-white text-[9px] font-black uppercase tracking-wider">
+              25% OFF
+            </span>
+          </Link>
+
           {/* Call us link */}
           <a
             href="tel:+919908796677"

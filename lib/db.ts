@@ -16,6 +16,8 @@ import {
   VehicleRibbon,
   CarFinderRequest,
   CarFinderStatus,
+  PPFSpecificationPackage,
+  DEFAULT_PPF_PACKAGES,
 } from './types';
 
 function getDatabaseConnectionString(): string {
@@ -245,6 +247,28 @@ export async function ensureDealerAndCarsSchema(): Promise<void> {
           CREATE INDEX IF NOT EXISTS idx_car_finder_status ON public.car_finder_requests(status);
           CREATE INDEX IF NOT EXISTS idx_car_finder_brand ON public.car_finder_requests(preferred_brand);
           CREATE INDEX IF NOT EXISTS idx_car_finder_created_at ON public.car_finder_requests(created_at DESC);
+
+          CREATE TABLE IF NOT EXISTS public.ppf_packages (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            brand TEXT NOT NULL,
+            microns TEXT NOT NULL,
+            finish_type TEXT,
+            warranty_years TEXT,
+            mrp NUMERIC,
+            discount_percent NUMERIC,
+            offer_price NUMERIC,
+            validity_date TEXT,
+            images JSONB NOT NULL DEFAULT '[]'::jsonb,
+            features JSONB NOT NULL DEFAULT '[]'::jsonb,
+            location TEXT,
+            contact_phones JSONB DEFAULT '[]'::jsonb,
+            is_active BOOLEAN DEFAULT true,
+            created_at TIMESTAMPTZ DEFAULT now(),
+            updated_at TIMESTAMPTZ DEFAULT now()
+          );
+          CREATE INDEX IF NOT EXISTS idx_ppf_packages_is_active ON public.ppf_packages(is_active);
+          CREATE INDEX IF NOT EXISTS idx_ppf_packages_created_at ON public.ppf_packages(created_at DESC);
         `);
       } catch (err: any) {
         console.warn('[DB_INIT] ensureDealerAndCarsSchema warning:', err?.message);
@@ -2447,5 +2471,147 @@ export async function dbMatchCarsForRequest(req: {
 
     return true;
   });
+}
+
+// ========================================================
+// 13. PPF PACKAGES & SPECIFICATIONS OPERATIONS
+// ========================================================
+
+export { DEFAULT_PPF_PACKAGES };
+
+let memoryPpfPackages: PPFSpecificationPackage[] = [...DEFAULT_PPF_PACKAGES];
+
+export async function dbGetPPFPackages(): Promise<PPFSpecificationPackage[]> {
+  try {
+    await ensureDealerAndCarsSchema();
+    const res = await safeDbQuery(
+      'SELECT * FROM public.ppf_packages ORDER BY created_at DESC',
+      [],
+      'dbGetPPFPackages'
+    );
+    if (res && res.rows && res.rows.length > 0) {
+      return res.rows.map((r: any) => ({
+        id: r.id,
+        title: r.title,
+        brand: r.brand,
+        microns: r.microns,
+        finishType: r.finish_type || '',
+        warrantyYears: r.warranty_years || '',
+        mrp: Number(r.mrp || 0),
+        discountPercent: Number(r.discount_percent || 0),
+        offerPrice: Number(r.offer_price || 0),
+        validityDate: r.validity_date || '',
+        images: Array.isArray(r.images)
+          ? r.images
+          : typeof r.images === 'string'
+          ? JSON.parse(r.images)
+          : [],
+        features: Array.isArray(r.features)
+          ? r.features
+          : typeof r.features === 'string'
+          ? JSON.parse(r.features)
+          : [],
+        location: r.location || '',
+        contactPhones: Array.isArray(r.contact_phones)
+          ? r.contact_phones
+          : typeof r.contact_phones === 'string'
+          ? JSON.parse(r.contact_phones)
+          : [],
+        isActive: r.is_active !== false,
+        createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+        updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+      }));
+    }
+  } catch (err: any) {
+    console.warn('[DB] dbGetPPFPackages fallback to memory:', err?.message);
+  }
+  return memoryPpfPackages;
+}
+
+export async function dbUpsertPPFPackage(pkg: PPFSpecificationPackage): Promise<PPFSpecificationPackage> {
+  const existingIndex = memoryPpfPackages.findIndex((p) => p.id === pkg.id);
+  const now = new Date().toISOString();
+  const normalized: PPFSpecificationPackage = {
+    ...pkg,
+    updatedAt: now,
+    createdAt: pkg.createdAt || now,
+    isActive: pkg.isActive !== false,
+  };
+
+  if (existingIndex >= 0) {
+    memoryPpfPackages[existingIndex] = normalized;
+  } else {
+    memoryPpfPackages.unshift(normalized);
+  }
+
+  try {
+    await ensureDealerAndCarsSchema();
+    const sql = `
+      INSERT INTO public.ppf_packages (
+        id, title, brand, microns, finish_type, warranty_years,
+        mrp, discount_percent, offer_price, validity_date,
+        images, features, location, contact_phones, is_active,
+        created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6,
+        $7, $8, $9, $10,
+        $11::jsonb, $12::jsonb, $13, $14::jsonb, $15,
+        now(), now()
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        title = EXCLUDED.title,
+        brand = EXCLUDED.brand,
+        microns = EXCLUDED.microns,
+        finish_type = EXCLUDED.finish_type,
+        warranty_years = EXCLUDED.warranty_years,
+        mrp = EXCLUDED.mrp,
+        discount_percent = EXCLUDED.discount_percent,
+        offer_price = EXCLUDED.offer_price,
+        validity_date = EXCLUDED.validity_date,
+        images = EXCLUDED.images,
+        features = EXCLUDED.features,
+        location = EXCLUDED.location,
+        contact_phones = EXCLUDED.contact_phones,
+        is_active = EXCLUDED.is_active,
+        updated_at = now();
+    `;
+    await safeDbQuery(
+      sql,
+      [
+        normalized.id,
+        normalized.title,
+        normalized.brand,
+        normalized.microns,
+        normalized.finishType || '',
+        normalized.warrantyYears || '',
+        normalized.mrp,
+        normalized.discountPercent,
+        normalized.offerPrice,
+        normalized.validityDate || '',
+        JSON.stringify(normalized.images || []),
+        JSON.stringify(normalized.features || []),
+        normalized.location || '',
+        JSON.stringify(normalized.contactPhones || []),
+        normalized.isActive !== false,
+      ],
+      'dbUpsertPPFPackage'
+    );
+  } catch (err: any) {
+    console.warn('[DB] dbUpsertPPFPackage DB error, kept in memory:', err?.message);
+  }
+
+  return normalized;
+}
+
+export async function dbDeletePPFPackage(id: string): Promise<boolean> {
+  memoryPpfPackages = memoryPpfPackages.filter((p) => p.id !== id);
+  try {
+    await ensureDealerAndCarsSchema();
+    await safeDbQuery('DELETE FROM public.ppf_packages WHERE id = $1', [id], 'dbDeletePPFPackage');
+    return true;
+  } catch (err: any) {
+    console.warn('[DB] dbDeletePPFPackage DB error, removed from memory:', err?.message);
+    return true;
+  }
 }
 

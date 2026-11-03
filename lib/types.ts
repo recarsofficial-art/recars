@@ -302,6 +302,101 @@ export interface CarCareEnquiry {
   updatedAt?: string;
 }
 
+export interface PPFSpecificationPackage {
+  id: string;
+  title: string;
+  brand: string;
+  microns: string;
+  finishType?: string;
+  warrantyYears?: string;
+  mrp: number;
+  discountPercent: number;
+  offerPrice: number;
+  validityDate?: string;
+  images: string[];
+  features?: string[];
+  location?: string;
+  contactPhones?: string[];
+  isActive?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export const DEFAULT_PPF_PACKAGES: PPFSpecificationPackage[] = [
+  {
+    id: 'ppf-bike-enfield',
+    title: 'Royal Enfield Bike Gloss PPF',
+    brand: 'The Detailing Mafia',
+    microns: '180–200 Micron TPU',
+    finishType: 'Gloss PPF',
+    warrantyYears: '5 Year Warranty',
+    mrp: 19000,
+    discountPercent: 25,
+    offerPrice: 14250,
+    validityDate: 'Limited Time Pre-Booking Offer',
+    images: ['/ppf/ppf-bike-enfield.jpg'],
+    features: [
+      'Scratch Resistant Self-Healing TPU',
+      'High Gloss Candy Finish',
+      'UV & Oxidation Protection',
+      'Water Repellent Hydrophobic Surface',
+      'Keeps Your Bike Looking Showroom New',
+    ],
+    location: 'Tellapur - Osman Nagar Road',
+    contactPhones: ['9032172211', '7780267514'],
+    isActive: true,
+    createdAt: '2026-11-01T00:00:00.000Z',
+  },
+  {
+    id: 'ppf-cars-matty-gloss',
+    title: 'Premium Matty Black & Gloss PPF',
+    brand: 'The Detailing Mafia',
+    microns: '200 Micron Self-Healing TPU',
+    finishType: 'Matty Black & Ultra Gloss PPF',
+    warrantyYears: '10 Year Warranty',
+    mrp: 100000,
+    discountPercent: 25,
+    offerPrice: 75000,
+    validityDate: 'Special Studio Discount',
+    images: ['/ppf/ppf-cars-matty-gloss.jpg'],
+    features: [
+      '10 Year Comprehensive Warranty',
+      'Stone Chip & Highway Gravel Protection',
+      'Deep Scratch Self-Healing with Heat Memory',
+      'Anti-Yellowing UV Shield',
+      'Available in Matty Black or Ultra Gloss',
+    ],
+    location: 'Tellapur - Osman Nagar Road',
+    contactPhones: ['9032172211', '7780267514'],
+    isActive: true,
+    createdAt: '2026-11-01T00:00:00.000Z',
+  },
+  {
+    id: 'ppf-studio-launch',
+    title: 'Premium Car Detailing Studio Pre-Booking',
+    brand: 'The Detailing Mafia',
+    microns: '180–220 Micron Hydrophobic Film',
+    finishType: 'Color, Texture & Clear PPF',
+    warrantyYears: '5 to 10 Years',
+    mrp: 120000,
+    discountPercent: 25,
+    offerPrice: 90000,
+    validityDate: 'Pre-Bookings Open • Flat 25% OFF',
+    images: ['/ppf/ppf-studio-launch.jpg'],
+    features: [
+      'Ceramic Coating (9H/10H)',
+      'Paint Protection Film (PPF)',
+      'Color & Texture PPF Options',
+      'Sunroof & Windshield Protection Film',
+      'Window Films & Ceramic Wash Included',
+    ],
+    location: 'Thellapur – Osman Nagar Road',
+    contactPhones: ['9032172211', '7780267514'],
+    isActive: true,
+    createdAt: '2026-11-01T00:00:00.000Z',
+  },
+];
+
 // ========================================================
 // VEHICLE ANALYTICS & VIEW TRACKING TYPES
 // ========================================================
