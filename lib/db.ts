@@ -944,6 +944,49 @@ export async function dbUpdateCustomerCarStatus(id: string, status: string): Pro
   return (res.rowCount || 0) > 0;
 }
 
+export async function dbUpdateCustomerCarPrice(params: {
+  id: string;
+  expectedPrice?: number;
+  suggestedListingPrice?: number;
+  syncPublishedCar?: boolean;
+}): Promise<boolean> {
+  const { id, expectedPrice, suggestedListingPrice, syncPublishedCar } = params;
+  const updates: string[] = ['updated_at = now()'];
+  const values: any[] = [];
+  let idx = 1;
+
+  if (expectedPrice !== undefined) {
+    updates.push(`expected_price = $${idx++}`);
+    values.push(expectedPrice);
+  }
+  if (suggestedListingPrice !== undefined) {
+    updates.push(`suggested_listing_price = $${idx++}`);
+    values.push(suggestedListingPrice);
+  }
+
+  values.push(id);
+  const q = `UPDATE public.customer_cars SET ${updates.join(', ')} WHERE id = $${idx} RETURNING published_car_id`;
+  const res = await pool.query(q, values);
+  if ((res.rowCount || 0) === 0) return false;
+
+  const publishedCarId = res.rows[0]?.published_car_id;
+  const newPrice = suggestedListingPrice || expectedPrice;
+  if (syncPublishedCar && publishedCarId && newPrice) {
+    await pool.query(
+      'UPDATE public.cars SET price = $1, emi_per_month = $2, suggested_price_min = $3, suggested_price_max = $4, suggestedpricemin = $3, suggestedpricemax = $4, updated_at = now() WHERE id = $5',
+      [
+        newPrice,
+        Math.round(newPrice * 0.021),
+        Math.round(newPrice * 0.95),
+        Math.round(newPrice * 1.05),
+        publishedCarId,
+      ]
+    );
+  }
+
+  return true;
+}
+
 function inferCarDetails(make: string, model: string) {
   const m = `${make} ${model}`.toLowerCase();
   let bodyType: 'SUV' | 'Sedan' | 'Hatchback' = 'Hatchback';

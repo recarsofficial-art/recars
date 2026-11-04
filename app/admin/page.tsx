@@ -229,6 +229,11 @@ export default function AdminDashboardPage() {
   const [approveIsSelect, setApproveIsSelect] = useState<boolean>(true);
   const [isSubmittingApproval, setIsSubmittingApproval] = useState<boolean>(false);
 
+  // Quick Price Edit Modal State (for both unapproved & published cars)
+  const [editingPriceReq, setEditingPriceReq] = useState<SellRequest | null>(null);
+  const [editingPriceValue, setEditingPriceValue] = useState<number | ''>(0);
+  const [isUpdatingPrice, setIsUpdatingPrice] = useState<boolean>(false);
+
   // Email Notification States
   const [emailNotifs, setEmailNotifs] = useState<Record<string, { status: string; errorMessage?: string; sentAt?: string }>>({});
   const [retryingNotifId, setRetryingNotifId] = useState<string | null>(null);
@@ -1764,6 +1769,44 @@ export default function AdminDashboardPage() {
       }
     } catch (err: any) {
       alert('Error delisting car: ' + err.message);
+    }
+  };
+
+  const handleOpenPriceModal = (req: SellRequest) => {
+    setEditingPriceReq(req);
+    const initialPrice = req.suggestedListingPrice || req.expectedPrice || req.estimatedPriceMax || 750000;
+    setEditingPriceValue(initialPrice);
+  };
+
+  const handleSavePriceEdit = async () => {
+    if (!editingPriceReq || !editingPriceValue || Number(editingPriceValue) <= 0) {
+      alert('Please enter a valid price amount.');
+      return;
+    }
+    setIsUpdatingPrice(true);
+    try {
+      const res = await fetch('/api/sell', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingPriceReq.id,
+          expectedPrice: Number(editingPriceValue),
+          suggestedListingPrice: Number(editingPriceValue),
+          syncPublishedCar: true,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Updated price to ${formatINR(Number(editingPriceValue))} successfully!`);
+        setEditingPriceReq(null);
+        await syncAllFromSupabase();
+      } else {
+        alert(data.error || 'Failed to update price');
+      }
+    } catch (err: any) {
+      alert('Network error updating price: ' + err.message);
+    } finally {
+      setIsUpdatingPrice(false);
     }
   };
 
@@ -5712,9 +5755,46 @@ export default function AdminDashboardPage() {
                         <span className="text-gray-500">Preferred Slot:</span>
                         <span className="font-semibold text-gray-800">{req.preferredInspectionDate} ({req.preferredInspectionTime || 'Morning'})</span>
                       </div>
-                      <div className="flex items-center justify-between pt-1 border-t border-gray-200">
-                        <span className="text-[#237A52] font-bold">Price Evaluation:</span>
-                        <span className="font-extrabold text-[#237A52]">Doorstep Physical Inspection</span>
+
+                      {/* Seller Asking Price & Live Website Price Display with Quick Edit */}
+                      <div className="pt-2 border-t border-gray-200 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-700 font-bold">Seller Asking Price:</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-extrabold text-[#E5325C] bg-[#FFF0F3] px-2.5 py-0.5 rounded-lg border border-[#FFD6DF]">
+                              {req.expectedPrice
+                                ? formatINR(req.expectedPrice)
+                                : req.suggestedListingPrice
+                                ? formatINR(req.suggestedListingPrice)
+                                : 'Not specified'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPriceModal(req)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 transition-colors cursor-pointer shadow-2xs"
+                              title="Edit Price"
+                            >
+                              <Edit className="w-3 h-3 text-[#E5325C]" />
+                              <span>Edit</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {req.publishedCarId && req.suggestedListingPrice && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-emerald-800 font-bold">Live Website Price:</span>
+                            <span className="font-black text-emerald-700">
+                              {formatINR(req.suggestedListingPrice)}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between text-[11px] text-gray-500">
+                          <span>Market Estimate Range:</span>
+                          <span className="font-semibold text-emerald-700">
+                            {formatINR(req.estimatedPriceMin)} - {formatINR(req.estimatedPriceMax)}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -5761,6 +5841,15 @@ export default function AdminDashboardPage() {
                           <span>Live on Public Website</span>
                         </span>
                         <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPriceModal(req)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors cursor-pointer shadow-2xs"
+                            title="Edit Live Price on Website"
+                          >
+                            <Edit className="w-3 h-3 text-emerald-600" />
+                            <span>Edit Price</span>
+                          </button>
                           {req.publishedCarId && (
                             <a
                               href={`/cars/${req.publishedCarId}`}
@@ -7989,22 +8078,73 @@ export default function AdminDashboardPage() {
               className="space-y-3.5 text-xs"
             >
               <div>
-                <label className="block font-bold text-[#101216] mb-1">
-                  Website Listing Price (₹) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  step={5000}
-                  value={approveListingPrice}
-                  onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setApproveListingPrice(v === '' ? '' : Number(v));
-                  }}
-                  className="w-full px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-black text-sm text-[#E5325C] focus:outline-none focus:border-[#E5325C]"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-[#101216]">
+                    Website Listing Price (₹) *
+                  </label>
+                  {approveListingPrice && Number(approveListingPrice) > 0 && (
+                    <span className="text-xs font-black text-[#E5325C] bg-[#FFF0F3] px-2.5 py-0.5 rounded-full border border-[#FFD6DF]">
+                      {formatINR(Number(approveListingPrice))}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-gray-500">₹</span>
+                  <input
+                    type="number"
+                    required
+                    step={5000}
+                    value={approveListingPrice}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setApproveListingPrice(v === '' ? '' : Number(v));
+                    }}
+                    className="w-full pl-8 pr-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-black text-sm text-[#E5325C] focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
                 <p className="text-[10px] text-gray-400 mt-1">This will be the public selling price shown on the website.</p>
+
+                {/* Quick Margin Suggestions based on Seller Asking Price */}
+                <div className="pt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-gray-500">Quick set:</span>
+                  {(approvingSellReq.expectedPrice || approvingSellReq.suggestedListingPrice) && (
+                    <button
+                      type="button"
+                      onClick={() => setApproveListingPrice(approvingSellReq.expectedPrice || approvingSellReq.suggestedListingPrice || 0)}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 cursor-pointer"
+                    >
+                      Seller Ask: {formatINR(approvingSellReq.expectedPrice || approvingSellReq.suggestedListingPrice || 0)}
+                    </button>
+                  )}
+                  {approvingSellReq.expectedPrice && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setApproveListingPrice(Math.round(approvingSellReq.expectedPrice! * 1.05 / 5000) * 5000)}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer"
+                      >
+                        +5% Margin ({formatINR(Math.round(approvingSellReq.expectedPrice! * 1.05 / 5000) * 5000)})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setApproveListingPrice(Math.round(approvingSellReq.expectedPrice! * 1.10 / 5000) * 5000)}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer"
+                      >
+                        +10% Margin ({formatINR(Math.round(approvingSellReq.expectedPrice! * 1.10 / 5000) * 5000)})
+                      </button>
+                    </>
+                  )}
+                  {approvingSellReq.estimatedPriceMax && (
+                    <button
+                      type="button"
+                      onClick={() => setApproveListingPrice(approvingSellReq.estimatedPriceMax)}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 cursor-pointer"
+                    >
+                      Top Est: {formatINR(approvingSellReq.estimatedPriceMax)}
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -8117,6 +8257,157 @@ export default function AdminDashboardPage() {
                 >
                   <CheckCircle2 className="w-4 h-4 text-emerald-300" />
                   <span>{isSubmittingApproval ? 'Publishing...' : 'Approve & Publish Live'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          EDIT CAR PRICE MODAL (SELLER ASKING & LIVE WEBSITE PRICE)
+      ========================================================= */}
+      {editingPriceReq && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-[#E5E7EB] p-6 space-y-4 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-red-50 text-[#E5325C] flex items-center justify-center font-bold">
+                  <Banknote className="w-5 h-5 text-[#E5325C]" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-[#101216]">
+                    {editingPriceReq.publishedCarId ? 'Edit Live Website Price' : 'Edit Seller / Listing Price'}
+                  </h3>
+                  <p className="text-[11px] text-gray-500">
+                    {editingPriceReq.year} {editingPriceReq.make} {editingPriceReq.model} ({editingPriceReq.id})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingPriceReq(null)}
+                className="p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Seller Name:</span>
+                <span className="font-bold text-gray-900">{editingPriceReq.sellerName} ({editingPriceReq.sellerCity})</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Original Seller Asking Price:</span>
+                <span className="font-extrabold text-[#E5325C]">
+                  {editingPriceReq.expectedPrice
+                    ? formatINR(editingPriceReq.expectedPrice)
+                    : editingPriceReq.suggestedListingPrice
+                    ? formatINR(editingPriceReq.suggestedListingPrice)
+                    : 'Not specified'}
+                </span>
+              </div>
+              {editingPriceReq.publishedCarId && (
+                <div className="flex justify-between items-center pt-1 border-t border-gray-200">
+                  <span className="text-emerald-800 font-bold">Marketplace Status:</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Live on Website ({editingPriceReq.publishedCarId})
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSavePriceEdit();
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block font-bold text-[#101216]">
+                    {editingPriceReq.publishedCarId ? 'New Website Listing Price (₹) *' : 'Updated Asking / Target Price (₹) *'}
+                  </label>
+                  {editingPriceValue && Number(editingPriceValue) > 0 && (
+                    <span className="text-xs font-black text-[#E5325C] bg-[#FFF0F3] px-2.5 py-0.5 rounded-full border border-[#FFD6DF]">
+                      {formatINR(Number(editingPriceValue))}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-gray-500">₹</span>
+                  <input
+                    type="number"
+                    required
+                    step={5000}
+                    value={editingPriceValue}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setEditingPriceValue(v === '' ? '' : Number(v));
+                    }}
+                    className="w-full pl-8 pr-3.5 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-black text-sm text-[#E5325C] focus:outline-none focus:border-[#E5325C]"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  {editingPriceReq.publishedCarId
+                    ? 'Updating this price immediately syncs to www.recars.in for buyer viewing.'
+                    : 'Adjusts the target price on this sell request before publication.'}
+                </p>
+
+                {/* Quick Adjust Buttons */}
+                <div className="pt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-gray-500">Quick adjust:</span>
+                  {editingPriceReq.expectedPrice && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingPriceValue(editingPriceReq.expectedPrice!)}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 cursor-pointer"
+                    >
+                      Reset to Ask
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setEditingPriceValue((prev) => (Number(prev) || 0) + 10000)}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer"
+                  >
+                    +₹10,000
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPriceValue((prev) => (Number(prev) || 0) + 25000)}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer"
+                  >
+                    +₹25,000
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPriceValue((prev) => Math.max(10000, (Number(prev) || 0) - 25000))}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 cursor-pointer"
+                  >
+                    -₹25,000
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-3 border-t border-[#E5E7EB]">
+                <button
+                  type="button"
+                  onClick={() => setEditingPriceReq(null)}
+                  disabled={isUpdatingPrice}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 font-bold text-xs text-gray-700 hover:bg-gray-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingPrice}
+                  className="flex-1 py-2.5 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] font-bold text-xs text-white shadow-md cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-white" />
+                  <span>{isUpdatingPrice ? 'Saving Price...' : (editingPriceReq.publishedCarId ? 'Update Live Website Price' : 'Save Price')}</span>
                 </button>
               </div>
             </form>

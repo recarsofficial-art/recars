@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { dbGetCustomerCars, dbInsertCustomerCar, dbUpdateCustomerCarStatus } from '@/lib/db';
+import { dbGetCustomerCars, dbInsertCustomerCar, dbUpdateCustomerCarStatus, dbUpdateCustomerCarPrice } from '@/lib/db';
 import { SellRequest } from '@/lib/types';
 import { sendEnquiryNotification } from '@/lib/email';
 import { verifyAdminRequest, checkRateLimit, getClientIp } from '@/lib/security';
@@ -101,16 +101,31 @@ export async function PATCH(request: Request) {
     const admin = await verifyAdminRequest(request);
     if (!admin) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized: Admin authentication required to update sell request status.' },
+        { success: false, error: 'Unauthorized: Admin authentication required to update sell request.' },
         { status: 401 }
       );
     }
 
-    const { id, status } = await request.json();
-    if (!id || !status) {
-      return NextResponse.json({ success: false, error: 'id and status required' }, { status: 400 });
+    const body = await request.json();
+    const { id, status, expectedPrice, suggestedListingPrice, syncPublishedCar } = body;
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'id is required' }, { status: 400 });
     }
-    const updated = await dbUpdateCustomerCarStatus(id, status);
+
+    let updated = false;
+    if (status) {
+      updated = await dbUpdateCustomerCarStatus(id, status);
+    }
+    if (expectedPrice !== undefined || suggestedListingPrice !== undefined) {
+      const priceUpdated = await dbUpdateCustomerCarPrice({
+        id,
+        expectedPrice: expectedPrice !== undefined ? Number(expectedPrice) : undefined,
+        suggestedListingPrice: suggestedListingPrice !== undefined ? Number(suggestedListingPrice) : undefined,
+        syncPublishedCar: syncPublishedCar ?? true,
+      });
+      updated = updated || priceUpdated;
+    }
+
     return NextResponse.json({ success: updated });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
