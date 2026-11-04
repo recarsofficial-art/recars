@@ -55,7 +55,21 @@ import {
   Percent,
   Zap,
   AlertTriangle,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
+import {
+  exportCustomersToExcel,
+  exportInquiriesToExcel,
+  exportSellRequestsToExcel,
+  exportCarsInventoryToExcel,
+  exportTestDrivesToExcel,
+  exportNegotiationsToExcel,
+  exportCarCareToExcel,
+  exportCarFinderToExcel,
+  exportPDIBookingsToExcel,
+  exportMasterAllDataToExcel,
+} from '@/lib/exportExcel';
 import Footer from '@/components/Footer';
 import Logo from '@/components/Logo';
 import { useRecarsState } from '@/lib/store';
@@ -80,7 +94,7 @@ import {
   PPFSpecificationPackage,
 } from '@/lib/types';
 import { computeCarRibbons, getRibbonColorStyles, PRESET_RIBBONS, calculateSoldDuration } from '@/lib/ribbons';
-import { MAKES, CITIES } from '@/lib/data';
+import { MAKES, CITIES, MODELS_BY_MAKE, getVariantsForMakeAndModel } from '@/lib/data';
 
 const AVAILABLE_IMAGES = [
   { label: 'Hyundai Creta (Metallic Titan Grey Studio SUV)', url: '/car-creta-hd.jpg' },
@@ -117,6 +131,7 @@ export default function AdminDashboardPage() {
 
   const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'carfinder' | 'pdi' | 'carcare' | 'negotiations' | 'inquiries' | 'leads' | 'testdrives' | 'customers' | 'settings'>('overview');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -2600,6 +2615,15 @@ export default function AdminDashboardPage() {
               {lastSyncTime && <span className="text-[10px] text-gray-400 font-normal hidden md:inline">({lastSyncTime})</span>}
             </button>
 
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-300 hover:border-emerald-500 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition-all cursor-pointer shadow-2xs"
+              title="Download Inquiries, Customers, Sell Requests & All Data as Excel Spreadsheet"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Download Excel</span>
+            </button>
+
             <Link
               href="/"
               className="text-xs font-bold text-gray-700 hover:text-[#E5325C] hidden sm:flex items-center gap-1 transition-colors"
@@ -3109,6 +3133,14 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="flex items-center gap-2.5">
                   <button
+                    onClick={() => exportCarsInventoryToExcel(cars)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs"
+                    title="Download Vehicles Inventory as Excel Spreadsheet"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="hidden sm:inline">Export Excel</span>
+                  </button>
+                  <button
                     onClick={handleOpenAddCarModal}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#FFF0F3] hover:bg-[#FFE0E6] text-[#E5325C] text-xs font-bold border border-[#FFD6DF] transition-all cursor-pointer"
                   >
@@ -3230,13 +3262,23 @@ export default function AdminDashboardPage() {
                     <h3 className="font-extrabold text-lg text-[#101216] mt-0.5">Customer Car Inquiries</h3>
                   </div>
                 </div>
-                <button
-                  onClick={() => setActiveTab('inquiries')}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#101216] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer shadow-2xs self-start sm:self-center"
-                >
-                  <span>Open Inquiries Workspace ({inquiries.length})</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => exportInquiriesToExcel(inquiries)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs"
+                    title="Download Inquiries to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="hidden sm:inline">Export Excel</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('inquiries')}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#101216] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer shadow-2xs self-start sm:self-center"
+                  >
+                    <span>Open Inquiries Workspace ({inquiries.length})</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -3308,13 +3350,23 @@ export default function AdminDashboardPage() {
                     <h3 className="font-extrabold text-lg text-[#101216] mt-0.5">Customer Sell Requests & Doorstep Inspections</h3>
                   </div>
                 </div>
-                <button
-                  onClick={() => setActiveTab('leads')}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#101216] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer shadow-2xs self-start sm:self-center"
-                >
-                  <span>Open Sell Requests Workspace ({sellRequests.length})</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => exportSellRequestsToExcel(sellRequests)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs"
+                    title="Download Sell Requests to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="hidden sm:inline">Export Excel</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('leads')}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#101216] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer shadow-2xs self-start sm:self-center"
+                  >
+                    <span>Open Sell Requests Workspace ({sellRequests.length})</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3405,13 +3457,23 @@ export default function AdminDashboardPage() {
                     <h3 className="font-extrabold text-lg text-[#101216] mt-0.5">Registered Customers Directory</h3>
                   </div>
                 </div>
-                <button
-                  onClick={() => setActiveTab('customers')}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#101216] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer shadow-2xs self-start sm:self-center"
-                >
-                  <span>Open Customers Directory ({customers.length})</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => exportCustomersToExcel(customers, inquiries, sellRequests)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs"
+                    title="Download Registered Customers to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="hidden sm:inline">Export Excel</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('customers')}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#101216] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer shadow-2xs self-start sm:self-center"
+                  >
+                    <span>Open Customers Directory ({customers.length})</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -3474,13 +3536,23 @@ export default function AdminDashboardPage() {
                     <h3 className="font-extrabold text-lg text-[#101216] mt-0.5">Test Drive & Experience Center Appointments</h3>
                   </div>
                 </div>
-                <button
-                  onClick={() => setActiveTab('testdrives')}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#101216] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer shadow-2xs self-start sm:self-center"
-                >
-                  <span>Open Test Drives Workspace ({testDrives.length})</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => exportTestDrivesToExcel(testDrives)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs"
+                    title="Download Test Drive Bookings to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="hidden sm:inline">Export Excel</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('testdrives')}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#101216] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer shadow-2xs self-start sm:self-center"
+                  >
+                    <span>Open Test Drives Workspace ({testDrives.length})</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -3541,6 +3613,14 @@ export default function AdminDashboardPage() {
                   </h3>
                 </div>
                 <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={() => exportPDIBookingsToExcel(livePDIBookings)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs whitespace-nowrap"
+                    title="Download PDI Bookings to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Export Excel</span>
+                  </button>
                   <Link
                     href="/pdi"
                     target="_blank"
@@ -3806,6 +3886,14 @@ export default function AdminDashboardPage() {
                   </h3>
                 </div>
                 <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={() => exportCarCareToExcel(liveCarCareList)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs whitespace-nowrap"
+                    title="Download Car Care & PPF Enquiries to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Export Excel</span>
+                  </button>
                   <Link
                     href="/car-care"
                     target="_blank"
@@ -4374,7 +4462,15 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-gray-500">Live Inventory:</span>
+                  <button
+                    onClick={() => exportCarFinderToExcel(liveCarFinderRequests)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs whitespace-nowrap"
+                    title="Download Car Finder Requests to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Export Excel</span>
+                  </button>
+                  <span className="text-xs font-bold text-gray-500 hidden sm:inline">Live Inventory:</span>
                   <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
                     {activeCarsCount} available vehicles
                   </span>
@@ -4896,8 +4992,18 @@ export default function AdminDashboardPage() {
 
                   <button
                     type="button"
+                    onClick={() => exportCarsInventoryToExcel(cars)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all shadow-2xs cursor-pointer ml-auto"
+                    title="Download Vehicles Inventory to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Export Excel</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handleOpenAddCarModal}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-bold transition-all shadow-xs cursor-pointer ml-auto"
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#E5325C] hover:bg-[#D4264E] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[3]" />
                     <span>Add Vehicle</span>
@@ -5404,21 +5510,31 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
-              {/* Status Filter Badges */}
-              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
-                {['All', 'New', 'In Progress', 'Contacted', 'Closed'].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setInquiryStatusFilter(st)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      inquiryStatusFilter === st
-                        ? 'bg-[#E5325C] text-white shadow-2xs'
-                        : 'bg-[#F8F9FA] text-gray-600 hover:text-black border border-[#E5E7EB]'
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
+              {/* Status Filter Badges & Export */}
+              <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+                <div className="flex items-center gap-1.5">
+                  {['All', 'New', 'In Progress', 'Contacted', 'Closed'].map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => setInquiryStatusFilter(st)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        inquiryStatusFilter === st
+                          ? 'bg-[#E5325C] text-white shadow-2xs'
+                          : 'bg-[#F8F9FA] text-gray-600 hover:text-black border border-[#E5E7EB]'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => exportInquiriesToExcel(inquiries)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs whitespace-nowrap ml-auto"
+                  title="Download Inquiries to Excel"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Export Excel</span>
+                </button>
               </div>
             </div>
 
@@ -5618,12 +5734,22 @@ export default function AdminDashboardPage() {
                     Customer Sell Requests & Doorstep Inspections ({sellRequests.length})
                   </h3>
                 </div>
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className="text-xs font-bold text-[#E5325C] hover:underline self-start sm:self-center"
-                >
-                  ← Back to All Sections
-                </button>
+                <div className="flex items-center gap-2 self-start sm:self-center">
+                  <button
+                    onClick={() => exportSellRequestsToExcel(sellRequests)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs whitespace-nowrap"
+                    title="Download Sell Requests to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Export Excel</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className="text-xs font-bold text-[#E5325C] hover:underline"
+                  >
+                    ← Back to All Sections
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -5942,12 +6068,22 @@ export default function AdminDashboardPage() {
                     Test Drive Appointments ({testDrives.length})
                   </h3>
                 </div>
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className="text-xs font-bold text-[#E5325C] hover:underline self-start sm:self-center"
-                >
-                  ← Back to All Sections
-                </button>
+                <div className="flex items-center gap-2 self-start sm:self-center">
+                  <button
+                    onClick={() => exportTestDrivesToExcel(testDrives)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs whitespace-nowrap"
+                    title="Download Test Drives to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Export Excel</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className="text-xs font-bold text-[#E5325C] hover:underline"
+                  >
+                    ← Back to All Sections
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -6113,12 +6249,22 @@ export default function AdminDashboardPage() {
                     Registered Customers Directory ({customers.length})
                   </h3>
                 </div>
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className="text-xs font-bold text-[#E5325C] hover:underline self-start sm:self-center"
-                >
-                  ← Back to All Sections
-                </button>
+                <div className="flex items-center gap-2 self-start sm:self-center">
+                  <button
+                    onClick={() => exportCustomersToExcel(customers, inquiries, sellRequests)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs whitespace-nowrap"
+                    title="Download Registered Customers to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Export Excel</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className="text-xs font-bold text-[#E5325C] hover:underline"
+                  >
+                    ← Back to All Sections
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -6277,21 +6423,31 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
-              {/* Status Filter Badges */}
-              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
-                {['All', 'Pending', 'Counteroffer', 'Accepted', 'Rejected', 'Expired'].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setNegotiationStatusFilter(st)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      negotiationStatusFilter === st
-                        ? 'bg-[#E5325C] text-white shadow-2xs'
-                        : 'bg-[#F8F9FA] text-gray-600 hover:text-black border border-[#E5E7EB]'
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
+              {/* Status Filter Badges & Export */}
+              <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+                <div className="flex items-center gap-1.5">
+                  {['All', 'Pending', 'Counteroffer', 'Accepted', 'Rejected', 'Expired'].map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => setNegotiationStatusFilter(st)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        negotiationStatusFilter === st
+                          ? 'bg-[#E5325C] text-white shadow-2xs'
+                          : 'bg-[#F8F9FA] text-gray-600 hover:text-black border border-[#E5E7EB]'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => exportNegotiationsToExcel(liveNegotiations)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 transition-all cursor-pointer shadow-2xs whitespace-nowrap ml-auto"
+                  title="Download Negotiations to Excel"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Export Excel</span>
+                </button>
               </div>
             </div>
 
@@ -6984,16 +7140,27 @@ export default function AdminDashboardPage() {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block font-bold text-[#101216]">Make / Brand</label>
-                    {isCustomMake && (
+                    {isCustomMake ? (
                       <button
                         type="button"
                         onClick={() => {
                           setIsCustomMake(false);
                           setNewMake('Hyundai');
                         }}
-                        className="text-[11px] font-bold text-[#E5325C] hover:underline cursor-pointer"
+                        className="text-[11px] font-bold text-[#E5325C] hover:underline cursor-pointer flex items-center gap-1"
                       >
-                        Choose from list
+                        📋 Choose from list
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomMake(true);
+                          setCustomMakeName('');
+                        }}
+                        className="text-[11px] font-bold text-[#E5325C] hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        ✏️ Type brand manually
                       </button>
                     )}
                   </div>
@@ -7010,10 +7177,11 @@ export default function AdminDashboardPage() {
                     }}
                     className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   >
+                    <option value="Other">✏️ + Enter Custom Brand (Not in list)...</option>
                     {MAKES.map((m) => (
                       <option key={m} value={m}>{m}</option>
                     ))}
-                    <option value="Other">+ Other (Enter Custom Brand)</option>
+                    <option value="Other">✏️ + Other (Type Custom Brand)</option>
                   </select>
 
                   {isCustomMake && (
@@ -7021,40 +7189,163 @@ export default function AdminDashboardPage() {
                       <input
                         type="text"
                         required
-                        placeholder="Type custom brand name (e.g. Isuzu, BYD, Lotus...)"
+                        list="admin-custom-brands-list"
+                        placeholder="Type custom brand name (e.g. Isuzu, BYD, Lotus, Porsche...)"
                         value={customMakeName}
                         onChange={(e) => setCustomMakeName(e.target.value)}
                         className="w-full px-3 py-2 bg-white border-2 border-[#E5325C] rounded-xl font-semibold text-gray-800 focus:outline-none placeholder:text-gray-400 text-xs sm:text-sm shadow-xs"
                       />
+                      <datalist id="admin-custom-brands-list">
+                        {MAKES.map((m) => (
+                          <option key={m} value={m} />
+                        ))}
+                        <option value="BYD" />
+                        <option value="Isuzu" />
+                        <option value="Force Motors" />
+                        <option value="Lexus" />
+                        <option value="Mini" />
+                        <option value="Porsche" />
+                        <option value="Volvo" />
+                        <option value="Jaguar" />
+                        <option value="Land Rover" />
+                        <option value="Datsun" />
+                        <option value="Fiat" />
+                        <option value="Chevrolet" />
+                        <option value="Mitsubishi" />
+                        <option value="Aston Martin" />
+                        <option value="Bentley" />
+                        <option value="Ferrari" />
+                        <option value="Lamborghini" />
+                        <option value="Maserati" />
+                        <option value="Rolls-Royce" />
+                        <option value="Tesla" />
+                      </datalist>
                       <p className="text-[11px] text-gray-500">
-                        Brand not available in list? Type any make name above.
+                        Brand not in list? Type any manufacturer name above — it will be saved directly.
                       </p>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block font-bold text-[#101216] mb-1">Model Name</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-[#101216]">Model Name</label>
+                    {(MODELS_BY_MAKE[isCustomMake ? customMakeName : newMake] || []).length > 0 && (
+                      <span className="text-[10px] text-gray-500 font-semibold">
+                        {(MODELS_BY_MAKE[isCustomMake ? customMakeName : newMake] || []).length} Models
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
+                    list="admin-car-models-list"
                     required
                     value={newModel}
                     onChange={(e) => setNewModel(e.target.value)}
                     placeholder="e.g. Creta, City, Thar..."
                     className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
                   />
+                  <datalist id="admin-car-models-list">
+                    {(MODELS_BY_MAKE[isCustomMake ? customMakeName : newMake] || []).map((m) => (
+                      <option key={m} value={m} />
+                    ))}
+                  </datalist>
+                  {/* Quick Model Pills */}
+                  {(MODELS_BY_MAKE[isCustomMake ? customMakeName : newMake] || []).length > 0 && (
+                    <div className="flex items-center gap-1 overflow-x-auto pt-1.5 pb-0.5 scrollbar-thin">
+                      {(MODELS_BY_MAKE[isCustomMake ? customMakeName : newMake] || []).slice(0, 6).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setNewModel(m)}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap transition-colors cursor-pointer ${
+                            newModel.toLowerCase() === m.toLowerCase()
+                              ? 'bg-[#101216] text-white border-[#101216]'
+                              : 'bg-white text-gray-700 border-gray-200 hover:border-[#101216]'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block font-bold text-[#101216] mb-1">Variant</label>
-                  <input
-                    type="text"
-                    required
-                    value={newVariant}
-                    onChange={(e) => setNewVariant(e.target.value)}
-                    placeholder="e.g. SX (O) DCT Turbo"
-                    className="w-full px-3 py-2.5 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C]"
-                  />
+                  {(() => {
+                    const currentMake = isCustomMake ? customMakeName : newMake;
+                    const availableVariants = getVariantsForMakeAndModel(currentMake, newModel);
+                    return (
+                      <>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block font-bold text-[#101216]">Variant</label>
+                          {availableVariants.length > 0 && (
+                            <span className="text-[10px] font-bold text-[#E5325C]">
+                              {availableVariants.length} Company Trim{availableVariants.length === 1 ? '' : 's'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Select from Official Company Variants */}
+                        <select
+                          value={availableVariants.includes(newVariant) ? newVariant : (newVariant ? '__custom__' : '')}
+                          onChange={(e) => {
+                            if (e.target.value !== '__custom__' && e.target.value) {
+                              setNewVariant(e.target.value);
+                            }
+                          }}
+                          className="w-full mb-1.5 px-3 py-2 bg-[#F8F9FA] border border-[#E5E7EB] rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#E5325C] cursor-pointer"
+                        >
+                          <option value="">-- Select from {newModel || currentMake || 'Company'} Variants ({availableVariants.length}) --</option>
+                          {availableVariants.map((v) => (
+                            <option key={v} value={v}>
+                              {v}
+                            </option>
+                          ))}
+                          <option value="__custom__">✏️ Other (Enter Custom Variant Manually Below)</option>
+                        </select>
+
+                        {/* Text input with Datalist for manual entry or tweaks */}
+                        <div className="relative">
+                          <input
+                            type="text"
+                            list="admin-car-variants-list"
+                            required
+                            value={newVariant}
+                            onChange={(e) => setNewVariant(e.target.value)}
+                            placeholder={availableVariants[0] ? `Or type manually (e.g. ${availableVariants[0]})` : "e.g. SX (O) DCT Turbo"}
+                            className="w-full px-3 py-2 bg-white border border-[#E5E7EB] rounded-xl font-semibold text-gray-800 text-xs focus:outline-none focus:border-[#E5325C] shadow-2xs"
+                          />
+                          <datalist id="admin-car-variants-list">
+                            {availableVariants.map((v) => (
+                              <option key={v} value={v} />
+                            ))}
+                          </datalist>
+                        </div>
+
+                        {/* Quick One-Click Variant Pills */}
+                        {availableVariants.length > 0 && (
+                          <div className="flex items-center gap-1.5 overflow-x-auto pt-1.5 pb-0.5 scrollbar-thin">
+                            <span className="text-[10px] text-gray-400 font-bold whitespace-nowrap">Tap:</span>
+                            {availableVariants.slice(0, 8).map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => setNewVariant(v)}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap transition-colors cursor-pointer ${
+                                  newVariant.toLowerCase() === v.toLowerCase()
+                                    ? 'bg-[#E5325C] text-white border-[#E5325C]'
+                                    : 'bg-white text-gray-700 border-gray-200 hover:border-[#E5325C] hover:text-[#E5325C]'
+                                }`}
+                              >
+                                {v}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -7754,6 +8045,8 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+
+
       {/* ========================================================
           VEHICLE SOURCE & DEALER DETAILS MODAL (ADMIN ONLY)
       ========================================================= */}
@@ -8000,6 +8293,8 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+
 
       {/* ========================================================
           APPROVE & PUBLISH TO WEBSITE MODAL (CUSTOMER CAR SELL)
@@ -8264,6 +8559,8 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+
+
       {/* ========================================================
           EDIT CAR PRICE MODAL (SELLER ASKING & LIVE WEBSITE PRICE)
       ========================================================= */}
@@ -8414,6 +8711,8 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+
       {/* ========================================================
           VEHICLE RIBBON & BADGES MANAGER MODAL
       ========================================================= */}
@@ -9139,6 +9438,374 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* ========================================================
+          MODAL: EXPORT DATA & REPORTS TO EXCEL (.CSV)
+      ========================================================= */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-6 my-8 animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-4 border-b border-[#E5E7EB]">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <FileSpreadsheet className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-xl text-[#101216]">
+                    Download Business Data (Excel)
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Export all platform enquiries, registered customers, vehicle inventory, and sell requests to Microsoft Excel (.csv) spreadsheets.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsExportModalOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Master Export Card */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-green-50 border-2 border-emerald-300 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider">
+                    Recommended • Full Platform Backup
+                  </div>
+                  <h4 className="font-black text-base text-emerald-950">
+                    Download Complete Master Report (All Inquiries & Customers)
+                  </h4>
+                  <p className="text-xs text-emerald-800/80 leading-relaxed max-w-xl">
+                    Consolidates every single customer inquiry, registered profile, sell car submission, test drive booking, price negotiation, car finder request, car care lead, and inventory listing into one unified, structured Excel spreadsheet.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportMasterAllDataToExcel({
+                      customers,
+                      inquiries,
+                      sellRequests,
+                      testDrives,
+                      negotiations: liveNegotiations,
+                      carFinder: liveCarFinderRequests,
+                      carCare: liveCarCareList,
+                      pdi: livePDIBookings,
+                      cars,
+                    });
+                    setToastMessage('Master Excel report downloaded successfully!');
+                    setTimeout(() => setToastMessage(null), 3000);
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-black shadow-md hover:shadow-lg transition-all cursor-pointer whitespace-nowrap self-start sm:self-center"
+                >
+                  <Download className="w-4 h-4 stroke-[2.5]" />
+                  <span>Download Master Report</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sectional Data Exports Grid */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-black uppercase tracking-wider text-gray-400">
+                Individual Section Downloads
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[46vh] overflow-y-auto pr-1">
+                {/* 1. Customers Directory */}
+                <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] hover:border-emerald-300 transition-all flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-[#101216] flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-emerald-600" />
+                        <span>Registered Customers</span>
+                      </span>
+                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {customers.length} Profiles
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Customer names, verified phones, emails, cities, addresses, and inquiry counts.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportCustomersToExcel(customers, inquiries, sellRequests);
+                      setToastMessage('Customers Excel report downloaded!');
+                      setTimeout(() => setToastMessage(null), 2500);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Customers ({customers.length})</span>
+                  </button>
+                </div>
+
+                {/* 2. Car Inquiries */}
+                <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] hover:border-emerald-300 transition-all flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-[#101216] flex items-center gap-1.5">
+                        <MessageSquare className="w-4 h-4 text-emerald-600" />
+                        <span>Customer Car Inquiries</span>
+                      </span>
+                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {inquiries.length} Inquiries
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Buyer leads, inquired vehicle titles, car prices, messages, dates, and status.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportInquiriesToExcel(inquiries);
+                      setToastMessage('Car Inquiries Excel report downloaded!');
+                      setTimeout(() => setToastMessage(null), 2500);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Inquiries ({inquiries.length})</span>
+                  </button>
+                </div>
+
+                {/* 3. Customer Sell Requests */}
+                <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] hover:border-emerald-300 transition-all flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-[#101216] flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-emerald-600" />
+                        <span>Customer Sell Requests</span>
+                      </span>
+                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {sellRequests.length} Submissions
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Seller contacts, vehicle specifications, asking prices, doorstep inspection slots.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportSellRequestsToExcel(sellRequests);
+                      setToastMessage('Sell Requests Excel report downloaded!');
+                      setTimeout(() => setToastMessage(null), 2500);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Sell Requests ({sellRequests.length})</span>
+                  </button>
+                </div>
+
+                {/* 4. Live Vehicle Inventory */}
+                <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] hover:border-emerald-300 transition-all flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-[#101216] flex items-center gap-1.5">
+                        <Car className="w-4 h-4 text-emerald-600" />
+                        <span>Vehicles Inventory</span>
+                      </span>
+                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {cars.length} Cars
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Make, model, variant, year, price, EMI, source dealer, insurance, views & scores.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportCarsInventoryToExcel(cars);
+                      setToastMessage('Inventory Excel report downloaded!');
+                      setTimeout(() => setToastMessage(null), 2500);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Inventory ({cars.length})</span>
+                  </button>
+                </div>
+
+                {/* 5. Price Negotiations */}
+                <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] hover:border-emerald-300 transition-all flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-[#101216] flex items-center gap-1.5">
+                        <Handshake className="w-4 h-4 text-emerald-600" />
+                        <span>Price Negotiations</span>
+                      </span>
+                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {liveNegotiations.length} Deals
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Customer offers, listed prices, counteroffers, finalized deals, and negotiation logs.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportNegotiationsToExcel(liveNegotiations);
+                      setToastMessage('Negotiations Excel report downloaded!');
+                      setTimeout(() => setToastMessage(null), 2500);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Negotiations ({liveNegotiations.length})</span>
+                  </button>
+                </div>
+
+                {/* 6. Test Drive Bookings */}
+                <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] hover:border-emerald-300 transition-all flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-[#101216] flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-emerald-600" />
+                        <span>Test Drive Bookings</span>
+                      </span>
+                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {testDrives.length} Bookings
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Customer names, vehicle inquired, preferred date/time, and Hub visit appointments.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportTestDrivesToExcel(testDrives);
+                      setToastMessage('Test Drive Bookings Excel report downloaded!');
+                      setTimeout(() => setToastMessage(null), 2500);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Test Drives ({testDrives.length})</span>
+                  </button>
+                </div>
+
+                {/* 7. Car Finder Requests */}
+                <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] hover:border-emerald-300 transition-all flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-[#101216] flex items-center gap-1.5">
+                        <Search className="w-4 h-4 text-emerald-600" />
+                        <span>Car Finder Requests</span>
+                      </span>
+                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {liveCarFinderRequests.length} Requests
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Customer wishlists, brand & model preferences, budget brackets, fuel & location.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportCarFinderToExcel(liveCarFinderRequests);
+                      setToastMessage('Car Finder Requests Excel report downloaded!');
+                      setTimeout(() => setToastMessage(null), 2500);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Car Finder ({liveCarFinderRequests.length})</span>
+                  </button>
+                </div>
+
+                {/* 8. Car Care & PPF */}
+                <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] hover:border-emerald-300 transition-all flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-[#101216] flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-emerald-600" />
+                        <span>Car Care & PPF Enquiries</span>
+                      </span>
+                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {liveCarCareList.length} Leads
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      PPF, Ceramic, Teflon & detailing inquiries with car make, model, services & notes.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportCarCareToExcel(liveCarCareList);
+                      setToastMessage('Car Care Enquiries Excel report downloaded!');
+                      setTimeout(() => setToastMessage(null), 2500);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Car Care ({liveCarCareList.length})</span>
+                  </button>
+                </div>
+
+                {/* 9. PDI Bookings */}
+                <div className="p-4 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] hover:border-emerald-300 transition-all flex flex-col justify-between space-y-3 md:col-span-2">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm text-[#101216] flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                        <span>Pre-Delivery Inspection (PDI) Bookings</span>
+                      </span>
+                      <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {livePDIBookings.length} Bookings
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1">
+                      Showroom inspection requests, car make & model, dealership addresses, and dispatched engineers.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportPDIBookingsToExcel(livePDIBookings);
+                      setToastMessage('PDI Bookings Excel report downloaded!');
+                      setTimeout(() => setToastMessage(null), 2500);
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 hover:border-emerald-400 text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download PDI Bookings ({livePDIBookings.length})</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between pt-4 border-t border-[#E5E7EB] text-xs">
+              <span className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                UTF-8 BOM Encoded • Microsoft Excel, Apple Numbers & Google Sheets Ready
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsExportModalOpen(false)}
+                className="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
 
       </div>
     </div>

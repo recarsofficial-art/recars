@@ -26,7 +26,7 @@ import SimpleHeader from '@/components/SimpleHeader';
 import SpinnyHero from '@/components/SpinnyHero';
 import Footer from '@/components/Footer';
 import { useRecarsState } from '@/lib/store';
-import { MAKES, MODELS_BY_MAKE, CITIES } from '@/lib/data';
+import { MAKES, MODELS_BY_MAKE, CITIES, getVariantsForMakeAndModel } from '@/lib/data';
 import { FuelType, TransmissionType, OwnershipType, SellRequest } from '@/lib/types';
 import { useAuth } from '@/lib/authContext';
 
@@ -456,7 +456,7 @@ function SellWorkflowContent() {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-bold text-[#101216]">Make / Brand</label>
-                    {isCustomMake && (
+                    {isCustomMake ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -464,9 +464,22 @@ function SellWorkflowContent() {
                           setMake('Hyundai');
                           setModel(MODELS_BY_MAKE['Hyundai']?.[0] || 'Creta');
                         }}
-                        className="text-[11px] font-bold text-[#E5325C] hover:underline cursor-pointer"
+                        className="text-[11px] font-bold text-[#E5325C] hover:underline cursor-pointer flex items-center gap-1"
                       >
-                        Choose from list
+                        📋 Choose from list
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomMake(true);
+                          setIsCustomModel(true);
+                          setCustomMakeName('');
+                          setCustomModelName('');
+                        }}
+                        className="text-[11px] font-bold text-[#E5325C] hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        ✏️ Type brand manually
                       </button>
                     )}
                   </div>
@@ -486,12 +499,13 @@ function SellWorkflowContent() {
                     }}
                     className="w-full bg-[#F8F9FA] px-4 py-2.5 rounded-xl border border-[#E5E7EB] text-xs font-semibold focus:outline-none"
                   >
+                    <option value="Other">✏️ + Enter Custom Brand (Not in list)...</option>
                     {MAKES.map((m) => (
                       <option key={m} value={m}>
                         {m}
                       </option>
                     ))}
-                    <option value="Other">+ Other (Car brand not in list)</option>
+                    <option value="Other">✏️ + Other (Type Custom Brand)</option>
                   </select>
 
                   {isCustomMake && (
@@ -499,13 +513,30 @@ function SellWorkflowContent() {
                       <input
                         type="text"
                         required
-                        placeholder="Type car brand name (e.g. Isuzu, BYD, Lotus...)"
+                        list="sell-custom-brands-list"
+                        placeholder="Type car brand name (e.g. Isuzu, BYD, Lotus, Porsche...)"
                         value={customMakeName}
                         onChange={(e) => setCustomMakeName(e.target.value)}
                         className="w-full bg-white px-3.5 py-2 rounded-xl border-2 border-[#E5325C] text-xs font-semibold focus:outline-none placeholder:text-gray-400 shadow-2xs"
                       />
+                      <datalist id="sell-custom-brands-list">
+                        {MAKES.map((m) => (
+                          <option key={m} value={m} />
+                        ))}
+                        <option value="BYD" />
+                        <option value="Isuzu" />
+                        <option value="Force Motors" />
+                        <option value="Lexus" />
+                        <option value="Mini" />
+                        <option value="Porsche" />
+                        <option value="Volvo" />
+                        <option value="Jaguar" />
+                        <option value="Land Rover" />
+                        <option value="Datsun" />
+                        <option value="Tesla" />
+                      </datalist>
                       <p className="text-[11px] text-gray-500">
-                        Car brand not available? Type it above.
+                        Car brand not in list? Type it above — it will be recorded for inspection & listing.
                       </p>
                     </div>
                   )}
@@ -600,14 +631,78 @@ function SellWorkflowContent() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#101216] mb-1">Variant / Trim</label>
-                  <input
-                    type="text"
-                    value={variant}
-                    onChange={(e) => setVariant(e.target.value)}
-                    placeholder="e.g. VXI / SX / ZX"
-                    className="w-full bg-[#F8F9FA] px-4 py-2.5 rounded-xl border border-[#E5E7EB] text-xs font-semibold focus:outline-none"
-                  />
+                  {(() => {
+                    const availableVariants = getVariantsForMakeAndModel(displayMake, displayModel);
+                    return (
+                      <>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs font-bold text-[#101216]">Variant / Trim</label>
+                          {availableVariants.length > 0 && (
+                            <span className="text-[10px] font-bold text-[#E5325C]">
+                              {availableVariants.length} Company Variant{availableVariants.length === 1 ? '' : 's'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Select from Official Company Variants */}
+                        <select
+                          value={availableVariants.includes(variant) ? variant : (variant ? '__custom__' : '')}
+                          onChange={(e) => {
+                            if (e.target.value !== '__custom__' && e.target.value) {
+                              setVariant(e.target.value);
+                            }
+                          }}
+                          className="w-full mb-1.5 bg-[#F8F9FA] px-3.5 py-2 rounded-xl border border-[#E5E7EB] text-xs font-semibold focus:outline-none cursor-pointer"
+                        >
+                          <option value="">-- Select {displayModel || displayMake} Variant ({availableVariants.length}) --</option>
+                          {availableVariants.map((v) => (
+                            <option key={v} value={v}>
+                              {v}
+                            </option>
+                          ))}
+                          <option value="__custom__">✏️ Other / Type Custom Variant Below</option>
+                        </select>
+
+                        {/* Text input with datalist autocomplete */}
+                        <div className="relative">
+                          <input
+                            type="text"
+                            list="sell-variants-list"
+                            value={variant}
+                            onChange={(e) => setVariant(e.target.value)}
+                            placeholder={availableVariants[0] ? `Or type manually (e.g. ${availableVariants[0]})` : "e.g. VXI / SX / ZX"}
+                            className="w-full bg-white px-3.5 py-2 rounded-xl border border-[#E5E7EB] text-xs font-semibold focus:outline-none focus:border-[#E5325C] shadow-2xs"
+                          />
+                          <datalist id="sell-variants-list">
+                            {availableVariants.map((v) => (
+                              <option key={v} value={v} />
+                            ))}
+                          </datalist>
+                        </div>
+
+                        {/* Quick Clickable Variant Pills */}
+                        {availableVariants.length > 0 && (
+                          <div className="flex items-center gap-1.5 overflow-x-auto pt-1.5 pb-0.5 scrollbar-thin">
+                            <span className="text-[10px] text-gray-400 font-bold whitespace-nowrap">Popular:</span>
+                            {availableVariants.slice(0, 8).map((v) => (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => setVariant(v)}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap transition-colors cursor-pointer ${
+                                  variant.toLowerCase() === v.toLowerCase()
+                                    ? 'bg-[#E5325C] text-white border-[#E5325C]'
+                                    : 'bg-white text-gray-700 border-gray-200 hover:border-[#E5325C] hover:text-[#E5325C]'
+                                }`}
+                              >
+                                {v}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div>

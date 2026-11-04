@@ -43,6 +43,13 @@ export const MAKES = [
   'Chevrolet',
   'Hindustan Motors',
   'JSW',
+  'BYD',
+  'Isuzu',
+  'Force Motors',
+  'Lexus',
+  'Mini',
+  'Porsche',
+  'Datsun',
 ] as const;
 
 export const MODELS_BY_MAKE: Record<string, string[]> = {
@@ -74,7 +81,211 @@ export const MODELS_BY_MAKE: Record<string, string[]> = {
   Chevrolet: ['Beat', 'Cruze', 'Spark', 'Sail', 'Enjoy', 'Tavera', 'Captiva', 'Trailblazer'],
   'Hindustan Motors': ['Ambassador', 'Contessa', 'Trekker'],
   JSW: ['Windsor EV', 'MG Windsor EV', 'Cloud EV', 'Cyberster', 'MG ZS EV'],
+  BYD: ['Atto 3', 'Seal', 'e6', 'Sealion 7'],
+  Isuzu: ['D-Max', 'D-Max V-Cross', 'mu-X', 'Hi-Lander'],
+  'Force Motors': ['Gurkha', 'Trax Cruiser', 'Urbania'],
+  Lexus: ['ES', 'NX', 'RX', 'LX', 'LM'],
+  Mini: ['Cooper', 'Countryman', 'Cooper S', 'Cooper SE'],
+  Porsche: ['Macan', 'Cayenne', 'Panamera', 'Taycan', '911'],
+  Datsun: ['redi-GO', 'GO', 'GO+'],
 };
+
+export const VARIANTS_BY_MODEL: Record<string, string[]> = {
+  // Hyundai
+  'Creta': ['E', 'EX', 'S', 'S (O)', 'SX', 'SX Executive', 'SX (O)', 'SX (O) Turbo DCT', 'SX (O) Diesel AT', 'Knight Edition', 'N Line N8', 'N Line N10'],
+  'Venue': ['E', 'S', 'S (O)', 'S+ (O)', 'SX', 'SX (O)', 'SX 1.0 Turbo DCT', 'SX (O) Turbo DCT', 'N Line N6', 'N Line N8', 'Executive'],
+  'i20': ['Era', 'Magna', 'Sportz', 'Sportz (O)', 'Asta', 'Asta (O)', 'N Line N6', 'N Line N8', 'Active'],
+  'Verna': ['EX', 'S', 'SX', 'SX (O)', 'SX Turbo', 'SX (O) Turbo DCT', 'SX (O) Diesel AT'],
+  'Alcazar': ['Prestige', 'Platinum', 'Signature', 'Executive', 'Adventure Edition'],
+  'Exter': ['EX', 'EX (O)', 'S', 'S (O)', 'SX', 'SX (O)', 'SX (O) Connect', 'Knight Edition'],
+  'Tucson': ['Platinum AT', 'Signature AT', 'Signature 4WD AT', 'GLS 4WD'],
+  'Aura': ['E', 'S', 'SX', 'SX (O)', 'SX Plus AMT', 'S CNG', 'SX CNG'],
+  'Grand i10 Nios': ['Era', 'Magna', 'Sportz', 'Sportz Executive', 'Asta', 'Corporate Edition'],
+  'Ioniq 5': ['Long Range RWD', 'AWD'],
+
+  // Maruti Suzuki
+  'Swift': ['LXi', 'VXi', 'VXi (O)', 'ZXi', 'ZXi Plus', 'ZXi Plus Dual Tone', 'LDi', 'VDi', 'ZDi', 'ZDi Plus', 'VXi AGS', 'ZXi AGS', 'ZXi Plus AGS'],
+  'Baleno': ['Sigma', 'Delta', 'Zeta', 'Alpha', 'Delta AMT', 'Zeta AMT', 'Alpha AMT', 'RS 1.0 Turbo'],
+  'Brezza': ['LXi', 'VXi', 'ZXi', 'ZXi Plus', 'ZXi Dual Tone', 'ZXi Plus Dual Tone', 'VXi AT', 'ZXi AT', 'ZXi Plus AT', 'LDi', 'VDi', 'ZDi'],
+  'Dzire': ['LXi', 'VXi', 'ZXi', 'ZXi Plus', 'VXi AGS', 'ZXi AGS', 'ZXi Plus AGS', 'VXi CNG', 'ZXi CNG'],
+  'Grand Vitara': ['Sigma', 'Delta', 'Zeta', 'Alpha', 'Zeta Plus Hybrid', 'Alpha Plus Hybrid', 'Alpha AWD AllGrip'],
+  'Fronx': ['Sigma', 'Delta', 'Delta Plus', 'Zeta 1.0 Turbo', 'Alpha 1.0 Turbo', 'Velocity Edition', 'Delta CNG'],
+  'Ertiga': ['LXi', 'VXi', 'ZXi', 'ZXi Plus', 'VXi AT', 'ZXi AT', 'ZXi Plus AT', 'VXi CNG', 'ZXi CNG'],
+  'XL6': ['Zeta', 'Alpha', 'Alpha Plus', 'Alpha Plus Dual Tone', 'Zeta AT', 'Alpha AT'],
+  'Jimny': ['Zeta', 'Alpha', 'Alpha Dual Tone', 'Alpha AT'],
+  'Ciaz': ['Sigma', 'Delta', 'Zeta', 'Alpha', 'Alpha AT', 'S (Sport)'],
+  'Wagon R': ['LXi', 'VXi', 'ZXi', 'ZXi Plus', 'LXi CNG', 'VXi CNG', 'VXi AGS', 'ZXi AGS'],
+  'Alto K10': ['Std', 'LXi', 'VXi', 'VXi Plus', 'VXi CNG', 'VXi AGS'],
+  'Ignis': ['Sigma', 'Delta', 'Zeta', 'Alpha', 'Delta AMT', 'Zeta AMT', 'Alpha AMT'],
+  'Scross': ['Sigma', 'Delta', 'Zeta', 'Alpha', 'Zeta AT', 'Alpha AT'],
+  'Celerio': ['LXi', 'VXi', 'ZXi', 'ZXi Plus', 'VXi CNG', 'ZXi AMT'],
+
+  // Tata
+  'Nexon': ['Smart', 'Smart Plus', 'Pure', 'Pure S', 'Creative', 'Creative Plus', 'Creative Plus S', 'Fearless', 'Fearless Plus', 'Fearless Plus S', 'Dark Edition', 'Red Dark', 'XZ Plus', 'XZA Plus'],
+  'Nexon EV': ['Creative', 'Fearless', 'Empowered', 'Empowered Plus', 'Long Range', 'Dark Edition', 'Prime', 'Max'],
+  'Punch': ['Pure', 'Adventure', 'Accomplished', 'Accomplished Dazzle', 'Creative', 'Creative Flagship', 'iCNG Adventure', 'iCNG Accomplished'],
+  'Punch EV': ['Smart', 'Smart Plus', 'Adventure', 'Empowered', 'Empowered Plus'],
+  'Harrier': ['Smart', 'Pure', 'Adventure', 'Adventure Plus', 'Fearless', 'Fearless Plus', 'Dark Edition', 'XZ Plus', 'XZA Plus'],
+  'Safari': ['Smart', 'Pure', 'Adventure', 'Adventure Plus', 'Accomplished', 'Accomplished Plus', 'Dark Edition', 'Gold Edition', 'XZ Plus', 'XZA Plus'],
+  'Altroz': ['XE', 'XM', 'XM Plus', 'XT', 'XZ', 'XZ Plus', 'XZA Plus', 'i-Turbo', 'Racer R1', 'Racer R2', 'Racer R3', 'Dark Edition'],
+  'Tiago': ['XE', 'XT', 'XT (O)', 'XZ', 'XZ Plus', 'XZA Plus', 'XT iCNG', 'XZ Plus iCNG', 'NRG XT', 'NRG XZ'],
+  'Tigor': ['XE', 'XM', 'XZ', 'XZ Plus', 'XZA Plus', 'iCNG XZ', 'iCNG XZ Plus'],
+  'Curvv': ['Smart', 'Pure Plus', 'Creative', 'Creative Plus S', 'Accomplished', 'Accomplished Plus A'],
+
+  // Mahindra
+  'Thar': ['AX', 'AX (O)', 'LX Hard Top', 'LX Soft Top', 'LX 4x4 MT', 'LX 4x4 AT', 'RWD Petrol AT', 'RWD Diesel MT', 'Earth Edition', 'Roxx MX1', 'Roxx MX3', 'Roxx AX3L', 'Roxx AX5L', 'Roxx AX7L'],
+  'XUV700': ['MX', 'AX3', 'AX5', 'AX5 Select', 'AX7', 'AX7 Luxury (AX7L)', 'AX7L AWD', 'Blaze Edition', 'Ebony Edition'],
+  'Scorpio-N': ['Z2', 'Z4', 'Z6', 'Z8', 'Z8 Select', 'Z8 L', 'Z8 L 4x4', 'Z8 L AT'],
+  'Scorpio Classic': ['S', 'S11', 'S11 7-Seater', 'S11 9-Seater', 'S9'],
+  'XUV 3XO': ['MX1', 'MX2', 'MX2 Pro', 'MX3', 'MX3 Pro', 'AX5', 'AX5 Luxury', 'AX7', 'AX7 Luxury'],
+  'XUV300': ['W4', 'W6', 'W8', 'W8 (O)', 'Turbosport W6', 'Turbosport W8', 'Turbosport W8 (O)'],
+  'Bolero': ['B4', 'B6', 'B6 (O)', 'Power Plus'],
+  'Bolero Neo': ['N4', 'N8', 'N10', 'N10 (O)', 'Limited Edition'],
+  'XUV400 EV': ['EC Pro', 'EL Pro 34.5 kWh', 'EL Pro 39.4 kWh'],
+
+  // Honda
+  'City': ['SV', 'V', 'VX', 'ZX', 'e:HEV Hybrid V', 'e:HEV Hybrid ZX', 'Elegant Edition', 'V CVT', 'VX CVT', 'ZX CVT'],
+  'Amaze': ['E', 'S', 'VX', 'Elite Edition', 'S CVT', 'VX CVT'],
+  'Elevate': ['SV', 'V', 'VX', 'ZX', 'Black Edition', 'Apex Edition', 'V CVT', 'VX CVT', 'ZX CVT'],
+  'WR-V': ['SV', 'V', 'VX', 'Edge Edition'],
+  'Jazz': ['V', 'VX', 'ZX', 'V CVT', 'VX CVT', 'ZX CVT'],
+  'Civic': ['V', 'VX', 'ZX', 'ZX Diesel'],
+
+  // Toyota
+  'Fortuner': ['4x2 MT Petrol', '4x2 AT Petrol', '4x2 MT Diesel', '4x2 AT Diesel', '4x4 MT Diesel', '4x4 AT Diesel', 'Legender 4x2 AT', 'Legender 4x4 AT', 'GR Sport 4x4 AT'],
+  'Innova Crysta': ['GX', 'GX Plus', 'VX', 'ZX', 'Tour M', 'GX AT', 'ZX AT'],
+  'Innova Hycross': ['G', 'GX', 'GX (O)', 'VX Hybrid', 'VX (O) Hybrid', 'ZX Hybrid', 'ZX (O) Hybrid'],
+  'Urban Cruiser Hyryder': ['E', 'S', 'G', 'V', 'S Hybrid', 'G Hybrid', 'V Hybrid', 'V AWD AllGrip'],
+  'Glanza': ['E', 'S', 'G', 'V', 'S AMT', 'G AMT', 'V AMT', 'S CNG', 'G CNG'],
+  'Camry': ['Hybrid 2.5', 'Elegance', 'Luxury'],
+  'Hilux': ['Standard MT', 'High MT', 'High AT'],
+
+  // Kia
+  'Seltos': ['HTE', 'HTK', 'HTK Plus', 'HTX', 'HTX Plus', 'GTX Plus', 'X-Line', 'Gravity Edition'],
+  'Sonet': ['HTE', 'HTK', 'HTK Plus', 'HTX', 'HTX Plus', 'GTX Plus', 'X-Line'],
+  'Carens': ['Premium', 'Prestige', 'Prestige Plus', 'Luxury', 'Luxury Plus', 'X-Line'],
+  'Carnival': ['Prestige', 'Limousine', 'Limousine Plus'],
+  'EV6': ['GT Line RWD', 'GT Line AWD'],
+
+  // Volkswagen
+  'Virtus': ['Comfortline', 'Highline', 'Topline', 'GT', 'GT Plus', 'GT Edge', 'Sound Edition'],
+  'Taigun': ['Comfortline', 'Highline', 'Topline', 'GT', 'GT Plus', 'GT Edge', 'Trail Edition'],
+  'Polo': ['Trendline', 'Comfortline', 'Highline Plus', 'GT TSI', 'Legend'],
+  'Vento': ['Trendline', 'Comfortline', 'Highline', 'Highline Plus', 'Highline Plus AT'],
+  'Tiguan': ['Elegance 2.0 TSI', 'Exclusive Edition'],
+
+  // Skoda
+  'Slavia': ['Classic', 'Signature', 'Prestige', 'Active', 'Ambition', 'Style', 'Monte Carlo', 'Sportline'],
+  'Kushaq': ['Classic', 'Signature', 'Prestige', 'Active', 'Ambition', 'Style', 'Monte Carlo', 'Onyx', 'Sportline'],
+  'Octavia': ['Ambition', 'Style', 'L&K (Laurin & Klement)', 'vRS'],
+  'Superb': ['Sportline', 'L&K (Laurin & Klement)'],
+  'Kodiaq': ['Style', 'Sportline', 'L&K (Laurin & Klement)'],
+  'Rapid': ['Rider', 'Rider Plus', 'Ambition', 'Onyx', 'Style', 'Monte Carlo'],
+
+  // MG
+  'Hector': ['Style', 'Shine', 'Smart', 'Smart Pro', 'Sharp Pro', 'Savvy Pro', 'Blackstorm'],
+  'Hector Plus': ['Style', 'Shine Pro', 'Select Pro', 'Smart Pro', 'Sharp Pro', 'Savvy Pro'],
+  'ZS EV': ['Executive', 'Excite', 'Exclusive', 'Exclusive Plus', 'Essence'],
+  'Astor': ['Sprint', 'Shine', 'Select', 'Smart', 'Sharp', 'Savvy', 'Blackstorm'],
+  'Comet EV': ['Executive', 'Excite', 'Exclusive', 'Gamer Edition', '100-Year Edition'],
+  'Windsor EV': ['Excite', 'Exclusive', 'Essence'],
+  'Gloster': ['Super', 'Sharp', 'Savvy', 'Blackstorm', 'Desertstorm'],
+
+  // BMW
+  '3 Series': ['330i M Sport', '320d Luxury Line', 'M340i xDrive', 'Gran Limousine 330Li', 'Gran Limousine 320Ld'],
+  '5 Series': ['520d Luxury Line', '530i M Sport', '530d M Sport', '520d M Sport', '530Li Long Wheelbase'],
+  'X1': ['sDrive18i xLine', 'sDrive18d M Sport', 'sDrive20i M Sport'],
+  'X3': ['xDrive20d Luxury Line', 'xDrive30i M Sport', 'M40i'],
+  'X5': ['xDrive40i xLine', 'xDrive40i M Sport', 'xDrive30d xLine', 'xDrive30d M Sport'],
+
+  // Mercedes-Benz
+  'C-Class': ['C 200', 'C 220d', 'C 300 AMG Line'],
+  'E-Class': ['E 200 Exclusive', 'E 220d Exclusive', 'E 350d Elite', 'AMG Line'],
+  'GLA': ['GLA 200', 'GLA 220d 4MATIC', 'AMG GLA 35 4MATIC'],
+  'GLC': ['GLC 300 4MATIC', 'GLC 220d 4MATIC'],
+
+  // Audi
+  'A4': ['Premium', 'Premium Plus', 'Technology'],
+  'A6': ['Premium Plus', 'Technology'],
+  'Q3': ['Premium', 'Premium Plus', 'Technology', 'Sportback'],
+  'Q5': ['Premium Plus', 'Technology', 'Special Edition'],
+  'Q7': ['Premium Plus', 'Technology'],
+  'Q8': ['Standard', 'Celebration Edition'],
+
+  // Jeep
+  'Compass': ['Sport', 'Longitude', 'Longitude (O)', 'Night Eagle', 'Limited', 'Limited (O)', 'Model S', 'Trailhawk'],
+  'Meridian': ['Longitude', 'Longitude Plus', 'Limited (O)', 'Overland'],
+  'Wrangler': ['Unlimited', 'Rubicon'],
+
+  // Renault
+  'Kwid': ['RXE', 'RXL', 'RXL (O)', 'RXT', 'Climber'],
+  'Triber': ['RXE', 'RXL', 'RXT', 'RXZ'],
+  'Kiger': ['RXE', 'RXL', 'RXT', 'RXT (O)', 'RXZ', 'RXZ Turbo'],
+
+  // Nissan
+  'Magnite': ['Visia', 'Visia Plus', 'Acenta', 'N-Connecta', 'Tekna', 'Tekna Plus', 'Geza Edition', 'Kuro Edition'],
+
+  // Citroen
+  'C3': ['Live', 'Feel', 'Feel (O)', 'Shine', 'Shine Turbo'],
+  'Basalt': ['You', 'Plus', 'Max'],
+  'C3 Aircross': ['You', 'Plus', 'Max'],
+};
+
+export const BRAND_DEFAULT_VARIANTS: Record<string, string[]> = {
+  'Hyundai': ['E', 'EX', 'S', 'S (O)', 'SX', 'SX (O)', 'Knight Edition', 'N Line'],
+  'Maruti Suzuki': ['LXi', 'VXi', 'ZXi', 'ZXi Plus', 'Sigma', 'Delta', 'Zeta', 'Alpha'],
+  'Tata': ['Smart', 'Pure', 'Creative', 'Fearless', 'Accomplished', 'Empowered', 'Dark Edition'],
+  'Mahindra': ['Base', 'MX', 'AX', 'LX', 'AX5', 'AX7', 'AX7 Luxury', 'Z4', 'Z8', 'Z8 L', 'S11'],
+  'Honda': ['E', 'SV', 'V', 'VX', 'ZX', 'e:HEV Hybrid'],
+  'Toyota': ['E', 'S', 'G', 'V', 'GX', 'VX', 'ZX', 'Legender', 'GR Sport'],
+  'Kia': ['HTE', 'HTK', 'HTK Plus', 'HTX', 'HTX Plus', 'GTX Plus', 'X-Line'],
+  'Volkswagen': ['Comfortline', 'Highline', 'Topline', 'GT', 'GT Plus'],
+  'Skoda': ['Classic', 'Signature', 'Prestige', 'Active', 'Ambition', 'Style', 'Monte Carlo'],
+  'MG': ['Style', 'Shine', 'Smart', 'Sharp', 'Savvy', 'Blackstorm'],
+  'BMW': ['Sport Line', 'Luxury Line', 'M Sport', 'xDrive'],
+  'Mercedes-Benz': ['Progressive', 'Executive', 'Exclusive', 'AMG Line', '4MATIC'],
+  'Audi': ['Standard', 'Premium', 'Premium Plus', 'Technology'],
+  'Jeep': ['Sport', 'Longitude', 'Limited', 'Model S', 'Trailhawk'],
+  'Renault': ['RXE', 'RXL', 'RXT', 'RXZ', 'Climber'],
+  'Nissan': ['Visia', 'Acenta', 'N-Connecta', 'Tekna', 'Tekna Plus'],
+  'Citroen': ['Live', 'Feel', 'Shine', 'You', 'Plus', 'Max'],
+};
+
+export function getVariantsForMakeAndModel(make?: string | null, model?: string | null): string[] {
+  const cleanMake = (make || '').trim();
+  const cleanModel = (model || '').trim();
+
+  // 1. Direct exact or case-insensitive match on model name
+  if (cleanModel) {
+    const directMatch = Object.keys(VARIANTS_BY_MODEL).find(
+      (m) => m.toLowerCase() === cleanModel.toLowerCase()
+    );
+    if (directMatch && VARIANTS_BY_MODEL[directMatch]?.length) {
+      return VARIANTS_BY_MODEL[directMatch];
+    }
+
+    // 2. Substring match (e.g. "Creta 1.5" matches "Creta", "Swift VXI" matches "Swift")
+    const subMatch = Object.keys(VARIANTS_BY_MODEL).find(
+      (m) => cleanModel.toLowerCase().includes(m.toLowerCase()) || m.toLowerCase().includes(cleanModel.toLowerCase())
+    );
+    if (subMatch && VARIANTS_BY_MODEL[subMatch]?.length) {
+      return VARIANTS_BY_MODEL[subMatch];
+    }
+  }
+
+  // 3. Fallback to Brand Default Variants
+  if (cleanMake) {
+    const brandMatch = Object.keys(BRAND_DEFAULT_VARIANTS).find(
+      (b) => b.toLowerCase() === cleanMake.toLowerCase()
+    );
+    if (brandMatch && BRAND_DEFAULT_VARIANTS[brandMatch]?.length) {
+      return BRAND_DEFAULT_VARIANTS[brandMatch];
+    }
+  }
+
+  // 4. Universal Fallback
+  return ['Standard', 'Base', 'Mid', 'Top', 'VXi / SX / VX', 'ZXi / SX (O) / ZX', 'Highline / Style / Luxury'];
+}
 
 export const INITIAL_CARS: Car[] = [
   {

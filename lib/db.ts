@@ -548,8 +548,8 @@ export async function dbInsertCar(car: Car): Promise<void> {
       insurance_expiry = EXCLUDED.insurance_expiry,
       insurance_type = EXCLUDED.insurance_type,
       finance_available = EXCLUDED.finance_available,
-      suggestedPriceMin = EXCLUDED.suggested_price_min,
-      suggestedPriceMax = EXCLUDED.suggested_price_max,
+      suggested_price_min = EXCLUDED.suggested_price_min,
+      suggested_price_max = EXCLUDED.suggested_price_max,
       vehicle_source = EXCLUDED.vehicle_source,
       dealer_id = EXCLUDED.dealer_id,
       dealer_name = EXCLUDED.dealer_name,
@@ -991,7 +991,7 @@ export async function dbUpdateCustomerCarPrice(params: {
   const newPrice = suggestedListingPrice || expectedPrice;
   if (syncPublishedCar && publishedCarId && newPrice) {
     await pool.query(
-      'UPDATE public.cars SET price = $1, emi_per_month = $2, suggested_price_min = $3, suggested_price_max = $4, suggestedpricemin = $3, suggestedpricemax = $4, updated_at = now() WHERE id = $5',
+      'UPDATE public.cars SET price = $1, emi_per_month = $2, suggested_price_min = $3, suggested_price_max = $4, updated_at = now() WHERE id = $5',
       [
         newPrice,
         Math.round(newPrice * 0.021),
