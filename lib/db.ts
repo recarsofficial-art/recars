@@ -32,6 +32,24 @@ function getDatabaseConnectionString(): string {
     return '';
   }
 
+  // Rewrite direct db.<project>.supabase.co hostnames to IPv4 Supabase Pooler (Transaction Mode port 6543)
+  try {
+    const parsed = new URL(envUrl);
+    const hostMatch = parsed.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+    if (hostMatch) {
+      const projectRef = hostMatch[1];
+      const poolerHost = process.env.SUPABASE_POOLER_HOST || 'aws-0-ap-northeast-1.pooler.supabase.com';
+      parsed.hostname = poolerHost;
+      parsed.port = '6543';
+      if (!parsed.username.includes('.')) {
+        parsed.username = `${parsed.username}.${projectRef}`;
+      }
+      envUrl = parsed.toString();
+    }
+  } catch {
+    // If not a standard URL, proceed with raw string
+  }
+
   // 2. CRITICAL PRODUCTION FIX: Port 5432 on Supabase pooler is Session Mode (limited to pool_size: 15).
   // Connecting in session mode causes "(EMAXCONNSESSION) max clients reached in session mode".
   // Automatically rewrite any Supabase pooler connection from port 5432 (Session) to 6543 (Transaction Mode).
