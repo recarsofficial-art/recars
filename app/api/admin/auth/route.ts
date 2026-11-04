@@ -57,8 +57,8 @@ export async function POST(request: Request) {
       return response;
     }
 
-    // Rate limit login attempts to prevent brute force (max 5 attempts per 15 minutes per IP)
-    const rateLimit = checkRateLimit(`admin-login:${clientIp}`, 5, 15 * 60);
+    // Rate limit login attempts to prevent brute force (max 15 attempts per 15 minutes per IP)
+    const rateLimit = checkRateLimit(`admin-login:${clientIp}`, 15, 15 * 60);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         {
@@ -160,6 +160,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: 'Authentication processing failed' }, { status: 500 });
+    console.error('Admin authentication POST error:', error);
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Authentication processing failed' },
+      { status: 500 }
+    );
   }
 }
