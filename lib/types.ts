@@ -129,6 +129,7 @@ export interface SellRequest {
   preferredInspectionTime: string;
   estimatedPriceMin: number;
   estimatedPriceMax: number;
+  expectedPrice?: number;
   inspectionFee?: number;
   inspectionFeeStatus?: 'Pending' | 'Pay at Doorstep' | 'Paid' | 'Waived' | string;
   suggestedListingPrice?: number;

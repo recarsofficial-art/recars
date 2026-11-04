@@ -205,6 +205,9 @@ export async function ensureDealerAndCarsSchema(): Promise<void> {
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS suggested_price_max BIGINT;
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS suggestedpricemin BIGINT;
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS suggestedpricemax BIGINT;
+          ALTER TABLE public.customer_cars ADD COLUMN IF NOT EXISTS expected_price BIGINT;
+          ALTER TABLE public.customer_cars ADD COLUMN IF NOT EXISTS suggested_listing_price BIGINT;
+          ALTER TABLE public.customer_cars ADD COLUMN IF NOT EXISTS photos JSONB DEFAULT '[]'::jsonb;
 
           CREATE INDEX IF NOT EXISTS idx_cars_vehicle_source ON public.cars(vehicle_source);
           CREATE INDEX IF NOT EXISTS idx_cars_dealer_id ON public.cars(dealer_id);
@@ -830,6 +833,8 @@ export async function dbGetCustomerCars(): Promise<SellRequest[]> {
     preferredInspectionTime: r.preferred_inspection_time || '10:00 AM - 12:00 PM',
     estimatedPriceMin: Number(r.estimated_price_min) || 0,
     estimatedPriceMax: Number(r.estimated_price_max) || 0,
+    expectedPrice: r.expected_price ? Number(r.expected_price) : (r.suggested_listing_price ? Number(r.suggested_listing_price) : undefined),
+    suggestedListingPrice: r.suggested_listing_price ? Number(r.suggested_listing_price) : (r.expected_price ? Number(r.expected_price) : undefined),
     publishedCarId: r.published_car_id || undefined,
     photos: Array.isArray(r.photos) ? r.photos : (typeof r.photos === 'string' ? JSON.parse(r.photos || '[]') : []),
     status: r.status,
@@ -857,16 +862,22 @@ export async function dbInsertCustomerCar(req: SellRequest): Promise<void> {
     }
   }
 
+  const effectiveExpectedPrice = req.expectedPrice || req.suggestedListingPrice || 0;
+  const effectiveSuggestedPrice = req.suggestedListingPrice || req.expectedPrice || 0;
+
   const sql = `
     INSERT INTO public.customer_cars (
       id, customer_id, registration_number, make, model, variant, year,
       fuel_type, transmission, kilometers, ownership, accident_history,
       seller_name, seller_phone, seller_city, preferred_inspection_date,
-      preferred_inspection_time, estimated_price_min, estimated_price_max, status, photos
+      preferred_inspection_time, estimated_price_min, estimated_price_max,
+      expected_price, suggested_listing_price, status, photos
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
     )
     ON CONFLICT (id) DO UPDATE SET
+      expected_price = EXCLUDED.expected_price,
+      suggested_listing_price = EXCLUDED.suggested_listing_price,
       status = EXCLUDED.status,
       photos = EXCLUDED.photos,
       updated_at = now();
@@ -891,6 +902,8 @@ export async function dbInsertCustomerCar(req: SellRequest): Promise<void> {
     req.preferredInspectionTime || '11:00 AM - 01:00 PM',
     req.estimatedPriceMin || 0,
     req.estimatedPriceMax || 0,
+    effectiveExpectedPrice,
+    effectiveSuggestedPrice,
     req.status || 'Inspection Scheduled',
     JSON.stringify(req.photos || []),
   ]);

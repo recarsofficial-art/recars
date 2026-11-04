@@ -88,6 +88,8 @@ CREATE TABLE IF NOT EXISTS public.customer_cars (
     preferred_inspection_time TEXT,
     estimated_price_min BIGINT,
     estimated_price_max BIGINT,
+    expected_price BIGINT,
+    suggested_listing_price BIGINT,
     status TEXT NOT NULL DEFAULT 'Valuation Submitted',
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),

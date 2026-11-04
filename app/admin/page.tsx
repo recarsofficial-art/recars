@@ -1690,7 +1690,7 @@ export default function AdminDashboardPage() {
 
   const openApproveModal = (req: SellRequest) => {
     setApprovingSellReq(req);
-    const inferredPrice = req.suggestedListingPrice || req.estimatedPriceMax || 750000;
+    const inferredPrice = req.expectedPrice || req.suggestedListingPrice || req.estimatedPriceMax || 750000;
     setApproveListingPrice(inferredPrice);
 
     const m = `${req.make} ${req.model}`.toLowerCase();
@@ -3290,8 +3290,16 @@ export default function AdminDashboardPage() {
                         <p className="text-xs text-gray-600 mt-1">
                           Seller: <span className="font-bold text-gray-900">{req.sellerName}</span> • {req.sellerPhone} • {req.sellerCity}
                         </p>
-                        <p className="text-xs text-[#237A52] font-bold mt-1">
-                          Price Evaluation: Physical Doorstep Inspection (Quote given on evaluation)
+                        {(req.expectedPrice || req.suggestedListingPrice) && (
+                          <p className="text-xs text-[#E5325C] font-extrabold mt-1 flex items-center gap-1.5">
+                            <span>Seller Asking Price:</span>
+                            <span className="bg-[#FFF0F3] px-2 py-0.5 rounded border border-[#FFD6DF]">
+                              {formatINR(req.expectedPrice || req.suggestedListingPrice || 0)}
+                            </span>
+                          </p>
+                        )}
+                        <p className="text-xs text-[#237A52] font-semibold mt-0.5">
+                          Est. Range: {formatINR(req.estimatedPriceMin)} - {formatINR(req.estimatedPriceMax)}
                         </p>
                       </div>
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#FFF0F3] text-[#E5325C] border border-[#FFD6DF] flex-shrink-0">
@@ -7955,7 +7963,17 @@ export default function AdminDashboardPage() {
                 </span>
               </div>
               <div className="flex justify-between pt-1 border-t border-gray-200">
-                <span className="text-gray-500">Seller Expected Range:</span>
+                <span className="text-gray-500 font-bold">Seller Asking Price:</span>
+                <span className="font-extrabold text-[#E5325C]">
+                  {approvingSellReq.expectedPrice
+                    ? formatINR(approvingSellReq.expectedPrice)
+                    : approvingSellReq.suggestedListingPrice
+                    ? formatINR(approvingSellReq.suggestedListingPrice)
+                    : 'Not specified'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Market Estimate Range:</span>
                 <span className="font-bold text-[#237A52]">
                   {formatINR(approvingSellReq.estimatedPriceMin)} - {formatINR(approvingSellReq.estimatedPriceMax)}
                 </span>

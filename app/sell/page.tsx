@@ -117,6 +117,8 @@ function SellWorkflowContent() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoUploadStatus, setPhotoUploadStatus] = useState<string>('');
   const [photoUploadError, setPhotoUploadError] = useState<string>('');
+  const [askingPrice, setAskingPrice] = useState<number | ''>('');
+  const [askingPriceError, setAskingPriceError] = useState<string>('');
 
   const handlePhotoFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -243,7 +245,25 @@ function SellWorkflowContent() {
     setIsOtpVerified(true);
   };
 
+  const handleProceedToStep3 = () => {
+    if (!askingPrice || Number(askingPrice) <= 0) {
+      setAskingPriceError('Please enter your expected / asking car value (e.g. ₹6,50,000) to proceed.');
+      return;
+    }
+    if (Number(askingPrice) < 10000) {
+      setAskingPriceError('Please enter a realistic expected car value (minimum ₹10,000).');
+      return;
+    }
+    setAskingPriceError('');
+    setStep(3);
+  };
+
   const handleFinalSubmit = () => {
+    if (!askingPrice || Number(askingPrice) <= 0) {
+      alert('Please enter your expected car value.');
+      setStep(2);
+      return;
+    }
     if (!sellerName.trim()) {
       alert('Please enter your full name before scheduling inspection.');
       return;
@@ -262,6 +282,7 @@ function SellWorkflowContent() {
 
     const priceRange = calculateSuggestedPrice();
     const reqId = getNextRequestId();
+    const parsedAskingPrice = Number(askingPrice);
     const newRequest: SellRequest = {
       id: reqId,
       registrationNumber: regNumber || 'TS 09 EA 4589',
@@ -281,7 +302,8 @@ function SellWorkflowContent() {
       preferredInspectionTime,
       estimatedPriceMin: priceRange.min,
       estimatedPriceMax: priceRange.max,
-      suggestedListingPrice: priceRange.mid,
+      suggestedListingPrice: parsedAskingPrice || priceRange.mid,
+      expectedPrice: parsedAskingPrice || priceRange.mid,
       inspectionFee: inspectionFee,
       inspectionFeeStatus: 'Pay at Doorstep',
       photos: uploadedPhotos,
@@ -800,6 +822,94 @@ function SellWorkflowContent() {
                 </p>
               </div>
 
+              {/* Mandatory Seller Asking Price Input */}
+              <div className={`p-5 rounded-2xl border-2 transition-all space-y-3 ${askingPriceError ? 'bg-red-50/40 border-red-300' : 'bg-white border-[#E5325C]/30 shadow-xs'}`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <div>
+                    <label className="block text-xs font-black text-[#101216] flex items-center gap-1">
+                      <span>Your Asking / Expected Car Value (₹)</span>
+                      <span className="text-[#E5325C] text-sm">*</span>
+                    </label>
+                    <p className="text-[11px] text-[#6B7078] mt-0.5">
+                      Enter the price you expect for your car. This value is mandatory for inspection and listing consideration.
+                    </p>
+                  </div>
+                  {askingPrice !== '' && Number(askingPrice) > 0 && (
+                    <span className="text-xs font-extrabold text-[#E5325C] bg-[#FFF0F3] px-3 py-1 rounded-full border border-[#FFD6DF] self-start sm:self-auto">
+                      ₹{(Number(askingPrice) / 100000).toFixed(2)} Lakh
+                    </span>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500">₹</span>
+                  <input
+                    type="number"
+                    step={10000}
+                    min={10000}
+                    placeholder="Enter your expected car price (e.g. 650000)"
+                    value={askingPrice}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAskingPrice(val === '' ? '' : Number(val));
+                      if (askingPriceError) setAskingPriceError('');
+                    }}
+                    className={`w-full bg-[#F8F9FA] pl-8 pr-4 py-3 rounded-xl border text-sm font-bold text-[#101216] focus:outline-none focus:ring-2 focus:ring-[#E5325C]/20 transition-all ${
+                      askingPriceError ? 'border-red-400 bg-red-50/20' : 'border-[#E5E7EB] focus:border-[#E5325C]'
+                    }`}
+                  />
+                </div>
+
+                {askingPrice !== '' && Number(askingPrice) > 0 && (
+                  <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>Your Asking Price: ₹{Number(askingPrice).toLocaleString('en-IN')} (₹{(Number(askingPrice) / 100000).toFixed(2)} Lakh)</span>
+                  </p>
+                )}
+
+                {/* Quick Autofill Buttons based on Market Model */}
+                <div className="pt-1 flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold text-gray-500">Quick suggestions:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAskingPrice(calculateSuggestedPrice().mid);
+                      setAskingPriceError('');
+                    }}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 transition-colors cursor-pointer"
+                  >
+                    Recars Fair: ₹{(calculateSuggestedPrice().mid / 100000).toFixed(2)}L
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAskingPrice(calculateSuggestedPrice().min);
+                      setAskingPriceError('');
+                    }}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 transition-colors cursor-pointer"
+                  >
+                    Floor Min: ₹{(calculateSuggestedPrice().min / 100000).toFixed(2)}L
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAskingPrice(calculateSuggestedPrice().max);
+                      setAskingPriceError('');
+                    }}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200 transition-colors cursor-pointer"
+                  >
+                    Top Range: ₹{(calculateSuggestedPrice().max / 100000).toFixed(2)}L
+                  </button>
+                </div>
+
+                {askingPriceError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                    <span>{askingPriceError}</span>
+                  </div>
+                )}
+              </div>
+
               <div className="pt-4 flex justify-between items-center">
                 <button
                   onClick={() => setStep(1)}
@@ -809,7 +919,7 @@ function SellWorkflowContent() {
                   <span>Back</span>
                 </button>
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={handleProceedToStep3}
                   className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#E5325C] text-white text-xs font-bold hover:bg-[#D4264E] transition-all shadow-md cursor-pointer"
                 >
                   <span>Continue to Inspection Details</span>
@@ -829,6 +939,27 @@ function SellWorkflowContent() {
                 <p className="text-xs text-[#6B7078] mt-1">
                   Schedule a certified engineer to physically evaluate your car and provide a genuine, highest-market quote.
                 </p>
+              </div>
+
+              {/* Summary Pill of Vehicle & Seller's Asking Price */}
+              <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E7EB] flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div>
+                  <span className="text-[#6B7078]">Vehicle Selected: </span>
+                  <span className="font-bold text-[#101216]">{year} {displayMake} {displayModel} ({variant})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#6B7078]">Your Asking Value:</span>
+                  <span className="font-black text-[#E5325C] bg-[#FFF0F3] px-3 py-1 rounded-full border border-[#FFD6DF]">
+                    ₹{(Number(askingPrice) / 100000).toFixed(2)} Lakh (₹{Number(askingPrice).toLocaleString('en-IN')})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="text-[11px] font-bold text-gray-500 hover:text-gray-800 underline ml-1 cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1052,6 +1183,15 @@ function SellWorkflowContent() {
                 <div className="flex justify-between items-center">
                   <span className="text-[#6B7078]">Inspection Fee Status:</span>
                   <span className="font-bold text-amber-600">Payable at Doorstep</span>
+                </div>
+                <div className="flex justify-between items-center py-1.5 px-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <span className="text-emerald-900 font-bold">Your Expected / Asking Price:</span>
+                  <span className="font-black text-emerald-700 text-sm">
+                    ₹{(Number(askingPrice) / 100000).toFixed(2)} Lakh
+                    <span className="text-[10px] font-semibold text-emerald-800 ml-1">
+                      (₹{Number(askingPrice).toLocaleString('en-IN')})
+                    </span>
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[#6B7078]">Suggested Market Value:</span>

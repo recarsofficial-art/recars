@@ -301,6 +301,14 @@ function AccountContent() {
                       <p className="text-xs text-[#6B7078] mt-1">
                         Reg No: {req.registrationNumber || 'TS 09 EA 4589'} • Ref: {req.id}
                       </p>
+                      {(req.expectedPrice || req.suggestedListingPrice) && (
+                        <p className="text-xs font-bold text-[#E5325C] mt-1 flex items-center gap-1.5">
+                          <span>Your Asking Price:</span>
+                          <span className="bg-[#FFF0F3] px-2 py-0.5 rounded-full border border-[#FFD6DF]">
+                            ₹{((req.expectedPrice || req.suggestedListingPrice || 0) / 100000).toFixed(2)} Lakh (₹{(req.expectedPrice || req.suggestedListingPrice || 0).toLocaleString('en-IN')})
+                          </span>
+                        </p>
+                      )}
                       <p className="text-xs font-semibold text-[#101216] mt-1">
                         Price Evaluation: <span className="text-[#237A52] font-bold">Physical Doorstep Inspection (Offer given on inspection)</span>
                       </p>

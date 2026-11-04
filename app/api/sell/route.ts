@@ -73,9 +73,9 @@ export async function POST(request: Request) {
       carYear: fullRequest.year,
       preferredDate: fullRequest.preferredInspectionDate,
       preferredTimeSlot: fullRequest.preferredInspectionTime,
-      offeredPrice: fullRequest.estimatedPriceMin,
+      offeredPrice: fullRequest.expectedPrice || fullRequest.suggestedListingPrice || fullRequest.estimatedPriceMin,
       listedPrice: fullRequest.estimatedPriceMax,
-      message: `Customer wants to sell ${fullRequest.year} ${fullRequest.make} ${fullRequest.model} (${fullRequest.variant || 'Standard'}). Reg: ${fullRequest.registrationNumber || 'Pending'}. Mileage: ${fullRequest.kilometers?.toLocaleString('en-IN') || 0} km. Estimated Range: ₹${fullRequest.estimatedPriceMin?.toLocaleString('en-IN') || 0} - ₹${fullRequest.estimatedPriceMax?.toLocaleString('en-IN') || 0}. Inspection: ${fullRequest.preferredInspectionDate} (${fullRequest.preferredInspectionTime}).`,
+      message: `Customer wants to sell ${fullRequest.year} ${fullRequest.make} ${fullRequest.model} (${fullRequest.variant || 'Standard'}). Reg: ${fullRequest.registrationNumber || 'Pending'}. Mileage: ${fullRequest.kilometers?.toLocaleString('en-IN') || 0} km. Seller Asking Price: ₹${(fullRequest.expectedPrice || fullRequest.suggestedListingPrice)?.toLocaleString('en-IN') || 'N/A'}. Estimated Range: ₹${fullRequest.estimatedPriceMin?.toLocaleString('en-IN') || 0} - ₹${fullRequest.estimatedPriceMax?.toLocaleString('en-IN') || 0}. Inspection: ${fullRequest.preferredInspectionDate} (${fullRequest.preferredInspectionTime}).`,
       adminTab: 'leads',
       createdAt: fullRequest.createdAt,
     }).catch((err) => console.error('Notice: sell request notification trigger error:', err));
