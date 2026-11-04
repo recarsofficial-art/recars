@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (phoneOrEmail: string, otpOrPass?: string) => Promise<{ success: boolean; message?: string }>;
   signup: (data: { name: string; phone: string; email: string; city: string }) => Promise<{ success: boolean; message?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; message?: string }>;
+  loginWithApple: () => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
 }
 
@@ -147,6 +148,91 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginWithApple = async () => {
+    try {
+      const { Capacitor } = await import('@capacitor/core');
+      let appleName = '';
+      let appleEmail = '';
+      let appleUserId = '';
+      let identityToken = '';
+
+      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
+        const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
+        const res = await SignInWithApple.authorize({
+          clientId: 'in.recars.app',
+          redirectURI: 'https://recars.in',
+          scopes: 'email name',
+        });
+
+        appleUserId = res.response.user || '';
+        identityToken = res.response.identityToken || '';
+
+        if (res.response.givenName || res.response.familyName) {
+          appleName = [res.response.givenName, res.response.familyName].filter(Boolean).join(' ');
+        }
+        if (res.response.email) {
+          appleEmail = res.response.email;
+        }
+
+        // Decode identityToken JWT payload if email was not supplied (e.g. repeat sign-ins)
+        if (!appleEmail && identityToken) {
+          try {
+            const parts = identityToken.split('.');
+            if (parts.length >= 2) {
+              const decoded = JSON.parse(atob(parts[1]));
+              if (decoded?.email) {
+                appleEmail = decoded.email;
+              }
+            }
+          } catch {
+            // ignore jwt decode error
+          }
+        }
+      } else {
+        // Web / browser fallback with Firebase Auth
+        const { OAuthProvider, signInWithPopup } = await import('firebase/auth');
+        const { auth } = await import('./firebase');
+        const appleProvider = new OAuthProvider('apple.com');
+        appleProvider.addScope('email');
+        appleProvider.addScope('name');
+
+        const cred = await signInWithPopup(auth, appleProvider);
+        const appleUser = cred.user;
+        appleUserId = appleUser.uid;
+        appleEmail = appleUser.email || '';
+        appleName = appleUser.displayName || '';
+      }
+
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'apple',
+          appleUserId,
+          name: appleName,
+          email: appleEmail,
+          identityToken,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUser(data.user);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
+        setIsAuthModalOpen(false);
+        return { success: true };
+      }
+      return { success: false, message: safeErrorMessage(data.error, 'Apple sign in failed. Please try again.') };
+    } catch (e: any) {
+      console.error('Apple Auth Error:', e);
+      const msg = e?.message || '';
+      if (msg.includes('canceled') || msg.includes('cancelled') || e?.code === '1001') {
+        return { success: false, message: 'Apple sign in was cancelled.' };
+      }
+      return { success: false, message: safeErrorMessage(msg, 'Apple sign in is temporarily unavailable.') };
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -164,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         signup,
         loginWithGoogle,
+        loginWithApple,
         logout,
       }}
     >

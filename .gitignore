@@ -44,3 +44,18 @@ skills-lock.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# mobile builds & temporary artifacts
+android/.gradle/
+android/build/
+android/app/build/
+ios/build/
+ios/App/Pods/
+ios/App/DerivedData/
+*.apk
+*.aab
+*.jks
+*.keystore
+scratch/
+.cloudflare-audit/
+

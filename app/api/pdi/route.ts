@@ -2,9 +2,18 @@ import { NextResponse } from 'next/server';
 import { dbGetPDIBookings, dbInsertPDIBooking, dbUpdatePDIBookingStatus, dbDeletePDIBooking } from '@/lib/db';
 import { PDIBooking } from '@/lib/types';
 import { sendEnquiryNotification } from '@/lib/email';
+import { verifyAdminRequest, checkRateLimit, getClientIp } from '@/lib/security';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to access PDI bookings.' },
+        { status: 401 }
+      );
+    }
+
     const bookings = await dbGetPDIBookings();
     return NextResponse.json({
       success: true,
@@ -19,6 +28,15 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const limit = checkRateLimit(`pdi-submit:${clientIp}`, 15, 10 * 60);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many PDI requests submitted. Please wait a few minutes before trying again.' },
+        { status: 429 }
+      );
+    }
+
     const body: Partial<PDIBooking> = await request.json();
 
     if (!body.customerName || !body.customerPhone || !body.dealershipName || !body.carMake || !body.carModel || !body.preferredDate) {
@@ -31,18 +49,18 @@ export async function POST(request: Request) {
     const id = body.id || `PDI-${Date.now().toString().slice(-6)}`;
     const newBooking: PDIBooking = {
       id,
-      customerName: body.customerName,
-      customerPhone: body.customerPhone,
-      customerEmail: body.customerEmail || '',
-      city: body.city || 'Warangal',
-      dealershipName: body.dealershipName,
-      dealershipAddress: body.dealershipAddress || '',
-      carMake: body.carMake,
-      carModel: body.carModel,
-      carVariant: body.carVariant || '',
+      customerName: body.customerName.trim(),
+      customerPhone: body.customerPhone.trim(),
+      customerEmail: body.customerEmail?.trim() || '',
+      city: body.city?.trim() || 'Warangal',
+      dealershipName: body.dealershipName.trim(),
+      dealershipAddress: body.dealershipAddress?.trim() || '',
+      carMake: body.carMake.trim(),
+      carModel: body.carModel.trim(),
+      carVariant: body.carVariant?.trim() || '',
       fuelType: body.fuelType || 'Petrol',
       transmission: body.transmission || 'Automatic',
-      vinOrChassis: body.vinOrChassis || '',
+      vinOrChassis: body.vinOrChassis?.trim() || '',
       preferredDate: body.preferredDate,
       preferredTimeSlot: body.preferredTimeSlot || 'Morning 10:00 AM - 12:00 PM',
       specialInstructions: body.specialInstructions || '',
@@ -93,6 +111,14 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to update PDI bookings.' },
+        { status: 401 }
+      );
+    }
+
     const { id, status, assignedRepresentative } = await request.json();
     if (!id || !status) {
       return NextResponse.json({ success: false, error: 'Booking ID and status are required' }, { status: 400 });
@@ -107,6 +133,14 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to delete PDI bookings.' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {

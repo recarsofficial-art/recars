@@ -24,8 +24,22 @@ import { formatINR } from '@/lib/formatters';
 import { SellRequest, TestDriveBooking } from '@/lib/types';
 import { useAuth } from '@/lib/authContext';
 
-function AccountContent() {
+function AccountTabWatcher({
+  onTab,
+}: {
+  onTab: (tab: 'wishlist' | 'bookings' | 'selling' | 'profile') => void;
+}) {
   const searchParams = useSearchParams();
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t === 'wishlist' || t === 'bookings' || t === 'selling' || t === 'profile') {
+      onTab(t);
+    }
+  }, [searchParams, onTab]);
+  return null;
+}
+
+function AccountContent() {
   const router = useRouter();
 
   const {
@@ -37,6 +51,7 @@ function AccountContent() {
     cars,
     sellRequests: storeSellRequests,
     testDrives: storeTestDrives,
+    refreshAuxiliaryData,
   } = useRecarsState();
 
   const { user, logout } = useAuth();
@@ -44,6 +59,7 @@ function AccountContent() {
   const [liveTestDrives, setLiveTestDrives] = useState<TestDriveBooking[]>([]);
 
   useEffect(() => {
+    refreshAuxiliaryData();
     const fetchFreshData = () => {
       fetch('/api/sell')
         .then((r) => r.json())
@@ -60,27 +76,20 @@ function AccountContent() {
     };
 
     fetchFreshData();
-    window.addEventListener('focus', fetchFreshData);
-    const interval = setInterval(fetchFreshData, 6000);
-    return () => {
-      window.removeEventListener('focus', fetchFreshData);
-      clearInterval(interval);
-    };
-  }, []);
+  }, [refreshAuxiliaryData]);
 
   const sellRequests = liveSellRequests.length > 0 ? liveSellRequests : storeSellRequests;
   const testDrives = liveTestDrives.length > 0 ? liveTestDrives : storeTestDrives;
 
-  const [activeTab, setActiveTab] = useState<'wishlist' | 'bookings' | 'selling' | 'profile'>(() => {
-    const t = searchParams.get('tab');
-    if (t === 'wishlist' || t === 'bookings' || t === 'selling' || t === 'profile') return t;
-    return 'wishlist';
-  });
+  const [activeTab, setActiveTab] = useState<'wishlist' | 'bookings' | 'selling' | 'profile'>('wishlist');
 
   const wishlistedCars = cars.filter((c) => wishlistIds.includes(c.id));
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
+      <Suspense fallback={null}>
+        <AccountTabWatcher onTab={setActiveTab} />
+      </Suspense>
       <Navbar
         selectedCity={selectedCity}
         onSelectCity={changeCity}
@@ -400,9 +409,5 @@ function AccountContent() {
 }
 
 export default function AccountPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">Loading Account...</div>}>
-      <AccountContent />
-    </Suspense>
-  );
+  return <AccountContent />;
 }

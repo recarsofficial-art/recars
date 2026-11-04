@@ -2,9 +2,18 @@ import { NextResponse } from 'next/server';
 import { dbGetCustomerCars, dbInsertCustomerCar, dbUpdateCustomerCarStatus } from '@/lib/db';
 import { SellRequest } from '@/lib/types';
 import { sendEnquiryNotification } from '@/lib/email';
+import { verifyAdminRequest, checkRateLimit, getClientIp } from '@/lib/security';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to access customer vehicle sell requests.' },
+        { status: 401 }
+      );
+    }
+
     const customerCars = await dbGetCustomerCars();
     return NextResponse.json({
       success: true,
@@ -19,11 +28,32 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const limit = checkRateLimit(`sell-submit:${clientIp}`, 15, 10 * 60);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many sell requests submitted. Please wait a few minutes before trying again.' },
+        { status: 429 }
+      );
+    }
+
     const body: SellRequest = await request.json();
+
+    if (!body || !body.sellerName || !body.sellerPhone || !body.make || !body.model) {
+      return NextResponse.json(
+        { success: false, error: 'Seller name, mobile number, make, and model are required.' },
+        { status: 400 }
+      );
+    }
+
     const requestId = body.id || `REC-SELL-${Date.now().toString().slice(-5)}`;
     const fullRequest: SellRequest = {
       ...body,
       id: requestId,
+      sellerName: body.sellerName.trim(),
+      sellerPhone: body.sellerPhone.trim(),
+      make: body.make.trim(),
+      model: body.model.trim(),
       status: body.status || 'Inspection Scheduled',
       createdAt: body.createdAt || new Date().toISOString(),
     };
@@ -68,6 +98,14 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to update sell request status.' },
+        { status: 401 }
+      );
+    }
+
     const { id, status } = await request.json();
     if (!id || !status) {
       return NextResponse.json({ success: false, error: 'id and status required' }, { status: 400 });

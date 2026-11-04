@@ -1,11 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Shield, Phone, Mail, User, MapPin, CheckCircle2, ArrowRight, Sparkles, Lock } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { CITIES } from '@/lib/data';
+import { Capacitor } from '@capacitor/core';
 
 import Logo from './Logo';
+
+export function AppleIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 170 170" fill="currentColor">
+      <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.59-7.71-11.66-14.01-6.19-9.5-11-20.47-14.43-32.92-3.43-12.45-5.15-24.16-5.15-35.13 0-14.06 3.5-25.75 10.5-35.08 7-9.33 15.65-14.08 25.96-14.25 4.69 0 10.15 1.34 16.39 4.02 6.24 2.68 10.37 4.08 12.39 4.2 1.68 0 5.86-1.42 12.54-4.27 6.68-2.85 12.18-4.17 16.51-3.95 9.27.45 17.15 3.97 23.64 10.56 6.49 6.59 10.66 14.33 12.51 23.23-8.27 4.97-12.31 11.95-12.12 20.93.19 7.6 3.16 13.98 8.91 19.14 5.75 5.16 12.44 8.21 20.07 9.15-2.01 6.25-4.43 12.43-7.26 18.53zM119.22 31.84c0-7.26 2.65-13.84 7.95-19.74 5.3-5.9 11.75-9.43 19.35-10.6 0 .89.04 1.73.04 2.52 0 7.04-2.73 13.62-8.19 19.74-5.46 6.12-12.02 9.69-19.68 10.71-.34-1.23-.51-2.45-.51-3.66z" />
+    </svg>
+  );
+}
 
 export function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
@@ -53,9 +62,11 @@ function sanitizeErrorMessage(msg?: string | null): string {
 }
 
 export default function AuthModal() {
-  const { isAuthModalOpen, closeAuthModal, authMode, login, signup, loginWithGoogle } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, authMode, login, signup, loginWithGoogle, loginWithApple } = useAuth();
   const [tab, setTab] = useState<'login' | 'signup'>(authMode);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   
   // Login form state
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -73,13 +84,21 @@ export default function AuthModal() {
   const [signupError, setSignupError] = useState<string | null>(null);
 
   // Sync mode whenever modal opens or authMode changes
-  useState(() => {
+  useEffect(() => {
     setTab(authMode);
-  });
+  }, [authMode]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isCapacitorIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+      const isAppleEnv = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+      setIsIOS(isCapacitorIOS || isAppleEnv);
+    }
+  }, []);
 
   if (!isAuthModalOpen) return null;
 
-  const isBusy = loginLoading || signupLoading || googleLoading;
+  const isBusy = loginLoading || signupLoading || googleLoading || appleLoading;
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,6 +148,23 @@ export default function AuthModal() {
     setSignupError(null);
     const res = await loginWithGoogle();
     setGoogleLoading(false);
+    if (!res.success) {
+      const sanitized = sanitizeErrorMessage(res.message);
+      if (tab === 'login') {
+        setLoginError(sanitized);
+      } else {
+        setSignupError(sanitized);
+      }
+    }
+  };
+
+  const handleAppleAuth = async () => {
+    if (isBusy) return;
+    setAppleLoading(true);
+    setLoginError(null);
+    setSignupError(null);
+    const res = await loginWithApple();
+    setAppleLoading(false);
     if (!res.success) {
       const sanitized = sanitizeErrorMessage(res.message);
       if (tab === 'login') {
@@ -206,22 +242,42 @@ export default function AuthModal() {
 
         {/* Form Body */}
         <div className="p-6 space-y-4">
-          {/* One-Click Google Authentication */}
-          <button
-            type="button"
-            onClick={handleGoogleAuth}
-            disabled={googleLoading}
-            className="w-full py-2.5 px-4 rounded-xl border border-[#E5E7EB] hover:border-gray-400 bg-white hover:bg-gray-50 text-gray-800 font-bold text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
-          >
-            <GoogleIcon className="w-4 h-4" />
-            <span>
-              {googleLoading
-                ? 'Connecting with Google...'
-                : tab === 'login'
-                ? 'Sign in with Google'
-                : 'Sign up with Google'}
-            </span>
-          </button>
+          {/* Social Authentication: Apple (on iOS/Apple) & Google */}
+          <div className="space-y-2">
+            {isIOS && (
+              <button
+                type="button"
+                onClick={handleAppleAuth}
+                disabled={isBusy}
+                className="w-full py-2.5 px-4 rounded-xl bg-black hover:bg-neutral-900 active:bg-neutral-800 text-white font-bold text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+              >
+                <AppleIcon className="w-4 h-4 fill-white" />
+                <span>
+                  {appleLoading
+                    ? 'Connecting with Apple...'
+                    : tab === 'login'
+                    ? 'Sign in with Apple'
+                    : 'Sign up with Apple'}
+                </span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleGoogleAuth}
+              disabled={isBusy}
+              className="w-full py-2.5 px-4 rounded-xl border border-[#E5E7EB] hover:border-gray-400 bg-white hover:bg-gray-50 text-gray-800 font-bold text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+            >
+              <GoogleIcon className="w-4 h-4" />
+              <span>
+                {googleLoading
+                  ? 'Connecting with Google...'
+                  : tab === 'login'
+                  ? 'Sign in with Google'
+                  : 'Sign up with Google'}
+              </span>
+            </button>
+          </div>
 
           <div className="relative flex items-center justify-center my-3">
             <div className="absolute inset-0 flex items-center">

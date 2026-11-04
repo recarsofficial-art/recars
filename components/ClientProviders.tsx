@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { AuthProvider } from '@/lib/authContext';
+import { RecarsProvider } from '@/lib/store';
 import AuthModal from './AuthModal';
 import { app } from '@/lib/firebase';
 
@@ -17,9 +18,11 @@ export default function ClientProviders({ children }: { children: React.ReactNod
 
   return (
     <AuthProvider>
-      {children}
-      <AuthModal />
-      <FloatingContactButtons />
+      <RecarsProvider>
+        {children}
+        <AuthModal />
+        <FloatingContactButtons />
+      </RecarsProvider>
     </AuthProvider>
   );
 }

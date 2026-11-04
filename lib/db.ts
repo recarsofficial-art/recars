@@ -24,8 +24,12 @@ function getDatabaseConnectionString(): string {
   let envUrl = (process.env.DATABASE_URL || '').trim();
 
   // 1. Direct db.<project>.supabase.co is IPv6-only and fails with ENOTFOUND on IPv4 serverless hosts like Vercel.
-  if (!envUrl || envUrl.includes('db.kgzzobdvwryijuubyzbh.supabase.co')) {
-    return 'postgresql://postgres.kgzzobdvwryijuubyzbh:Recars%402026@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres';
+  if (!envUrl) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('DATABASE_URL environment variable is required to connect to the database.');
+    }
+    console.warn('[DB] Warning: DATABASE_URL is not configured.');
+    return '';
   }
 
   // 2. CRITICAL PRODUCTION FIX: Port 5432 on Supabase pooler is Session Mode (limited to pool_size: 15).
@@ -190,6 +194,17 @@ export async function ensureDealerAndCarsSchema(): Promise<void> {
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS featured BOOLEAN DEFAULT false;
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS fitness_valid_until TEXT;
           ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS sold_in_duration TEXT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS availability_status TEXT DEFAULT 'Available';
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS manufacturing_year INTEGER;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS registration_year INTEGER;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS insurance_status TEXT DEFAULT 'Valid';
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS insurance_expiry TEXT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS insurance_type TEXT DEFAULT 'Comprehensive';
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS finance_available TEXT DEFAULT 'Available';
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS suggested_price_min BIGINT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS suggested_price_max BIGINT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS suggestedpricemin BIGINT;
+          ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS suggestedpricemax BIGINT;
 
           CREATE INDEX IF NOT EXISTS idx_cars_vehicle_source ON public.cars(vehicle_source);
           CREATE INDEX IF NOT EXISTS idx_cars_dealer_id ON public.cars(dealer_id);

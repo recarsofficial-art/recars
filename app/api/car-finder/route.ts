@@ -7,31 +7,15 @@ import {
 } from '@/lib/db';
 import { sendAdminEmailNotification } from '@/lib/email';
 import { CarFinderRequest } from '@/lib/types';
-
-function checkIsAdmin(request: Request | NextRequest, searchParams?: URLSearchParams): boolean {
-  const params = searchParams || ('nextUrl' in request ? (request as NextRequest).nextUrl.searchParams : new URL(request.url).searchParams);
-  if (params.get('admin') === 'true' || params.get('source') === 'admin') {
-    return true;
-  }
-  const roleHeader = request.headers.get('x-recars-role');
-  if (roleHeader === 'admin') return true;
-
-  const cookieHeader = request.headers.get('cookie') || '';
-  if (cookieHeader.includes('recars_admin_session=') || cookieHeader.includes('admin_token=')) {
-    return true;
-  }
-
-  return false;
-}
+import { verifyAdminRequest, checkRateLimit, getClientIp } from '@/lib/security';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const isAdmin = checkIsAdmin(request);
-
-    if (!isAdmin) {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized: Admin access required' },
+        { success: false, error: 'Unauthorized: Admin access required for car finder records.' },
         { status: 401 }
       );
     }
@@ -87,6 +71,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const limit = checkRateLimit(`carfinder-submit:${clientIp}`, 15, 10 * 60);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please wait a few minutes before submitting again.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const {
       customerName,
@@ -206,10 +199,8 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const isAdmin = checkIsAdmin(request, searchParams);
-
-    if (!isAdmin) {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized: Admin access required' },
         { status: 401 }

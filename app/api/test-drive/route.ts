@@ -2,9 +2,18 @@ import { NextResponse } from 'next/server';
 import { dbGetTestDrives, dbInsertTestDrive } from '@/lib/db';
 import { TestDriveBooking } from '@/lib/types';
 import { sendEnquiryNotification } from '@/lib/email';
+import { verifyAdminRequest, checkRateLimit, getClientIp } from '@/lib/security';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to access test drive bookings.' },
+        { status: 401 }
+      );
+    }
+
     const testDrives = await dbGetTestDrives();
     return NextResponse.json({
       success: true,
@@ -19,11 +28,31 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const limit = checkRateLimit(`testdrive-submit:${clientIp}`, 15, 10 * 60);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many test drive requests submitted. Please wait a few minutes before trying again.' },
+        { status: 429 }
+      );
+    }
+
     const body: TestDriveBooking = await request.json();
+
+    if (!body || !body.userName || !body.userPhone || !body.carId) {
+      return NextResponse.json(
+        { success: false, error: 'Customer name, phone number, and vehicle selection are required.' },
+        { status: 400 }
+      );
+    }
+
     const bookingId = body.id || `TD-${Date.now().toString().slice(-6)}`;
     const fullBooking: TestDriveBooking = {
       ...body,
       id: bookingId,
+      userName: body.userName.trim(),
+      userPhone: body.userPhone.trim(),
+      userEmail: body.userEmail?.trim() || '',
       status: body.status || 'Confirmed',
       createdAt: body.createdAt || new Date().toISOString(),
     };

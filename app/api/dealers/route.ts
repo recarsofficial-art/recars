@@ -1,14 +1,29 @@
 import { NextResponse } from 'next/server';
 import { dbGetDealers, dbInsertDealer, dbDeleteDealer } from '@/lib/db';
 import { RegisteredDealer } from '@/lib/types';
+import { verifyAdminRequest } from '@/lib/security';
 
 export async function GET(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
     const dealers = await dbGetDealers();
+
+    // If unauthenticated public request, sanitize private internal dealer fields
+    const sanitized = admin
+      ? dealers
+      : dealers
+          .filter((d) => d.status === 'Active')
+          .map((d) => ({
+            id: d.id,
+            name: d.name,
+            city: d.city,
+            activeCarsCount: d.activeCarsCount,
+          }));
+
     return NextResponse.json({
       success: true,
-      dealers,
-      total: dealers.length,
+      dealers: sanitized,
+      total: sanitized.length,
     });
   } catch (error: any) {
     console.error('Error fetching registered dealers:', error);
@@ -21,6 +36,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to register dealers.' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     if (!body.name || !body.name.trim()) {
       return NextResponse.json(
@@ -63,6 +86,14 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to delete dealers.' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {

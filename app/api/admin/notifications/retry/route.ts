@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
 import { dbGetEmailNotificationByEnquiryId } from '@/lib/db';
 import { sendEnquiryNotification, EmailNotificationPayload } from '@/lib/email';
+import { verifyAdminRequest } from '@/lib/security';
 
 export async function POST(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to re-trigger notifications.' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { enquiryId } = body;
 

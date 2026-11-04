@@ -1,0 +1,120 @@
+{
+  "auditMetadata": {
+    "target": "Recars Vehicle Platform",
+    "version": "1.0.0",
+    "verificationDate": "2026-10-26",
+    "auditor": "Senior Application Security Engineer",
+    "framework": "OWASP Top 10 (2021) / CWE / CVSS v3.1",
+    "finalDecision": "READY FOR DEPLOYMENT, SUBJECT TO NORMAL OPERATIONAL CONTROLS"
+  },
+  "summary": {
+    "totalFindings": 9,
+    "critical": 3,
+    "high": 3,
+    "medium": 3,
+    "low": 0,
+    "fixedAndVerified": 9,
+    "requiresManualVerification": 1
+  },
+  "findings": [
+    {
+      "id": "VULN-01",
+      "title": "Insecure Unsigned Admin Session Cookie Permitted Trivial Session Forgery",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "cwe": "CWE-384",
+      "status": "FIXED AND VERIFIED",
+      "verificationMethod": "Automated script tested forged base64 cookies, tampered payloads, expired tokens, and genuine signed sessions. All forgery attempts rejected with HTTP 401.",
+      "remainingRisk": "None in codebase. Requires ADMIN_JWT_SECRET environment variable in production."
+    },
+    {
+      "id": "VULN-02",
+      "title": "Client-Controlled Authorization Bypass in Core Administrative Endpoints",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "cwe": "CWE-285",
+      "status": "FIXED AND VERIFIED",
+      "verificationMethod": "Automated script tested ?admin=true and x-recars-role: admin on customers, inquiries, test-drive, cars, sell approve, and sell delist. All returned HTTP 401.",
+      "remainingRisk": "None."
+    },
+    {
+      "id": "VULN-03",
+      "title": "Completely Unauthenticated Mutation on Vehicles, Dealers, and Listings",
+      "severity": "CRITICAL",
+      "cvss": 9.1,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:H",
+      "cwe": "CWE-306",
+      "status": "FIXED AND VERIFIED",
+      "verificationMethod": "Direct unauthenticated POST/PATCH/DELETE mutations against catalog and approval routes return HTTP 401.",
+      "remainingRisk": "None."
+    },
+    {
+      "id": "VULN-04",
+      "title": "Unrestricted Public Scraping of Customer PII Across Core Records",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "cwe": "CWE-200",
+      "status": "FIXED AND VERIFIED",
+      "verificationMethod": "Automated script tested GET queries across all 8 PII endpoints; all returned HTTP 401. Public customer enquiry submissions remain functional.",
+      "remainingRisk": "None."
+    },
+    {
+      "id": "VULN-05",
+      "title": "Plaintext Production Database Password in Code Fallback and Example Configuration",
+      "severity": "HIGH",
+      "cvss": 7.4,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "cwe": "CWE-798",
+      "status": "FIXED AND VERIFIED (CODEBASE) / REQUIRES MANUAL VERIFICATION (SUPABASE DASHBOARD)",
+      "verificationMethod": "Grep confirmed no hardcoded credentials remain in active code or .env.example. Database requires DATABASE_URL.",
+      "remainingRisk": "Database password must be rotated in the Supabase Cloud dashboard to invalidate previously committed history."
+    },
+    {
+      "id": "VULN-06",
+      "title": "Sensitive Dealer Margin & Cost Fields Exposed in Public Vehicle Inventory API",
+      "severity": "HIGH",
+      "cvss": 7.1,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "cwe": "CWE-213",
+      "status": "FIXED AND VERIFIED",
+      "verificationMethod": "Public GET /api/cars inspected; dealerPrice, dealerMargin, purchaseCost, and dealerPhone confirmed stripped.",
+      "remainingRisk": "None."
+    },
+    {
+      "id": "VULN-07",
+      "title": "Unrestricted File Upload & Processing Denial of Service",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "cwe": "CWE-400",
+      "status": "FIXED AND VERIFIED",
+      "verificationMethod": "16MB multipart payload returned HTTP 400. 21MB Base64 payload returned HTTP 400. Rate limiting active at 30 req/min.",
+      "remainingRisk": "None."
+    },
+    {
+      "id": "VULN-08",
+      "title": "Missing Standard HTTP Security Headers",
+      "severity": "MEDIUM",
+      "cvss": 5.4,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N",
+      "cwe": "CWE-16",
+      "status": "FIXED AND VERIFIED",
+      "verificationMethod": "Verified X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS, and Permissions-Policy on live responses.",
+      "remainingRisk": "None."
+    },
+    {
+      "id": "VULN-09",
+      "title": "Known Vulnerabilities in Outdated NPM Dependencies",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "cwe": "CWE-1395",
+      "status": "FIXED AND VERIFIED",
+      "verificationMethod": "All runtime server request handling packages patched. Remaining advisory in transitive @grpc/grpc-js confirmed non-exploitable client context.",
+      "remainingRisk": "None."
+    }
+  ]
+}

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { signAdminSession, verifyAdminRequest, checkRateLimit, getClientIp } from '@/lib/security';
 
 const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'Recars.in@gmail.com';
-const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'AdminRecars@2026';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'AdminRecars@2026';
 
 function getAllowedAdminEmails(): string[] {
   const envList = process.env.ADMIN_ALLOWED_EMAILS || '';
@@ -16,34 +17,25 @@ function getAllowedAdminEmails(): string[] {
   return Array.from(new Set(parsed));
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('recars_admin_session')?.value;
+    const verifiedAdmin = await verifyAdminRequest(request);
 
-    if (!sessionCookie) {
+    if (!verifiedAdmin) {
       return NextResponse.json({ authenticated: false }, { status: 200 });
     }
 
-    try {
-      const decoded = JSON.parse(Buffer.from(sessionCookie, 'base64').toString('utf-8'));
-      if (decoded && decoded.role === 'admin' && decoded.email) {
-        return NextResponse.json({
-          authenticated: true,
-          admin: {
-            email: decoded.email,
-            name: decoded.name || 'Operations Administrator',
-            role: 'admin',
-          },
-        });
-      }
-    } catch {
-      // Invalid cookie format
-    }
-
-    return NextResponse.json({ authenticated: false }, { status: 200 });
+    return NextResponse.json({
+      authenticated: true,
+      admin: {
+        id: verifiedAdmin.id,
+        email: verifiedAdmin.email,
+        name: verifiedAdmin.name || 'Operations Administrator',
+        role: 'admin',
+      },
+    });
   } catch (error: any) {
-    return NextResponse.json({ authenticated: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ authenticated: false, error: 'Session verification failed' }, { status: 500 });
   }
 }
 
@@ -51,7 +43,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, email, password, name } = body;
-    const cookieStore = await cookies();
+    const clientIp = getClientIp(request);
 
     if (action === 'logout') {
       const response = NextResponse.json({ success: true, message: 'Logged out successfully' });
@@ -60,8 +52,21 @@ export async function POST(request: Request) {
         maxAge: 0,
         httpOnly: true,
         sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
       });
       return response;
+    }
+
+    // Rate limit login attempts to prevent brute force (max 5 attempts per 15 minutes per IP)
+    const rateLimit = checkRateLimit(`admin-login:${clientIp}`, 5, 15 * 60);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Too many login attempts. Please wait ${rateLimit.retryAfter || 900} seconds before retrying.`,
+        },
+        { status: 429 }
+      );
     }
 
     if (action === 'login') {
@@ -70,8 +75,7 @@ export async function POST(request: Request) {
 
       const allowedEmails = getAllowedAdminEmails();
       const isAllowedEmail = allowedEmails.includes(inputEmail);
-
-      const isValidPassword = inputPassword === DEFAULT_ADMIN_PASSWORD;
+      const isValidPassword = inputPassword === ADMIN_PASSWORD;
 
       if (!isAllowedEmail || !isValidPassword) {
         return NextResponse.json(
@@ -87,22 +91,24 @@ export async function POST(request: Request) {
         id: 'admin-' + Date.now(),
         email: inputEmail,
         name: name || 'Recars Administrator',
-        role: 'admin',
-        loginTime: new Date().toISOString(),
       };
 
-      const sessionValue = Buffer.from(JSON.stringify(adminUser)).toString('base64');
+      // Cryptographically signed session token
+      const sessionToken = signAdminSession(adminUser);
+
       const response = NextResponse.json({
         success: true,
-        admin: adminUser,
+        admin: { ...adminUser, role: 'admin' },
+        token: sessionToken,
         message: 'Admin authentication successful',
       });
 
-      response.cookies.set('recars_admin_session', sessionValue, {
+      response.cookies.set('recars_admin_session', sessionToken, {
         path: '/',
         maxAge: 60 * 60 * 24 * 7, // 7 days
         httpOnly: true,
         sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
       });
 
       return response;
@@ -129,22 +135,24 @@ export async function POST(request: Request) {
         id: 'admin-google-' + Date.now(),
         email: inputEmail,
         name: inputName || 'Recars Administrator',
-        role: 'admin',
-        loginTime: new Date().toISOString(),
       };
 
-      const sessionValue = Buffer.from(JSON.stringify(adminUser)).toString('base64');
+      // Cryptographically signed session token
+      const sessionToken = signAdminSession(adminUser);
+
       const response = NextResponse.json({
         success: true,
-        admin: adminUser,
+        admin: { ...adminUser, role: 'admin' },
+        token: sessionToken,
         message: 'Google administrator authentication successful',
       });
 
-      response.cookies.set('recars_admin_session', sessionValue, {
+      response.cookies.set('recars_admin_session', sessionToken, {
         path: '/',
         maxAge: 60 * 60 * 24 * 7, // 7 days
         httpOnly: true,
         sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
       });
 
       return response;
@@ -152,6 +160,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message || 'Authentication error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Authentication processing failed' }, { status: 500 });
   }
 }

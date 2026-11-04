@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -34,8 +34,35 @@ function getNextRequestId(): string {
   return `REC-SELL-${Date.now().toString().slice(-5)}`;
 }
 
-function SellWorkflowContent() {
+function SellSearchParamsWatcher({
+  onParams,
+}: {
+  onParams: (p: {
+    reg: string | null;
+    make: string | null;
+    model: string | null;
+    year: string | null;
+    variant: string | null;
+    fuel: string | null;
+    transmission: string | null;
+  }) => void;
+}) {
   const searchParams = useSearchParams();
+  useEffect(() => {
+    onParams({
+      reg: searchParams.get('reg'),
+      make: searchParams.get('make'),
+      model: searchParams.get('model'),
+      year: searchParams.get('year'),
+      variant: searchParams.get('variant'),
+      fuel: searchParams.get('fuel'),
+      transmission: searchParams.get('transmission'),
+    });
+  }, [searchParams, onParams]);
+  return null;
+}
+
+function SellWorkflowContent() {
   const router = useRouter();
 
   const {
@@ -48,20 +75,37 @@ function SellWorkflowContent() {
   const [step, setStep] = useState<number>(1);
 
   // Step 1: Vehicle Identification
-  const [regNumber, setRegNumber] = useState(searchParams.get('reg') || '');
-  const [make, setMake] = useState(searchParams.get('make') || 'Hyundai');
+  const [regNumber, setRegNumber] = useState('');
+  const [make, setMake] = useState('Hyundai');
   const [isCustomMake, setIsCustomMake] = useState(false);
   const [customMakeName, setCustomMakeName] = useState('');
-  const [model, setModel] = useState(searchParams.get('model') || 'Creta');
+  const [model, setModel] = useState('Creta');
   const [isCustomModel, setIsCustomModel] = useState(false);
   const [customModelName, setCustomModelName] = useState('');
-  const [year, setYear] = useState<number>(() => Number(searchParams.get('year')) || 2021);
-  const [variant, setVariant] = useState(searchParams.get('variant') || 'SX (O) 1.5 Petrol');
-  const [fuelType, setFuelType] = useState<FuelType>(
-    (searchParams.get('fuel') as FuelType) || 'Petrol'
-  );
-  const [transmission, setTransmission] = useState<TransmissionType>(
-    (searchParams.get('transmission') as TransmissionType) || 'Automatic'
+  const [year, setYear] = useState<number>(2021);
+  const [variant, setVariant] = useState('SX (O) 1.5 Petrol');
+  const [fuelType, setFuelType] = useState<FuelType>('Petrol');
+  const [transmission, setTransmission] = useState<TransmissionType>('Automatic');
+
+  const handleParamsUpdate = useCallback(
+    (p: {
+      reg: string | null;
+      make: string | null;
+      model: string | null;
+      year: string | null;
+      variant: string | null;
+      fuel: string | null;
+      transmission: string | null;
+    }) => {
+      if (p.reg) setRegNumber(p.reg);
+      if (p.make) setMake(p.make);
+      if (p.model) setModel(p.model);
+      if (p.year) setYear(Number(p.year) || 2021);
+      if (p.variant) setVariant(p.variant);
+      if (p.fuel) setFuelType(p.fuel as FuelType);
+      if (p.transmission) setTransmission(p.transmission as TransmissionType);
+    },
+    []
   );
 
   // Step 2: Vehicle Condition
@@ -304,6 +348,9 @@ function SellWorkflowContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
+      <Suspense fallback={null}>
+        <SellSearchParamsWatcher onParams={handleParamsUpdate} />
+      </Suspense>
       <SimpleHeader activeTab="sell" />
 
       {/* Exact SellRight Hero (Screenshot: R SellRight, Trust Every Drive. Value Every Rupee., Enter your car details, brand logos, ambassador image) */}
@@ -1051,9 +1098,5 @@ function SellWorkflowContent() {
 }
 
 export default function SellPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">Loading Sell Flow...</div>}>
-      <SellWorkflowContent />
-    </Suspense>
-  );
+  return <SellWorkflowContent />;
 }

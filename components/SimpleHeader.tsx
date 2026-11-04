@@ -16,7 +16,7 @@ export default function SimpleHeader({ activeTab = 'buy', onSelectTab }: SimpleH
   const { user, openLogin, logout } = useAuth();
 
   return (
-    <header className="w-full bg-white border-b border-[#E5E7EB] sticky top-0 z-40 transition-shadow">
+    <header className="w-full bg-white border-b border-[#E5E7EB] sticky top-0 z-40 transition-shadow pt-[env(safe-area-inset-top,0px)]">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
         {/* Left: Recars Logo */}
         <div className="flex items-center shrink-0">

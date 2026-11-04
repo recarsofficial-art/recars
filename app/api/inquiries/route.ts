@@ -2,9 +2,18 @@ import { NextResponse } from 'next/server';
 import { dbGetInquiries, dbInsertInquiry, dbUpdateInquiryStatus, dbDeleteInquiry } from '@/lib/db';
 import { CarInquiry } from '@/lib/types';
 import { sendEnquiryNotification } from '@/lib/email';
+import { verifyAdminRequest, checkRateLimit, getClientIp } from '@/lib/security';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to access customer inquiries.' },
+        { status: 401 }
+      );
+    }
+
     const inquiries = await dbGetInquiries();
     return NextResponse.json({
       success: true,
@@ -19,11 +28,31 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const limit = checkRateLimit(`inquiry-submit:${clientIp}`, 15, 10 * 60);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many inquiries submitted. Please wait a few minutes before submitting again.' },
+        { status: 429 }
+      );
+    }
+
     const body: CarInquiry = await request.json();
+
+    if (!body || !body.userName || !body.userPhone) {
+      return NextResponse.json(
+        { success: false, error: 'Name and phone number are required.' },
+        { status: 400 }
+      );
+    }
+
     const id = body.id || `inq-${Date.now().toString().slice(-5)}`;
     const newInquiry: CarInquiry = {
       ...body,
       id,
+      userName: body.userName.trim(),
+      userPhone: body.userPhone.trim(),
+      userEmail: body.userEmail?.trim() || '',
       status: body.status || 'New',
       createdAt: body.createdAt || new Date().toISOString(),
     };
@@ -60,6 +89,14 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to update inquiry status.' },
+        { status: 401 }
+      );
+    }
+
     const { id, status } = await request.json();
     if (!id || !status) {
       return NextResponse.json({ success: false, error: 'id and status required' }, { status: 400 });
@@ -73,6 +110,14 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to delete inquiries.' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {

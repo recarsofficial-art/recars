@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dbGetCars, dbInsertCar, dbDeleteCar, dbGetCarById, dbGetTrendingCars } from '@/lib/db';
 import { Car } from '@/lib/types';
+import { verifyAdminRequest } from '@/lib/security';
 
 /**
  * Strips internal dealer and source fields from public/customer responses.
@@ -20,22 +21,6 @@ function sanitizeCarForCustomer(car: Car): Partial<Car> {
   return publicCar;
 }
 
-function checkIsAdmin(request: Request | NextRequest, searchParams?: URLSearchParams): boolean {
-  const params = searchParams || ('nextUrl' in request ? (request as NextRequest).nextUrl.searchParams : new URL(request.url).searchParams);
-  if (params.get('admin') === 'true' || params.get('source') === 'admin') {
-    return true;
-  }
-  const roleHeader = request.headers.get('x-recars-role');
-  if (roleHeader === 'admin') return true;
-
-  const cookieHeader = request.headers.get('cookie') || '';
-  if (cookieHeader.includes('recars_admin_session=true') || cookieHeader.includes('admin_token=')) {
-    return true;
-  }
-
-  return false;
-}
-
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -49,17 +34,43 @@ export async function GET(request: NextRequest) {
     const dealerIdFilter = searchParams.get('dealerId');
     const dealerNameFilter = searchParams.get('dealerName');
 
-    const isAdmin = checkIsAdmin(request);
+    const admin = await verifyAdminRequest(request);
+    const isAdmin = admin !== null;
+
+    // Fast path: Single car lookup by ID
+    const carId = searchParams.get('id');
+    if (carId) {
+      const singleCar = await dbGetCarById(carId);
+      if (!singleCar) {
+        return NextResponse.json({ success: false, error: 'Car not found' }, { status: 404 });
+      }
+      const outputCar = isAdmin ? singleCar : sanitizeCarForCustomer(singleCar);
+      return NextResponse.json(
+        { success: true, car: outputCar },
+        {
+          headers: !isAdmin
+            ? { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' }
+            : undefined,
+        }
+      );
+    }
 
     if (searchParams.get('trending') === 'true') {
       const limit = Number(searchParams.get('limit')) || 8;
       const trending = await dbGetTrendingCars(limit);
       const outputCars = isAdmin ? trending : trending.map((c) => sanitizeCarForCustomer(c));
-      return NextResponse.json({
-        success: true,
-        total: outputCars.length,
-        cars: outputCars,
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          total: outputCars.length,
+          cars: outputCars,
+        },
+        {
+          headers: !isAdmin
+            ? { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' }
+            : undefined,
+        }
+      );
     }
 
     let cars = (await dbGetCars({ make, bodyType: type, city, minPrice, maxPrice })) || [];
@@ -93,11 +104,18 @@ export async function GET(request: NextRequest) {
       ? cars
       : cars.map((c) => sanitizeCarForCustomer(c));
 
-    return NextResponse.json({
-      success: true,
-      total: outputCars.length,
-      cars: outputCars,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        total: outputCars.length,
+        cars: outputCars,
+      },
+      {
+        headers: !isAdmin
+          ? { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' }
+          : undefined,
+      }
+    );
   } catch (error: any) {
     console.error('Error fetching cars from Supabase:', error);
     return NextResponse.json({
@@ -114,8 +132,16 @@ export async function POST(request: Request) {
     const { searchParams } = new URL(request.url);
     const body: Car = await request.json();
 
-    const isAdmin = checkIsAdmin(request, searchParams) || body.uploadedBy === 'Admin';
+    const admin = await verifyAdminRequest(request);
+    const isAdmin = admin !== null;
     const dealerAuthId = request.headers.get('x-dealer-id');
+
+    if (!isAdmin && !dealerAuthId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin or Dealer authentication required to add vehicles.' },
+        { status: 401 }
+      );
+    }
 
     // Validation: Dealer vehicles must specify dealer name
     if (body.vehicleSource === 'Dealer') {
@@ -170,8 +196,16 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'Car ID is required' }, { status: 400 });
     }
 
-    const isAdmin = checkIsAdmin(request, searchParams);
+    const admin = await verifyAdminRequest(request);
+    const isAdmin = admin !== null;
     const dealerAuthId = request.headers.get('x-dealer-id');
+
+    if (!isAdmin && !dealerAuthId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin or Dealer authentication required to modify vehicles.' },
+        { status: 401 }
+      );
+    }
 
     // Protect dealer association modification: only admins can reassign dealer
     if (body.dealerId || body.dealerName || body.vehicleSource) {
@@ -220,6 +254,14 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const admin = await verifyAdminRequest(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin authentication required to delete vehicles.' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {

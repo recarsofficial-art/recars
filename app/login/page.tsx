@@ -1,22 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Shield, Phone, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/lib/authContext';
-import { GoogleIcon } from '@/components/AuthModal';
+import { GoogleIcon, AppleIcon } from '@/components/AuthModal';
+import { Capacitor } from '@capacitor/core';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loginWithGoogle, user } = useAuth();
+  const { login, loginWithGoogle, loginWithApple, user } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isCapacitorIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+      const isAppleEnv = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+      setIsIOS(isCapacitorIOS || isAppleEnv);
+    }
+  }, []);
 
   if (user) {
     router.push('/account');
@@ -51,6 +62,18 @@ export default function LoginPage() {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    setAppleLoading(true);
+    setError(null);
+    const res = await loginWithApple();
+    setAppleLoading(false);
+    if (res.success) {
+      router.push('/');
+    } else {
+      setError(res.message || 'Apple sign in failed');
+    }
+  };
+
 
 
   return (
@@ -78,17 +101,31 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="p-6 space-y-5">
-            {/* Google Sign In Option */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="w-full py-2.5 px-4 rounded-xl border border-[#E5E7EB] hover:border-gray-400 bg-white hover:bg-gray-50 text-gray-800 font-semibold font-btn tracking-rounded text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
-            >
-              <GoogleIcon className="w-4 h-4" />
-              <span>{googleLoading ? 'Connecting with Google...' : 'Sign in with Google'}</span>
-            </button>
+          <div className="p-6 space-y-4">
+            {/* Social Authentication: Apple (iOS/Apple) & Google */}
+            <div className="space-y-2">
+              {isIOS && (
+                <button
+                  type="button"
+                  onClick={handleAppleSignIn}
+                  disabled={appleLoading || googleLoading || loading}
+                  className="w-full py-2.5 px-4 rounded-xl bg-black hover:bg-neutral-900 active:bg-neutral-800 text-white font-semibold font-btn tracking-rounded text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+                >
+                  <AppleIcon className="w-4 h-4 fill-white" />
+                  <span>{appleLoading ? 'Connecting with Apple...' : 'Sign in with Apple'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading || appleLoading || loading}
+                className="w-full py-2.5 px-4 rounded-xl border border-[#E5E7EB] hover:border-gray-400 bg-white hover:bg-gray-50 text-gray-800 font-semibold font-btn tracking-rounded text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+              >
+                <GoogleIcon className="w-4 h-4" />
+                <span>{googleLoading ? 'Connecting with Google...' : 'Sign in with Google'}</span>
+              </button>
+            </div>
 
             <div className="relative flex items-center justify-center my-2">
               <div className="absolute inset-0 flex items-center">

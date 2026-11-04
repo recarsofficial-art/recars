@@ -1,24 +1,16 @@
 import { NextResponse } from 'next/server';
 import { dbGetNegotiations, dbGetNegotiationById, dbCreateNegotiation, dbUpdateNegotiationStatus } from '@/lib/db';
 import { Negotiation } from '@/lib/types';
-import { cookies } from 'next/headers';
 import { sendEnquiryNotification } from '@/lib/email';
-
-// Verify admin session cookie
-async function checkIsAdmin(): Promise<boolean> {
-  try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('recars_admin_session')?.value;
-    if (!sessionCookie) return false;
-    const decoded = JSON.parse(Buffer.from(sessionCookie, 'base64').toString('utf-8'));
-    return decoded && decoded.role === 'admin';
-  } catch {
-    return false;
-  }
-}
+import { verifyAdminRequest, checkRateLimit, getClientIp } from '@/lib/security';
 
 export async function GET(request: Request) {
   try {
+    const isAdmin = await verifyAdminRequest(request);
+    if (!isAdmin) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Admin authentication required.' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const carId = searchParams.get('carId') || undefined;
     const customerPhone = searchParams.get('customerPhone') || undefined;
@@ -41,12 +33,21 @@ export async function GET(request: Request) {
     });
   } catch (error: any) {
     console.error('Error fetching negotiations:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'An unexpected error occurred while fetching negotiations.' }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const rl = checkRateLimit(`negotiation-submit:${clientIp}`, 10, 10 * 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many negotiation requests. Please wait a few minutes before submitting another offer.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { carId, carTitle, carImage, listedPrice, customerName, customerPhone, customerEmail, customerOffer, notes } = body;
 
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error('Error creating negotiation offer:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to submit negotiation offer.' }, { status: 500 });
   }
 }
 
@@ -148,9 +149,9 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'Negotiation ID and action are required.' }, { status: 400 });
     }
 
-    // Customer can accept a counteroffer without admin session
+    // Customer can accept a counteroffer without admin session, but administrative operations require verified admin session
     if (action !== 'customer_accept') {
-      const isAdmin = await checkIsAdmin();
+      const isAdmin = await verifyAdminRequest(request);
       if (!isAdmin) {
         return NextResponse.json({ success: false, error: 'Unauthorized: Admin authentication required.' }, { status: 403 });
       }
@@ -174,6 +175,6 @@ export async function PATCH(request: Request) {
     });
   } catch (error: any) {
     console.error('Error updating negotiation:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to update negotiation.' }, { status: 500 });
   }
 }

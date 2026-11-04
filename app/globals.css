@@ -24,6 +24,14 @@
     --recars-border: #E5E7EB;
     --recars-success: #237A52;
     --recars-error: #C43D3D;
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Support for iOS Dynamic Island, Notch, and Android display cutouts */
+  header,
+  .mobile-safe-header {
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   body {
@@ -130,3 +138,14 @@
 .tracking-rounded {
   letter-spacing: 0.015em;
 }
+
+/* Mobile Safe Area & Inset Support */
+header.sticky,
+header.fixed {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Shield, Phone, Mail, User, MapPin, Sparkles } from 'lucide-react';
@@ -8,18 +8,29 @@ import Logo from '@/components/Logo';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/lib/authContext';
 import { CITIES } from '@/lib/data';
-import { GoogleIcon } from '@/components/AuthModal';
+import { GoogleIcon, AppleIcon } from '@/components/AuthModal';
+import { Capacitor } from '@capacitor/core';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signup, loginWithGoogle, user } = useAuth();
+  const { signup, loginWithGoogle, loginWithApple, user } = useAuth();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [city, setCity] = useState('Warangal');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isCapacitorIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+      const isAppleEnv = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+      setIsIOS(isCapacitorIOS || isAppleEnv);
+    }
+  }, []);
 
   if (user) {
     router.push('/account');
@@ -63,6 +74,18 @@ export default function SignupPage() {
     }
   };
 
+  const handleAppleSignUp = async () => {
+    setAppleLoading(true);
+    setError(null);
+    const res = await loginWithApple();
+    setAppleLoading(false);
+    if (res.success) {
+      router.push('/');
+    } else {
+      setError(res.message || 'Apple sign up failed');
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
       <header className="bg-white border-b border-[#E5E7EB] py-4 px-6 flex items-center justify-between">
@@ -89,16 +112,30 @@ export default function SignupPage() {
           </div>
 
           <div className="p-6 space-y-4">
-            {/* Google Sign Up Option */}
-            <button
-              type="button"
-              onClick={handleGoogleSignUp}
-              disabled={googleLoading}
-              className="w-full py-2.5 px-4 rounded-xl border border-[#E5E7EB] hover:border-gray-400 bg-white hover:bg-gray-50 text-gray-800 font-semibold font-btn tracking-rounded text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
-            >
-              <GoogleIcon className="w-4 h-4" />
-              <span>{googleLoading ? 'Connecting with Google...' : 'Sign up with Google'}</span>
-            </button>
+            {/* Social Authentication: Apple (iOS/Apple) & Google */}
+            <div className="space-y-2">
+              {isIOS && (
+                <button
+                  type="button"
+                  onClick={handleAppleSignUp}
+                  disabled={appleLoading || googleLoading || loading}
+                  className="w-full py-2.5 px-4 rounded-xl bg-black hover:bg-neutral-900 active:bg-neutral-800 text-white font-semibold font-btn tracking-rounded text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+                >
+                  <AppleIcon className="w-4 h-4 fill-white" />
+                  <span>{appleLoading ? 'Connecting with Apple...' : 'Sign up with Apple'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleGoogleSignUp}
+                disabled={googleLoading || appleLoading || loading}
+                className="w-full py-2.5 px-4 rounded-xl border border-[#E5E7EB] hover:border-gray-400 bg-white hover:bg-gray-50 text-gray-800 font-semibold font-btn tracking-rounded text-xs shadow-2xs transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+              >
+                <GoogleIcon className="w-4 h-4" />
+                <span>{googleLoading ? 'Connecting with Google...' : 'Sign up with Google'}</span>
+              </button>
+            </div>
 
             <div className="relative flex items-center justify-center my-2">
               <div className="absolute inset-0 flex items-center">

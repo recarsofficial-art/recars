@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -25,8 +25,31 @@ import { MAKES, CITIES, CAR_TYPES } from '@/lib/data';
 import { CarBodyType, FuelType, TransmissionType } from '@/lib/types';
 import { formatINR, formatKM } from '@/lib/formatters';
 
-function BuyContent() {
+function BuySearchParamsWatcher({
+  onParams,
+}: {
+  onParams: (params: {
+    make: string | null;
+    type: string | null;
+    budget: string | null;
+    q: string | null;
+    skipWizard: string | null;
+  }) => void;
+}) {
   const searchParams = useSearchParams();
+  useEffect(() => {
+    onParams({
+      make: searchParams.get('make'),
+      type: searchParams.get('type'),
+      budget: searchParams.get('budget'),
+      q: searchParams.get('q'),
+      skipWizard: searchParams.get('skipWizard'),
+    });
+  }, [searchParams, onParams]);
+  return null;
+}
+
+function BuyContent() {
   const router = useRouter();
 
   const {
@@ -35,38 +58,17 @@ function BuyContent() {
     wishlistIds,
     toggleWishlist,
     isWishlisted,
-    cars: storeCars,
+    cars,
+    refreshCars,
   } = useRecarsState();
 
-  const [liveCars, setLiveCars] = useState<any[] | null>(null);
-
   useEffect(() => {
-    const fetchFreshCars = () => {
-      fetch('/api/cars')
-        .then((r) => r.json())
-        .then((d) => {
-          if (Array.isArray(d?.cars)) setLiveCars(d.cars);
-        })
-        .catch(() => {});
-    };
-    fetchFreshCars();
-    window.addEventListener('focus', fetchFreshCars);
-    return () => window.removeEventListener('focus', fetchFreshCars);
-  }, []);
-
-  const cars = liveCars !== null ? liveCars : storeCars;
+    refreshCars();
+  }, [refreshCars]);
 
   // Filters State initialized from search params
-  const [selectedMakes, setSelectedMakes] = useState<string[]>(() => {
-    const p = searchParams.get('make');
-    return p ? [p] : [];
-  });
-
-  const [selectedBodyTypes, setSelectedBodyTypes] = useState<string[]>(() => {
-    const p = searchParams.get('type');
-    return p ? [p] : [];
-  });
-
+  const [selectedMakes, setSelectedMakes] = useState<string[]>([]);
+  const [selectedBodyTypes, setSelectedBodyTypes] = useState<string[]>([]);
   const [selectedFuels, setSelectedFuels] = useState<string[]>([]);
   const [selectedTransmissions, setSelectedTransmissions] = useState<string[]>([]);
   const [selectedOwnerships, setSelectedOwnerships] = useState<string[]>([]);
@@ -75,35 +77,40 @@ function BuyContent() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
 
-  const [minPrice, setMinPrice] = useState<number>(() => {
-    const b = searchParams.get('budget');
-    if (b && b.includes('-')) {
-      return parseInt(b.split('-')[0]) || 50000;
-    }
-    return 50000;
-  });
-
-  const [maxPrice, setMaxPrice] = useState<number>(() => {
-    const b = searchParams.get('budget');
-    if (b && b.includes('-')) {
-      return parseInt(b.split('-')[1]) || 7000000;
-    }
-    return 7000000;
-  });
-
+  const [minPrice, setMinPrice] = useState<number>(50000);
+  const [maxPrice, setMaxPrice] = useState<number>(7000000);
   const [maxKm, setMaxKm] = useState<number>(500000);
   const [minYear, setMinYear] = useState<number>(2000);
   const [onlyVerified, setOnlyVerified] = useState<boolean>(false);
   const [onlyRecarsSelect, setOnlyRecarsSelect] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>(() => searchParams.get('q') || '');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('recommended');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [isDreamWizardOpen, setIsDreamWizardOpen] = useState<boolean>(() => {
-    // Automatically popup budget modal when opening Buy a Car!
-    const skip = searchParams.get('skipWizard');
-    return skip !== 'true';
-  });
+  const [isDreamWizardOpen, setIsDreamWizardOpen] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  const handleParamsUpdate = useCallback(
+    (p: {
+      make: string | null;
+      type: string | null;
+      budget: string | null;
+      q: string | null;
+      skipWizard: string | null;
+    }) => {
+      if (p.make) setSelectedMakes([p.make]);
+      if (p.type) setSelectedBodyTypes([p.type]);
+      if (p.q) setSearchQuery(p.q);
+      if (p.budget && p.budget.includes('-')) {
+        const parts = p.budget.split('-');
+        if (parts[0]) setMinPrice(parseInt(parts[0]) || 50000);
+        if (parts[1]) setMaxPrice(parseInt(parts[1]) || 7000000);
+      }
+      if (p.skipWizard !== 'true' && !p.make && !p.type && !p.q && !p.budget) {
+        setIsDreamWizardOpen(true);
+      }
+    },
+    []
+  );
 
   // Multi-select toggle helpers
   const toggleItem = (list: string[], setList: (val: string[]) => void, item: string) => {
@@ -280,13 +287,14 @@ function BuyContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
+      <Suspense fallback={null}>
+        <BuySearchParamsWatcher onParams={handleParamsUpdate} />
+      </Suspense>
       <Navbar
         selectedCity={selectedCity}
         onSelectCity={changeCity}
         wishlistCount={wishlistIds.length}
       />
-
-
 
       {/* Main Inventory Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
@@ -857,9 +865,5 @@ function BuyContent() {
 }
 
 export default function BuyPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">Loading Inventory...</div>}>
-      <BuyContent />
-    </Suspense>
-  );
+  return <BuyContent />;
 }

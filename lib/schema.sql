@@ -29,6 +29,17 @@ CREATE TABLE IF NOT EXISTS public.cars (
     is_verified BOOLEAN DEFAULT true,
     is_select BOOLEAN DEFAULT true,
     description TEXT,
+    availability_status TEXT DEFAULT 'Available',
+    manufacturing_year INTEGER,
+    registration_year INTEGER,
+    insurance_status TEXT DEFAULT 'Valid',
+    insurance_expiry TEXT,
+    insurance_type TEXT DEFAULT 'Comprehensive',
+    finance_available TEXT DEFAULT 'Available',
+    suggested_price_min BIGINT,
+    suggested_price_max BIGINT,
+    suggestedpricemin BIGINT,
+    suggestedpricemax BIGINT,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );

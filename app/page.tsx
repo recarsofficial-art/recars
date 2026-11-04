@@ -113,33 +113,37 @@ const REVIEWS = [
   }
 ];
 
+function SearchParamsWatcher({
+  onTab,
+  onFinder,
+}: {
+  onTab: (tab: 'buy' | 'sell') => void;
+  onFinder: () => void;
+}) {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('tab') === 'sell') onTab('sell');
+    if (searchParams.get('finder') === 'true' || searchParams.get('find') === 'true') {
+      onFinder();
+    }
+  }, [searchParams, onTab, onFinder]);
+  return null;
+}
+
 function HomePageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const {
     wishlistIds,
     toggleWishlist,
     isWishlisted,
-    cars: storeCars,
+    cars,
     selectedCity,
     changeCity,
   } = useRecarsState();
 
-  const [liveCars, setLiveCars] = useState<any[] | null>(null);
   const [trendingCars, setTrendingCars] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchFreshCars = () => {
-      fetch('/api/cars')
-        .then((r) => r.json())
-        .then((d) => {
-          if (Array.isArray(d?.cars)) setLiveCars(d.cars);
-        })
-        .catch(() => {});
-    };
-    fetchFreshCars();
-    window.addEventListener('focus', fetchFreshCars);
-
     // Fetch actual trending / most-viewed cars from backend views
     fetch('/api/cars?trending=true&limit=4')
       .then((r) => r.json())
@@ -147,16 +151,10 @@ function HomePageContent() {
         if (Array.isArray(d?.cars)) setTrendingCars(d.cars);
       })
       .catch(() => {});
-
-    return () => window.removeEventListener('focus', fetchFreshCars);
   }, []);
 
-  const cars = liveCars !== null ? liveCars : storeCars;
-
   // Active Mode: 'buy' | 'sell' (initialized from ?tab=sell or default 'buy')
-  const [activeTab, setActiveTab] = useState<'buy' | 'sell'>(() => {
-    return searchParams.get('tab') === 'sell' ? 'sell' : 'buy';
-  });
+  const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
 
   const [hubSearchQuery, setHubSearchQuery] = useState('');
   const [selectedBudgetBracket, setSelectedBudgetBracket] = useState<string | null>(null);
@@ -180,12 +178,6 @@ function HomePageContent() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
   const [quickQuery, setQuickQuery] = useState('');
-
-  useEffect(() => {
-    if (searchParams.get('finder') === 'true' || searchParams.get('find') === 'true') {
-      setIsCarFinderOpen(true);
-    }
-  }, [searchParams]);
 
   // Interactive Content States
   const [howItWorksTab, setHowItWorksTab] = useState<'buy' | 'sell'>('buy');
@@ -1217,14 +1209,16 @@ function HomePageContent() {
         onClose={() => setIsCarFinderOpen(false)}
         defaultCity={selectedCity}
       />
+      <Suspense fallback={null}>
+        <SearchParamsWatcher
+          onTab={setActiveTab}
+          onFinder={() => setIsCarFinderOpen(true)}
+        />
+      </Suspense>
     </div>
   );
 }
 
 export default function HomePage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center text-sm font-semibold text-gray-500">Loading Recars...</div>}>
-      <HomePageContent />
-    </Suspense>
-  );
+  return <HomePageContent />;
 }

@@ -61,23 +61,22 @@ function CarDetailInner({ params }: PageProps) {
     isWishlisted,
     cars: storeCars,
     addInquiry,
+    isHydrated,
   } = useRecarsState();
 
-  const [liveCars, setLiveCars] = useState<Car[] | null>(null);
+  const [singleCar, setSingleCar] = useState<Car | null>(null);
 
+  // Fast single-car background fetch
   useEffect(() => {
-    const fetchCars = () => {
-      fetch('/api/cars')
+    if (unwrappedParams?.id) {
+      fetch(`/api/cars?id=${encodeURIComponent(unwrappedParams.id)}`)
         .then((r) => r.json())
         .then((d) => {
-          if (Array.isArray(d?.cars)) setLiveCars(d.cars);
+          if (d?.car) setSingleCar(d.car);
         })
         .catch(() => {});
-    };
-    fetchCars();
-    window.addEventListener('focus', fetchCars);
-    return () => window.removeEventListener('focus', fetchCars);
-  }, []);
+    }
+  }, [unwrappedParams?.id]);
 
   // Track genuine vehicle view (deduplicated by IP & car in backend)
   useEffect(() => {
@@ -90,8 +89,7 @@ function CarDetailInner({ params }: PageProps) {
     }
   }, [unwrappedParams?.id]);
 
-  const cars = liveCars !== null ? liveCars : storeCars;
-  const car = cars.find((c) => c.id === unwrappedParams.id) || (cars.length > 0 ? cars[0] : null);
+  const car = singleCar || storeCars.find((c) => c.id === unwrappedParams?.id) || null;
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
@@ -179,20 +177,19 @@ function CarDetailInner({ params }: PageProps) {
     };
   }, [isLightboxOpen, galleryImagesList.length]);
 
-  if (liveCars === null) {
-    return (
-      <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-between">
-        <Navbar selectedCity={selectedCity} onSelectCity={changeCity} wishlistCount={wishlistIds.length} />
-        <div className="flex-1 flex flex-col items-center justify-center py-32">
-          <div className="w-12 h-12 border-4 border-[#E5325C]/20 border-t-[#E5325C] rounded-full animate-spin mb-4" />
-          <p className="font-bold text-sm text-[#101216]">Loading vehicle details...</p>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
   if (!car) {
+    if (!isHydrated) {
+      return (
+        <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-between">
+          <Navbar selectedCity={selectedCity} onSelectCity={changeCity} wishlistCount={wishlistIds.length} />
+          <div className="flex-1 flex flex-col items-center justify-center py-32">
+            <div className="w-12 h-12 border-4 border-[#E5325C]/20 border-t-[#E5325C] rounded-full animate-spin mb-4" />
+            <p className="font-bold text-sm text-[#101216]">Loading vehicle details...</p>
+          </div>
+          <Footer />
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-between">
         <Navbar selectedCity={selectedCity} onSelectCity={changeCity} wishlistCount={wishlistIds.length} />
@@ -223,8 +220,8 @@ function CarDetailInner({ params }: PageProps) {
   );
 
   const images = car.galleryImages && car.galleryImages.length > 0 ? car.galleryImages : [car.image];
-  const similarCars = cars
-    .filter((c) => c.id !== car.id && c.availabilityStatus !== 'Sold Out' && (c.bodyType === car.bodyType || c.make === car.make))
+  const similarCars = storeCars
+    .filter((c: Car) => c.id !== car.id && c.availabilityStatus !== 'Sold Out' && (c.bodyType === car.bodyType || c.make === car.make))
     .slice(0, 3);
 
   // Dynamic Vehicle Age Calculation
@@ -1231,7 +1228,7 @@ function CarDetailInner({ params }: PageProps) {
           <div id="similar-cars" className="pt-10 border-t border-[#E5E7EB] scroll-mt-28">
             <h2 className="text-2xl font-black text-[#101216] mb-6">Similar Verified Cars</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {similarCars.map((c) => (
+              {similarCars.map((c: Car) => (
                 <CarCard
                   key={c.id}
                   car={c}
@@ -1716,9 +1713,22 @@ function CarDetailInner({ params }: PageProps) {
   );
 }
 
+function CarDetailSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-between">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] h-20" />
+      <div className="flex-1 flex flex-col items-center justify-center py-32">
+        <div className="w-10 h-10 border-4 border-[#E5325C]/20 border-t-[#E5325C] rounded-full animate-spin mb-3" />
+        <p className="font-semibold text-xs text-gray-500">Loading vehicle details...</p>
+      </div>
+      <div className="h-24 bg-white border-t border-[#E5E7EB]" />
+    </div>
+  );
+}
+
 export default function CarDetailPage(props: PageProps) {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center font-bold text-sm text-[#E5325C]">Loading vehicle details...</div>}>
+    <Suspense fallback={<CarDetailSkeleton />}>
       <CarDetailInner {...props} />
     </Suspense>
   );

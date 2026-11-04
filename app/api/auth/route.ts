@@ -8,33 +8,58 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, phoneOrEmail, name, phone, email, city } = body;
 
-    if (action === 'google') {
-      const googleEmail = (email || '').trim();
-      const googleName = (name || (googleEmail ? googleEmail.split('@')[0] : 'Google Customer')).trim();
-      const googlePhone = (phone || '').trim();
+    if (action === 'google' || action === 'apple') {
+      let authEmail = (email || '').trim();
+      const appleId = (body.appleUserId || '').trim();
 
-      // Check if user already exists by email
-      const existing = googleEmail ? await dbFindCustomer(googleEmail) : null;
+      // If Apple didn't provide email directly (e.g. subsequent sign-ins), attempt to decode from JWT identityToken
+      if (action === 'apple' && !authEmail && body.identityToken) {
+        try {
+          const parts = body.identityToken.split('.');
+          if (parts.length >= 2) {
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+            if (payload?.email) {
+              authEmail = String(payload.email).trim();
+            }
+          }
+        } catch {
+          // ignore decode error
+        }
+      }
+
+      const defaultName = action === 'apple' ? 'Apple Customer' : 'Google Customer';
+      const authName = (name || (authEmail ? authEmail.split('@')[0] : defaultName)).trim();
+      const authPhone = (phone || '').trim();
+
+      // Check if user already exists by email or apple ID
+      let existing = authEmail ? await dbFindCustomer(authEmail) : null;
+      if (!existing && appleId) {
+        existing = await dbFindCustomer(`apple_${appleId}`);
+      }
+
+      const providerLabel = action === 'apple' ? 'Apple' : 'Google';
+
       if (existing) {
         return NextResponse.json({
           success: true,
           user: {
             id: existing.id,
-            name: existing.name || googleName,
-            phone: existing.phone || googlePhone,
-            email: existing.email || googleEmail,
+            name: existing.name || authName,
+            phone: existing.phone || authPhone,
+            email: existing.email || authEmail,
             city: existing.city || city || 'Warangal',
           },
-          message: 'Signed in with Google successfully',
+          message: `Signed in with ${providerLabel} successfully`,
         });
       }
 
       // Create new customer record in database
+      const fallbackEmail = authEmail || (appleId ? `apple_${appleId}@privaterelay.appleid.com` : '');
       const newId = await dbUpsertCustomer({
         id: '',
-        name: googleName,
-        phone: googlePhone,
-        email: googleEmail,
+        name: authName,
+        phone: authPhone,
+        email: fallbackEmail,
         city: city || 'Warangal',
       });
 
@@ -42,12 +67,12 @@ export async function POST(request: Request) {
         success: true,
         user: {
           id: newId,
-          name: googleName,
-          phone: googlePhone,
-          email: googleEmail,
+          name: authName,
+          phone: authPhone,
+          email: fallbackEmail,
           city: city || 'Warangal',
         },
-        message: 'Google account linked and created successfully',
+        message: `${providerLabel} account linked and created successfully`,
       });
     }
 

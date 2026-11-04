@@ -1,7 +1,15 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Outfit, DM_Sans } from 'next/font/google';
 import './globals.css';
 import ClientProviders from '@/components/ClientProviders';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#E5325C',
+};
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -80,8 +88,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`h-full antialiased scroll-smooth ${outfit.variable} ${dmSans.variable}`}>
-      <body className="min-h-full flex flex-col bg-[#F8F9FA] text-[#101216] font-sans">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`h-full antialiased scroll-smooth ${outfit.variable} ${dmSans.variable}`}
+    >
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col bg-[#F8F9FA] text-[#101216] font-sans"
+      >
         <ClientProviders>
           {children}
         </ClientProviders>
