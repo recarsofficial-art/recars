@@ -66,7 +66,17 @@ export default function DreamCarWizardModal({
   };
 
   const handleFinish = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('recars_dream_wizard_dismissed', 'true');
+    }
     onApply(currentFilters);
+    onClose();
+  };
+
+  const handleSkip = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('recars_dream_wizard_dismissed', 'true');
+    }
     onClose();
   };
 
@@ -86,7 +96,7 @@ export default function DreamCarWizardModal({
               </span>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleSkip}
               className="text-xs sm:text-sm font-bold text-[#6A1B9A] hover:text-purple-950 transition-colors cursor-pointer"
             >
               Skip

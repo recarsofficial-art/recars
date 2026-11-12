@@ -105,7 +105,13 @@ function BuyContent() {
         if (parts[0]) setMinPrice(parseInt(parts[0]) || 50000);
         if (parts[1]) setMaxPrice(parseInt(parts[1]) || 7000000);
       }
-      if (p.skipWizard !== 'true' && !p.make && !p.type && !p.q && !p.budget) {
+
+      // Check if the user already saw, skipped, or dismissed the wizard in this browser session
+      const alreadyDismissedInSession =
+        typeof window !== 'undefined' &&
+        sessionStorage.getItem('recars_dream_wizard_dismissed') === 'true';
+
+      if (!alreadyDismissedInSession && p.skipWizard !== 'true' && !p.make && !p.type && !p.q && !p.budget) {
         setIsDreamWizardOpen(true);
       }
     },
@@ -848,8 +854,16 @@ function BuyContent() {
       {/* Dream Car 3-Step Wizard Modal */}
       <DreamCarWizardModal
         isOpen={isDreamWizardOpen}
-        onClose={() => setIsDreamWizardOpen(false)}
+        onClose={() => {
+          setIsDreamWizardOpen(false);
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('recars_dream_wizard_dismissed', 'true');
+          }
+        }}
         onApply={(filters) => {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('recars_dream_wizard_dismissed', 'true');
+          }
           setMinPrice(filters.minPrice);
           setMaxPrice(filters.maxPrice);
           if (filters.bodyTypes.length > 0) setSelectedBodyTypes(filters.bodyTypes);
