@@ -33,6 +33,8 @@ import {
   CheckCircle,
   User,
   Maximize2,
+  MessageCircle,
+  MessageSquare,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -219,8 +221,12 @@ function CarDetailInner({ params }: PageProps) {
     loanTenureYears * 12
   );
 
-  const images = car.galleryImages && car.galleryImages.length > 0 ? car.galleryImages : [car.image];
-  const similarCars = storeCars
+  const validGallery = (car.galleryImages || []).filter(
+    (img) => typeof img === 'string' && img.trim() !== '' && !img.includes('white-bg-')
+  );
+  const validPrimary = car.image && !car.image.includes('white-bg-') ? car.image : (validGallery[0] || '/car-creta-hd.jpg');
+  const images = validGallery.length > 0 ? validGallery : [validPrimary];
+  const similarCars = (cars || storeCars)
     .filter((c: Car) => c.id !== car.id && c.availabilityStatus !== 'Sold Out' && (c.bodyType === car.bodyType || c.make === car.make))
     .slice(0, 3);
 
@@ -412,8 +418,12 @@ function CarDetailInner({ params }: PageProps) {
                 title="Click to view full image"
               >
                 <img
-                  src={images[activeImageIndex]}
+                  src={images[activeImageIndex] || '/car-creta-hd.jpg'}
                   alt={`${car.make} ${car.model}`}
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (target.src !== '/car-creta-hd.jpg') target.src = '/car-creta-hd.jpg';
+                  }}
                   className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-102"
                 />
 
@@ -1103,51 +1113,54 @@ function CarDetailInner({ params }: PageProps) {
                   </div>
                 ) : (
                   <>
-                    {/* 1. Interested Button */}
-                    <button
-                      onClick={() => setIsInterestedModalOpen(true)}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-semibold font-btn tracking-rounded text-sm shadow-md transition-all active:scale-98 cursor-pointer text-white bg-[#E5325C] hover:bg-[#D4264E]"
-                    >
-                      <Heart className="w-4 h-4 fill-current" />
-                      <span>Interested</span>
-                    </button>
-
-                    {/* 2. Make an Offer / Negotiate Price Button */}
-                    <button
-                      onClick={() => setIsNegotiateModalOpen(true)}
-                      className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-2xl font-semibold font-btn tracking-rounded text-sm transition-all border cursor-pointer text-[#101216] bg-white border-gray-300 hover:border-[#E5325C] hover:text-[#E5325C] hover:bg-[#FFF0F3]/40"
-                    >
-                      <Tag className="w-4 h-4 text-[#E5325C]" />
-                      <span>Make an Offer / Negotiate Price</span>
-                    </button>
-
-                    {/* 3. Request Callback Button */}
-                    <button
-                      onClick={() => setIsCallbackModalOpen(true)}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold font-btn tracking-rounded text-xs text-[#101216] bg-white border border-[#E5E7EB] hover:bg-gray-50 transition-all cursor-pointer"
-                    >
-                      <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
-                      <span>Request Instant Callback</span>
-                    </button>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <a
-                        href="tel:+919908796677"
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold font-btn tracking-rounded text-xs text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-[#E5325C] transition-all"
-                      >
-                        <Phone className="w-3.5 h-3.5 text-[#E5325C]" />
-                        <span>Call 9908796677</span>
-                      </a>
-
+                    {/* Primary OLX-Style Action Pair */}
+                    <div className="grid grid-cols-2 gap-2">
                       <a
                         href={`https://wa.me/919908796677?text=Hello%20Recars%2C%20I%20am%20interested%20in%20the%20${encodeURIComponent(car.year + ' ' + car.make + ' ' + car.model)}%20(${encodeURIComponent(car.id)})%20listed%20at%20${encodeURIComponent(formatINR(car.price))}.`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-semibold font-btn tracking-rounded text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all"
+                        className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-xs bg-white text-gray-900 border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50/50 shadow-xs transition-all"
                       >
-                        <span>Chat on WhatsApp</span>
+                        <MessageCircle className="w-4 h-4 text-emerald-600" />
+                        <span>Chat</span>
                       </a>
+
+                      <button
+                        onClick={() => setIsNegotiateModalOpen(true)}
+                        className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-xs bg-white text-gray-900 border border-gray-300 hover:border-[#E5325C] hover:bg-[#FFF0F3]/50 shadow-xs transition-all cursor-pointer"
+                      >
+                        <Banknote className="w-4 h-4 text-[#E5325C]" />
+                        <span>Make Offer</span>
+                      </button>
                     </div>
+
+                    {/* Direct Call & Interested Buttons */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <a
+                        href="tel:+919908796677"
+                        className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-[#162A45] to-[#0A1828] border border-[#23436B] hover:brightness-110 shadow-xs transition-all text-center"
+                      >
+                        <Phone className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Call Advisor</span>
+                      </a>
+
+                      <button
+                        onClick={() => setIsInterestedModalOpen(true)}
+                        className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-xs shadow-xs transition-all active:scale-98 cursor-pointer text-white bg-[#E5325C] hover:bg-[#D4264E]"
+                      >
+                        <Heart className="w-3.5 h-3.5 fill-current" />
+                        <span>Interested</span>
+                      </button>
+                    </div>
+
+                    {/* Request Callback Button */}
+                    <button
+                      onClick={() => setIsCallbackModalOpen(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl font-semibold font-btn tracking-rounded text-xs text-[#101216] bg-gray-50 border border-[#E5E7EB] hover:bg-gray-100 transition-all cursor-pointer"
+                    >
+                      <Clock className="w-3.5 h-3.5 text-[#E5325C]" />
+                      <span>Request Instant Callback</span>
+                    </button>
                   </>
                 )}
               </div>
@@ -1581,32 +1594,65 @@ function CarDetailInner({ params }: PageProps) {
         </div>
       )}
 
-      {/* Mobile Sticky Action Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E5E7EB] p-3 flex items-center justify-between shadow-2xl">
-        <div>
-          <span className="text-[10px] text-[#6B7078] block">Recars Price</span>
-          <span className="text-base font-black text-[#101216]">{formatINR(car.price)}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {!isSoldOut && (
-            <button
-              onClick={() => setIsNegotiateModalOpen(true)}
-              className="px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-800"
-            >
-              Negotiate
-            </button>
+      {/* Mobile Sticky Action Bar - OLX Style (Chat, Make Offer, Call) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.12)] px-3 pt-2 pb-3">
+        {/* Quick price + car status line */}
+        <div className="flex items-center justify-between mb-2 px-1">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Recars Price</span>
+            <span className="text-base font-black text-gray-950 tracking-tight">{formatINR(car.price)}</span>
+            {car.emiPerMonth && (
+              <span className="text-[11px] font-medium text-gray-500">EMI {formatINR(car.emiPerMonth)}/mo</span>
+            )}
+          </div>
+          {isSoldOut ? (
+            <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-700 border border-red-300">
+              Sold Out
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Available
+            </span>
           )}
+        </div>
+
+        {/* The 3 OLX-Style Action Buttons: [ Chat ] [ Make Offer ] [ 📞 Call ] */}
+        <div className="grid grid-cols-12 gap-2 items-center">
+          {/* 1. Chat Button */}
+          <a
+            href={`https://wa.me/919908796677?text=Hello%20Recars%2C%20I%20am%20interested%20in%20the%20${encodeURIComponent(car.year + ' ' + car.make + ' ' + car.model)}%20(${encodeURIComponent(car.id)})%20listed%20at%20${encodeURIComponent(formatINR(car.price))}.`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="col-span-5 flex items-center justify-center gap-2 py-3 px-2 bg-white hover:bg-gray-50 text-gray-900 font-bold text-xs rounded-xl border border-gray-300 shadow-xs active:scale-[0.98] transition-all cursor-pointer text-center"
+          >
+            <MessageCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>Chat</span>
+          </a>
+
+          {/* 2. Make Offer Button */}
           <button
-            onClick={() => setIsInterestedModalOpen(true)}
+            onClick={() => setIsNegotiateModalOpen(true)}
             disabled={isSoldOut}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold shadow-md ${
+            className={`col-span-5 flex items-center justify-center gap-2 py-3 px-2 font-bold text-xs rounded-xl border shadow-xs active:scale-[0.98] transition-all cursor-pointer text-center ${
               isSoldOut
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-[#E5325C] text-white'
+                ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                : 'bg-white hover:bg-gray-50 text-gray-900 border-gray-300'
             }`}
           >
-            {isSoldOut ? 'Sold Out' : 'Interested'}
+            <Banknote className="w-4 h-4 text-[#E5325C] flex-shrink-0" />
+            <span>Make Offer</span>
           </button>
+
+          {/* 3. Call Button (OLX Elite Style) */}
+          <a
+            href="tel:+919908796677"
+            className="col-span-2 relative flex flex-col items-center justify-center py-2 px-1 bg-gradient-to-b from-[#162A45] to-[#0A1828] text-white rounded-xl border border-[#23436B] shadow-md hover:brightness-110 active:scale-95 transition-all text-center"
+            title="Call Recars Sales Advisor"
+          >
+            <span className="text-[7.5px] font-black tracking-widest text-amber-300 uppercase leading-none mb-0.5">ELITE</span>
+            <Phone className="w-4 h-4 text-white" />
+          </a>
         </div>
       </div>
 
@@ -1661,8 +1707,12 @@ function CarDetailInner({ params }: PageProps) {
 
             <div className="relative inline-flex items-center justify-center max-h-[72vh] sm:max-h-[80vh] max-w-full">
               <img
-                src={images[activeImageIndex]}
+                src={images[activeImageIndex] || '/car-creta-hd.jpg'}
                 alt={`${car.make} ${car.model} Full Image`}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (target.src !== '/car-creta-hd.jpg') target.src = '/car-creta-hd.jpg';
+                }}
                 className="max-h-[72vh] sm:max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl transition-all"
               />
               {/* Recars Watermark on full-size view (just like OLX) */}

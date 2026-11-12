@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, Check, ShieldCheck, ArrowRight, MapPin } from 'lucide-react';
@@ -18,14 +19,35 @@ export default function CarCard({ car, isWishlisted, onToggleWishlist }: CarCard
   const activeRibbons = computeCarRibbons(car, (car as any).viewsCount);
   const isSoldOut = car.availabilityStatus === 'Sold Out';
 
+  const fallbackImage = (car.galleryImages && car.galleryImages.length > 0 && !car.galleryImages[0].includes('white-bg-'))
+    ? car.galleryImages[0]
+    : '/car-creta-hd.jpg';
+
+  const initialImage = (car.image && !car.image.includes('white-bg-') && !car.image.includes('/images/model-'))
+    ? car.image
+    : fallbackImage;
+
+  const [imgSrc, setImgSrc] = useState(initialImage);
+
+  useEffect(() => {
+    setImgSrc(initialImage);
+  }, [initialImage]);
+
   return (
     <div className="group bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-xl hover:border-[#E5325C]/40 transition-all duration-300 flex flex-col relative">
       {/* Image container */}
       <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
         <Link href={`/cars/${car.id}`} className="block w-full h-full">
           <img
-            src={car.image}
+            src={imgSrc}
             alt={`${car.make} ${car.model}`}
+            onError={() => {
+              if (imgSrc !== fallbackImage) {
+                setImgSrc(fallbackImage);
+              } else if (imgSrc !== '/car-creta-hd.jpg') {
+                setImgSrc('/car-creta-hd.jpg');
+              }
+            }}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />

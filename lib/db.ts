@@ -114,6 +114,39 @@ export class DatabaseError extends Error {
 }
 
 /**
+ * Robust helper to resolve valid vehicle images from row data.
+ * Automatically cleans up dummy 'white-bg-*' or 'model-*' placeholders
+ * and uses real uploaded photos from gallery_images.
+ */
+export function resolveCarImages(r: any): { image: string; galleryImages: string[] } {
+  let gallery: string[] = [];
+  if (Array.isArray(r.gallery_images)) {
+    gallery = r.gallery_images;
+  } else if (typeof r.gallery_images === 'string') {
+    try {
+      const parsed = JSON.parse(r.gallery_images);
+      if (Array.isArray(parsed)) gallery = parsed;
+    } catch {
+      gallery = [];
+    }
+  }
+
+  // Filter out invalid/empty/white-bg dummy paths
+  gallery = gallery.filter((img) => typeof img === 'string' && img.trim() !== '' && !img.includes('white-bg-'));
+
+  let primary = r.image;
+  if (!primary || typeof primary !== 'string' || primary.includes('white-bg-') || primary.includes('/images/model-')) {
+    primary = gallery.length > 0 ? gallery[0] : '/car-creta-hd.jpg';
+  }
+
+  if (gallery.length === 0 && primary) {
+    gallery = [primary];
+  }
+
+  return { image: primary, galleryImages: gallery };
+}
+
+/**
  * Resilient query wrapper with single bounded retry for transient connection drops.
  * Logs diagnostic details server-side while safeguarding sensitive user parameters.
  */
@@ -352,7 +385,9 @@ export async function dbGetCars(filter?: {
   sql += ' ORDER BY created_at DESC';
 
   const { rows } = await pool.query(sql, values);
-  return rows.map((r) => ({
+  return rows.map((r) => {
+    const { image: cleanImage, galleryImages: cleanGallery } = resolveCarImages(r);
+    return {
     id: r.id,
     make: r.make,
     model: r.model,
@@ -368,8 +403,8 @@ export async function dbGetCars(filter?: {
     ownership: r.ownership,
     city: r.city,
     locationArea: r.location_area || `${r.city} Recars Hub`,
-    image: r.image,
-    galleryImages: typeof r.gallery_images === 'string' ? JSON.parse(r.gallery_images) : r.gallery_images || [r.image],
+    image: cleanImage,
+    galleryImages: cleanGallery,
     isVerified: r.is_verified,
     isRecarsSelect: r.is_select,
     featured: Boolean(r.featured),
@@ -420,7 +455,7 @@ export async function dbGetCars(filter?: {
     registrationNumber: r.registration_number || undefined,
     fitnessValidUntil: r.fitness_valid_until || undefined,
     soldInDuration: r.sold_in_duration || undefined,
-  }));
+  }; });
 }
 
 export async function dbGetCarById(id: string): Promise<Car | null> {
@@ -428,6 +463,7 @@ export async function dbGetCarById(id: string): Promise<Car | null> {
   const { rows } = await pool.query('SELECT * FROM public.cars WHERE id = $1 LIMIT 1', [id]);
   if (!rows.length) return null;
   const r = rows[0];
+  const { image: cleanImage, galleryImages: cleanGallery } = resolveCarImages(r);
   return {
     id: r.id,
     make: r.make,
@@ -444,8 +480,8 @@ export async function dbGetCarById(id: string): Promise<Car | null> {
     ownership: r.ownership,
     city: r.city,
     locationArea: r.location_area,
-    image: r.image,
-    galleryImages: typeof r.gallery_images === 'string' ? JSON.parse(r.gallery_images) : r.gallery_images || [r.image],
+    image: cleanImage,
+    galleryImages: cleanGallery,
     isVerified: r.is_verified,
     isRecarsSelect: r.is_select,
     featured: Boolean(r.featured),
@@ -506,6 +542,10 @@ export async function dbGetCarById(id: string): Promise<Car | null> {
 
 export async function dbInsertCar(car: Car): Promise<void> {
   await ensureDealerAndCarsSchema();
+  const { image: cleanImage, galleryImages: cleanGallery } = resolveCarImages({
+    image: car.image,
+    gallery_images: car.galleryImages,
+  });
   const sql = `
     INSERT INTO public.cars (
       id, make, model, variant, year, price, original_price, emi_per_month,
@@ -581,8 +621,8 @@ export async function dbInsertCar(car: Car): Promise<void> {
     car.ownership || '1st Owner',
     car.city,
     car.locationArea || null,
-    car.image,
-    JSON.stringify(car.galleryImages || [car.image]),
+    cleanImage,
+    JSON.stringify(cleanGallery),
     car.inspectionScore || 95,
     car.isVerified ?? true,
     car.isRecarsSelect ?? true,
@@ -2208,7 +2248,9 @@ export async function dbGetTrendingCars(limit = 6): Promise<Car[]> {
     LIMIT $1;
   `;
   const { rows } = await pool.query(query, [limit]);
-  return rows.map((r: any) => ({
+  return rows.map((r: any) => {
+    const { image: cleanImage, galleryImages: cleanGallery } = resolveCarImages(r);
+    return {
     id: r.id,
     make: r.make,
     model: r.model,
@@ -2224,8 +2266,8 @@ export async function dbGetTrendingCars(limit = 6): Promise<Car[]> {
     ownership: r.ownership,
     city: r.city,
     locationArea: r.location_area || `${r.city} Recars Hub`,
-    image: r.image,
-    galleryImages: typeof r.gallery_images === 'string' ? JSON.parse(r.gallery_images) : r.gallery_images || [r.image],
+    image: cleanImage,
+    galleryImages: cleanGallery,
     isVerified: r.is_verified,
     isRecarsSelect: r.is_select,
     featured: Boolean(r.featured),
@@ -2261,7 +2303,7 @@ export async function dbGetTrendingCars(limit = 6): Promise<Car[]> {
       : typeof r.custom_ribbons === 'string'
       ? JSON.parse(r.custom_ribbons)
       : [],
-  }));
+  }; });
 }
 
 // ========================================================
