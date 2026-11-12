@@ -226,7 +226,7 @@ function CarDetailInner({ params }: PageProps) {
   );
   const validPrimary = car.image && !car.image.includes('white-bg-') ? car.image : (validGallery[0] || '/car-creta-hd.jpg');
   const images = validGallery.length > 0 ? validGallery : [validPrimary];
-  const similarCars = (cars || storeCars)
+  const similarCars = storeCars
     .filter((c: Car) => c.id !== car.id && c.availabilityStatus !== 'Sold Out' && (c.bodyType === car.bodyType || c.make === car.make))
     .slice(0, 3);
 
