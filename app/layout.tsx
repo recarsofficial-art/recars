@@ -91,7 +91,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`h-full antialiased scroll-smooth ${outfit.variable} ${dmSans.variable}`}
+      className={`h-full antialiased ${outfit.variable} ${dmSans.variable}`}
     >
       <body
         suppressHydrationWarning

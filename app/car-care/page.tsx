@@ -173,6 +173,13 @@ export default function CarCarePage() {
       .catch((err) => console.warn('Could not load dynamic PPF packages, using defaults:', err));
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      if (!fullName && user.name) setFullName(user.name);
+      if (!mobileNumber && user.phone) setMobileNumber(user.phone);
+    }
+  }, [user]);
+
   const handleAvailOffer = (pkg: PPFSpecificationPackage) => {
     setSelectedPackage(pkg);
     if (!selectedServices.includes('Paint Protection Film (PPF)')) {
@@ -183,7 +190,7 @@ export default function CarCarePage() {
     );
     const formElement = document.getElementById('enquiry-form');
     if (formElement) {
-      formElement.scrollIntoView({ behavior: 'smooth' });
+      formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -203,7 +210,7 @@ export default function CarCarePage() {
     }
     const formElement = document.getElementById('enquiry-form');
     if (formElement) {
-      formElement.scrollIntoView({ behavior: 'smooth' });
+      formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -654,7 +661,7 @@ export default function CarCarePage() {
       </section>
 
       {/* Enquiry Form Section */}
-      <section id="enquiry-form" className="py-16 bg-white border-t border-gray-200">
+      <section id="enquiry-form" className="py-16 bg-white border-t border-gray-200 scroll-mt-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-[#F8F9FA] border border-gray-200 rounded-3xl p-6 sm:p-10 shadow-sm">
             <div className="text-center max-w-xl mx-auto mb-8">
@@ -707,7 +714,15 @@ export default function CarCarePage() {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form
+                onSubmit={handleSubmit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') {
+                    e.preventDefault();
+                  }
+                }}
+                className="space-y-6"
+              >
                 {submitError && (
                   <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />

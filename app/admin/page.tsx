@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
   Shield,
@@ -311,7 +311,11 @@ export default function AdminDashboardPage() {
     );
   };
 
-  const syncAllFromSupabase = async () => {
+  const isModalOpenRef = useRef(false);
+
+  const syncAllFromSupabase = async (forceParam?: any) => {
+    const force = typeof forceParam === 'boolean' ? forceParam : false;
+    if (!force && isModalOpenRef.current) return;
     setIsSyncing(true);
     try {
       const [carsRes, sellRes, inqRes, custRes, tdRes, negRes, setRes, pdiRes, notifRes, dealersRes, carCareRes, carFinderRes, ppfRes] = await Promise.all([
@@ -772,16 +776,20 @@ export default function AdminDashboardPage() {
     });
 
     const handleFocus = () => {
-      if (isAdminAuthenticated) syncAllFromSupabase();
+      if (isAdminAuthenticated && !isModalOpenRef.current) syncAllFromSupabase();
     };
     window.addEventListener('focus', handleFocus);
     const handleVis = () => {
-      if (document.visibilityState === 'visible' && isAdminAuthenticated) syncAllFromSupabase();
+      if (document.visibilityState === 'visible' && isAdminAuthenticated && !isModalOpenRef.current) {
+        syncAllFromSupabase();
+      }
     };
     document.addEventListener('visibilitychange', handleVis);
     const interval = setInterval(() => {
-      if (isAdminAuthenticated) syncAllFromSupabase();
-    }, 6000);
+      if (isAdminAuthenticated && !isModalOpenRef.current && document.visibilityState === 'visible') {
+        syncAllFromSupabase();
+      }
+    }, 30000);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
@@ -834,6 +842,30 @@ export default function AdminDashboardPage() {
   const [customDealerName, setCustomDealerName] = useState<string>('');
   const [customDealerPhone, setCustomDealerPhone] = useState<string>('');
   const [customDealerContactPerson, setCustomDealerContactPerson] = useState<string>('');
+
+  const isAnyModalOpen = Boolean(
+    isPPFModalOpen ||
+    isAddCarModalOpen ||
+    carToDelete ||
+    editingPriceReq ||
+    carCareEditingNotes ||
+    viewingDetailsCar
+  );
+
+  useEffect(() => {
+    isModalOpenRef.current = isAnyModalOpen;
+  }, [isAnyModalOpen]);
+
+  // Lock background scroll when any modal is open to prevent page jumps
+  useEffect(() => {
+    if (isAnyModalOpen) {
+      const orig = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = orig;
+      };
+    }
+  }, [isAnyModalOpen]);
 
   // New / Edit Car form fields
   const [newMake, setNewMake] = useState('Hyundai');
@@ -6902,8 +6934,8 @@ export default function AdminDashboardPage() {
           ADD CAR MODAL (COMPREHENSIVE VEHICLE FORM)
       ========================================================= */}
       {isAddCarModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-[#E5E7EB] p-6 sm:p-8 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-[#E5E7EB] p-6 sm:p-8 space-y-5 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[#FFF0F3] text-[#E5325C] flex items-center justify-center">
@@ -8954,8 +8986,8 @@ export default function AdminDashboardPage() {
           MODAL: PPF SPECIFICATIONS, MICRONS, DISCOUNT & FLYERS
       ========================================================= */}
       {isPPFModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] overflow-y-auto border border-[#E5E7EB] shadow-2xl p-6 sm:p-7 space-y-6 my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-[#E5E7EB] shadow-2xl p-6 sm:p-7 space-y-6 my-auto">
             {/* Modal Header */}
             <div className="flex items-start justify-between pb-4 border-b border-[#E5E7EB]">
               <div>
