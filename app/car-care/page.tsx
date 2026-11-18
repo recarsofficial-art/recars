@@ -809,7 +809,7 @@ export default function CarCarePage() {
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="e.g. Rahul Sharma"
-                        className="w-full pl-10 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-[#101216] focus:outline-none focus:border-[#E5325C]"
+                        className="w-full pl-10 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-black placeholder:text-gray-400 [color-scheme:light] focus:outline-none focus:border-[#E5325C]"
                       />
                     </div>
                   </div>
@@ -829,7 +829,7 @@ export default function CarCarePage() {
                         value={mobileNumber}
                         onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
                         placeholder="98765 43210"
-                        className="w-full pl-12 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-[#101216] focus:outline-none focus:border-[#E5325C]"
+                        className="w-full pl-12 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-black placeholder:text-gray-400 [color-scheme:light] focus:outline-none focus:border-[#E5325C]"
                       />
                     </div>
                   </div>
@@ -849,7 +849,7 @@ export default function CarCarePage() {
                         value={vehicleBrand}
                         onChange={(e) => setVehicleBrand(e.target.value)}
                         placeholder="e.g. Hyundai, Tata, Kia"
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-[#101216] focus:outline-none focus:border-[#E5325C]"
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-black placeholder:text-gray-400 [color-scheme:light] focus:outline-none focus:border-[#E5325C]"
                       />
                       <datalist id="brand-list">
                         {MAKES.map((m) => (
@@ -869,7 +869,7 @@ export default function CarCarePage() {
                       value={vehicleModel}
                       onChange={(e) => setVehicleModel(e.target.value)}
                       placeholder="e.g. Creta, Harrier, Seltos"
-                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-[#101216] focus:outline-none focus:border-[#E5325C]"
+                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-black placeholder:text-gray-400 [color-scheme:light] focus:outline-none focus:border-[#E5325C]"
                     />
                   </div>
 
@@ -880,10 +880,10 @@ export default function CarCarePage() {
                     <select
                       value={vehicleYear}
                       onChange={(e) => setVehicleYear(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-[#101216] focus:outline-none focus:border-[#E5325C]"
+                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-black [color-scheme:light] focus:outline-none focus:border-[#E5325C]"
                     >
                       {Array.from({ length: 15 }, (_, i) => 2026 - i).map((yr) => (
-                        <option key={yr} value={yr}>
+                        <option key={yr} value={yr} className="text-black bg-white font-medium">
                           {yr}
                         </option>
                       ))}
@@ -904,7 +904,7 @@ export default function CarCarePage() {
                         value={preferredLocation}
                         onChange={(e) => setPreferredLocation(e.target.value)}
                         placeholder="e.g. Warangal Studio / Hanamkonda Doorstep"
-                        className="w-full pl-10 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-[#101216] focus:outline-none focus:border-[#E5325C]"
+                        className="w-full pl-10 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-black placeholder:text-gray-400 [color-scheme:light] focus:outline-none focus:border-[#E5325C]"
                       />
                     </div>
                   </div>
@@ -920,7 +920,7 @@ export default function CarCarePage() {
                         value={preferredDate}
                         onChange={(e) => setPreferredDate(e.target.value)}
                         min={minDate || undefined}
-                        className="w-full pl-10 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-[#101216] focus:outline-none focus:border-[#E5325C]"
+                        className="w-full pl-10 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-black [color-scheme:light] [&::-webkit-datetime-edit]:text-black [&::-webkit-datetime-edit-fields-wrapper]:text-black [&::-webkit-datetime-edit-text]:text-black [&::-webkit-datetime-edit-month-field]:text-black [&::-webkit-datetime-edit-day-field]:text-black [&::-webkit-datetime-edit-year-field]:text-black [&::-webkit-calendar-picker-indicator]:opacity-100 focus:outline-none focus:border-[#E5325C]"
                       />
                     </div>
                   </div>
@@ -936,7 +936,7 @@ export default function CarCarePage() {
                     value={additionalRequirements}
                     onChange={(e) => setAdditionalRequirements(e.target.value)}
                     placeholder="e.g. Matte finish PPF preference, doorstep pick-up inquiry, deep scratch inspection..."
-                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs text-[#101216] focus:outline-none focus:border-[#E5325C]"
+                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-black placeholder:text-gray-400 [color-scheme:light] focus:outline-none focus:border-[#E5325C]"
                   />
                 </div>
 
